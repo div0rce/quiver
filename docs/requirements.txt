@@ -1,0 +1,4 @@
+# Documentation toolchain — pinned per ADR-019 / REQ-DOC-005 (docs/prd/14-documentation.md).
+# Versions resolved and verified at M0 (Python >= 3.11); update = deliberate PR.
+mkdocs==1.6.1
+mkdocs-material==9.7.6

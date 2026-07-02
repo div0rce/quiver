@@ -1,0 +1,44 @@
+name: Benchmark dispute
+description: Challenge a published ledger number. All disputes are resolved in public with reproducible runs (Charter §12, REQ-LEDGER-009).
+labels: ["benchmark-dispute"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Quiver's performance claims are reproducible by contract. This template asks for exactly
+        the artifacts needed to compare runs credibly. Methodology: docs/prd/11-performance-ledger.md.
+  - type: input
+    id: entry
+    attributes:
+      label: Disputed ledger entry_id (or benchmark name + axes)
+      placeholder: "e.g. entry_id from ledger/results/…/entries.json"
+    validations:
+      required: true
+  - type: textarea
+    id: manifest
+    attributes:
+      label: Your machine manifest
+      description: |
+        CPU model + microarchitecture, frequency governor, turbo/SMT/ASLR state, OS + kernel,
+        compiler + exact flags, Quiver commit (clean tree required). This mirrors the fields the
+        ledger runner captures (REQ-LEDGER-003).
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Reproduction command and full output
+      description: |
+        The command you ran (once the runner ships: `python3 ledger/runner/quiver_ledger.py run
+        --machine <id> --filter <pattern>`) and its complete output, including repetition count
+        and statistics.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: What the numbers show, in your reading
+      description: Which published statistic (median/min/CI) your run contradicts, and by how much.
+    validations:
+      required: true

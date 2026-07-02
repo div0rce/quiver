@@ -1,0 +1,8 @@
+# Normalize line endings; source is LF everywhere (amalgamation determinism, REQ-INT-005).
+* text=auto eol=lf
+*.png binary
+*.gif binary
+*.gz binary
+
+# Keep GitHub language stats honest once C++ lands.
+docs/** linguist-documentation

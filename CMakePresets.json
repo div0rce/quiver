@@ -1,0 +1,103 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "dev",
+      "displayName": "Development (Debug, asserts, tests)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "QUIVER_ENABLE_TESTS": "ON",
+        "QUIVER_ENABLE_ASSERTS": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release (-O3, tests)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "QUIVER_ENABLE_TESTS": "ON"
+      }
+    },
+    {
+      "name": "bench",
+      "displayName": "Benchmarking (Release + bench + examples)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "QUIVER_ENABLE_TESTS": "OFF",
+        "QUIVER_ENABLE_BENCH": "ON",
+        "QUIVER_ENABLE_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "asan-ubsan",
+      "displayName": "ASan + UBSan (asserts on, REQ-BUILD-012)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "QUIVER_ENABLE_TESTS": "ON",
+        "QUIVER_ENABLE_ASSERTS": "ON",
+        "QUIVER_SANITIZE": "address;undefined"
+      }
+    },
+    {
+      "name": "tsan",
+      "displayName": "ThreadSanitizer (dispatch tests)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "QUIVER_ENABLE_TESTS": "ON",
+        "QUIVER_ENABLE_ASSERTS": "ON",
+        "QUIVER_SANITIZE": "thread"
+      }
+    },
+    {
+      "name": "msan",
+      "displayName": "MemorySanitizer (nightly, Clang)",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "QUIVER_ENABLE_TESTS": "ON",
+        "QUIVER_ENABLE_ASSERTS": "ON",
+        "QUIVER_SANITIZE": "memory"
+      }
+    },
+    {
+      "name": "ci-gcc",
+      "displayName": "CI (GCC; compiler version selected via $CC/$CXX)",
+      "inherits": "release",
+      "cacheVariables": {
+        "QUIVER_ENABLE_WERROR": "ON"
+      }
+    },
+    {
+      "name": "ci-clang",
+      "displayName": "CI (Clang; compiler version selected via $CC/$CXX)",
+      "inherits": "release",
+      "cacheVariables": {
+        "QUIVER_ENABLE_WERROR": "ON"
+      }
+    },
+    {
+      "name": "ci-msvc",
+      "displayName": "CI (MSVC, tier-2)",
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "cacheVariables": {
+        "QUIVER_ENABLE_TESTS": "ON",
+        "QUIVER_ENABLE_WERROR": "ON"
+      }
+    }
+  ]
+}

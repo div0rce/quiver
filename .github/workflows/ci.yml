@@ -1,0 +1,96 @@
+# Quiver CI — M0 skeleton (MOD-CI).
+# REQ-CI-001 (SHA-pinned actions), REQ-CI-002 gate subset live at M0:
+# format-check, repo-lint, docs-build, configure-check, dco-check.
+# The build/test matrix, sanitizers, SDE, fuzz, and bench-smoke jobs activate at their
+# owning milestones (docs/prd/13-ci-architecture.md, docs/prd/18-milestones.md).
+#
+# Action pin registry (REQ-SEC-006; verify against upstream when adding):
+#   actions/checkout v4.2.2 = 11bd71901bbe5b1630ceea73d27597364c9af683
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read  # REQ-SEC-008: minimal default; jobs never need more in ci.yml
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CLANG_FORMAT: clang-format-18  # pinned major version, REQ-STD-002
+
+jobs:
+  repo-lint:
+    name: repo lint (tree manifest, ADR set, source scans)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run repository lint
+        run: python3 .github/scripts/repo_lint.py
+
+  format-check:
+    name: clang-format (pinned major 18)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned clang-format
+        run: sudo apt-get update -q && sudo apt-get install -y -q clang-format-18
+      - name: Check formatting of all C++ sources
+        run: |
+          set -eu
+          files=$(git ls-files '*.h' '*.hpp' '*.cpp' '*.cc' || true)
+          if [ -z "$files" ]; then
+            echo "format-check: no C++ sources yet (M0) — trivially clean"
+            exit 0
+          fi
+          echo "$files" | xargs ${CLANG_FORMAT} --dry-run --Werror
+
+  docs-build:
+    name: docs build (mkdocs --strict)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned docs toolchain
+        run: python3 -m pip install --require-hashes --no-deps -r docs/requirements.txt 2>/dev/null
+             || python3 -m pip install -r docs/requirements.txt
+      - name: Build documentation site (strict; broken links fail, REQ-DOC-005)
+        run: mkdocs build --strict -f docs/mkdocs.yml
+
+  configure-check:
+    name: cmake presets configure (REQ-BUILD-011)
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        preset: [dev, release]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configure (${{ matrix.preset }})
+        run: cmake --preset ${{ matrix.preset }}
+
+  dco-check:
+    name: DCO sign-off (REQ-STD-009)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Verify Signed-off-by on every commit in the PR
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          bad=0
+          for sha in $(git rev-list "$BASE_SHA".."$HEAD_SHA"); do
+            if ! git log -1 --format=%B "$sha" | grep -q '^Signed-off-by: '; then
+              echo "::error::commit $sha lacks a DCO Signed-off-by trailer (git commit -s)"
+              bad=1
+            fi
+          done
+          exit $bad

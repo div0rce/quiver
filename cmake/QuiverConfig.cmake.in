@@ -1,0 +1,11 @@
+# Quiver CMake package configuration template — REQ-BUILD-009 (docs/prd/03-build-system.md).
+# Consumed by the install/export machinery introduced at milestone M8; committed at M0 so the
+# packaging surface is predetermined (docs/prd/18-milestones.md). The shipped package exports
+# exactly: headers, the static library, and the quiver::quiver target — nothing else
+# (REQ-BUILD-009, REQ-REPO-007).
+
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/QuiverTargets.cmake")
+
+check_required_components(Quiver)

@@ -1,0 +1,21 @@
+# Quiver static-analysis configuration — REQ-STD-007 (docs/prd/17-coding-standards.md).
+# Check set is pinned; per-check suppressions only via inline NOLINT(check) + reason.
+---
+Checks: >
+  -*,
+  bugprone-*,
+  performance-*,
+  portability-*,
+  modernize-use-bit-cast,
+  cppcoreguidelines-init-variables,
+  misc-definitions-in-headers,
+  -bugprone-easily-swappable-parameters
+WarningsAsErrors: ''
+HeaderFilterRegex: '(include/quiver|src)/.*'
+FormatStyle: file
+CheckOptions:
+  - key: bugprone-easily-swappable-parameters.MinimumLength
+    value: '3'
+# Note: bugprone-easily-swappable-parameters is disabled globally with reason:
+# kernel signatures are pointer+length shaped by contract (REQ-API-* / ADR-006);
+# the check would flag the entire public surface. Recorded here per REQ-STD-007.

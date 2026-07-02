@@ -1,0 +1,32 @@
+# Build trees (CMakePresets binaryDir convention: build/<preset>)
+build/
+cmake-build-*/
+
+# MkDocs site output
+site/
+docs/site/
+
+# Python tooling
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
+
+# Fuzzing artifacts (corpora are committed; crash artifacts are not)
+crash-*
+leak-*
+timeout-*
+
+# Coverage / profiling output
+*.profraw
+*.profdata
+*.gcda
+*.gcno

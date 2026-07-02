@@ -1,0 +1,57 @@
+# Quiver documentation site — ADR-019, REQ-DOC-005 (docs/prd/14-documentation.md).
+# Built with `mkdocs build --strict -f docs/mkdocs.yml`; broken links fail CI.
+# Navigation grows per milestone as pages come into existence; the target navigation
+# is PRD 14 §3. Pages not yet in nav remain reachable via directory README links.
+
+site_name: Quiver
+site_description: >-
+  Dependency-free C++23 vectorized analytical kernels with a reproducible
+  cross-ISA performance ledger.
+site_url: !ENV [QUIVER_DOCS_SITE_URL, "https://example.invalid/quiver/"]
+repo_url: !ENV [QUIVER_DOCS_REPO_URL, "https://github.com/div0rce/quiver"]
+
+docs_dir: .
+site_dir: ../site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: black
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.highlight
+
+exclude_docs: |
+  mkdocs.yml
+  requirements.txt
+
+validation:
+  omitted_files: info
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: info
+
+nav:
+  - Home: README.md
+  - Guides:
+      - Building: guides/building.md
+  - Architecture:
+      - Module map: architecture/module-map.md
+      - Overview: architecture/README.md
+  - ADRs: adr/README.md
+  - Specifications:
+      - Design Charter: design/DESIGN_CHARTER.md
+      - Engineering PRD: prd/README.md
+  - Releases:
+      - Overview: releases/README.md
+      - Gate M0: releases/gates/M0.md

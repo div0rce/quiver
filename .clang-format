@@ -1,0 +1,27 @@
+# Quiver formatting rules — REQ-STD-002 (docs/prd/17-coding-standards.md).
+# CI pins the clang-format major version; see .github/workflows/ci.yml.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++20
+IndentWidth: 2
+ColumnLimit: 100
+PointerAlignment: Left
+DerivePointerAlignment: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: true
+BinPackParameters: true
+BreakBeforeBraces: Attach
+IncludeBlocks: Preserve
+IndentPPDirectives: None
+InsertNewlineAtEOF: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: None
+ReflowComments: true
+SeparateDefinitionBlocks: Leave
+SortIncludes: CaseSensitive
+SpacesBeforeTrailingComments: 2

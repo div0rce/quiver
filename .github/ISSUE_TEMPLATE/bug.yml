@@ -1,0 +1,46 @@
+name: Bug report
+description: A defect in Quiver's behavior, build, or documentation.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For **performance disputes about published ledger numbers**, use the
+        "Benchmark dispute" template instead. For suspected **security issues**, use GitHub private
+        security advisories (see SECURITY.md) — not a public issue.
+  - type: input
+    id: version
+    attributes:
+      label: Quiver version / commit
+      placeholder: "v0.x.y or git SHA"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, compiler + version, CPU (and `quiver::active_isa()` once the API exists).
+      placeholder: |
+        Ubuntu 24.04, clang 19.1, AMD Ryzen 9 7950X
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Smallest input/code that reproduces the problem. Include the seed if a test printed one (REQ-TEST-012).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs observed behavior
+      description: Cite the documented contract if applicable (docs/api page, REQ ID, or PRD section).
+    validations:
+      required: true
+  - type: checkboxes
+    id: contract
+    attributes:
+      label: Contract check
+      options:
+        - label: I checked the documented preconditions for the API involved (contract-violating inputs are UB by contract — see docs/prd/16-error-handling.md).
