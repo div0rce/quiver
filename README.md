@@ -8,7 +8,7 @@ Two co-equal products, one repository: **the library** and **the ledger**.
 
 ## Project status
 
-**Pre-release — milestone M0 (repository bootstrap) complete.** No production C++ exists yet; the public API, kernels, tests, benchmarks, and ledger arrive milestone-by-milestone per the engineering plan. See [docs/prd/18-milestones.md](docs/prd/18-milestones.md) for the roadmap (M0–M10 → v0.1–v1.0) and [docs/releases/gates/](docs/releases/gates/) for gate evidence.
+**Pre-release — milestone M1 complete:** vocabulary types (Surface B), CPU feature detection, and the runtime-dispatch framework (Surface C) are implemented and tested across x86-64, ARM64, and macOS with ASan/UBSan/TSan coverage. Kernels arrive at M3 (v0.1); the ledger at M5 (v0.3). See [docs/prd/18-milestones.md](docs/prd/18-milestones.md) for the roadmap (M0–M10 → v0.1–v1.0) and [docs/releases/gates/](docs/releases/gates/) for gate evidence.
 
 ## What Quiver is (and is not)
 

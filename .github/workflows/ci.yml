@@ -1,10 +1,9 @@
-# Quiver CI — M0 skeleton (MOD-CI).
-# REQ-CI-001 (SHA-pinned actions), REQ-CI-002 gate subset live at M0:
-# format-check, repo-lint, docs-build, configure-check, dco-check.
-# The build/test matrix, sanitizers, SDE, fuzz, and bench-smoke jobs activate at their
-# owning milestones (docs/prd/13-ci-architecture.md, docs/prd/18-milestones.md).
+# Quiver CI — M1 gate set (MOD-CI).
+# REQ-CI-001 (SHA-pinned actions), REQ-CI-002/-003 (build/test matrix, sanitizers, TSan, tidy),
+# REQ-CI-010..012. SDE/fuzz/bench-smoke/nightly jobs activate at their owning milestones
+# (docs/prd/13-ci-architecture.md, docs/prd/18-milestones.md).
 #
-# Action pin registry (REQ-SEC-006; verify against upstream when adding):
+# Action pin registry (REQ-SEC-006; verified against upstream tags):
 #   actions/checkout v4.2.2 = 11bd71901bbe5b1630ceea73d27597364c9af683
 
 name: ci
@@ -15,7 +14,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read  # REQ-SEC-008: minimal default; jobs never need more in ci.yml
+  contents: read  # REQ-SEC-008: minimal default
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -23,6 +22,7 @@ concurrency:
 
 env:
   CLANG_FORMAT: clang-format-18  # pinned major version, REQ-STD-002
+  CLANG_TIDY: clang-tidy-18      # pinned major version, REQ-STD-007 / REQ-TEST-010
 
 jobs:
   repo-lint:
@@ -45,7 +45,7 @@ jobs:
           set -eu
           files=$(git ls-files '*.h' '*.hpp' '*.cpp' '*.cc' || true)
           if [ -z "$files" ]; then
-            echo "format-check: no C++ sources yet (M0) — trivially clean"
+            echo "format-check: no C++ sources — trivially clean"
             exit 0
           fi
           echo "$files" | xargs ${CLANG_FORMAT} --dry-run --Werror
@@ -56,8 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install pinned docs toolchain
-        run: python3 -m pip install --require-hashes --no-deps -r docs/requirements.txt 2>/dev/null
-             || python3 -m pip install -r docs/requirements.txt
+        run: python3 -m pip install -r docs/requirements.txt
       - name: Build documentation site (strict; broken links fail, REQ-DOC-005)
         run: mkdocs build --strict -f docs/mkdocs.yml
 
@@ -71,6 +70,96 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Configure (${{ matrix.preset }})
         run: cmake --preset ${{ matrix.preset }}
+
+  build-test:
+    name: build+test (${{ matrix.os }}, ${{ matrix.compiler }}, ${{ matrix.preset }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # REQ-CI-003: ubuntu x86-64 — two GCC + two Clang versions, dev + werror-release
+          - { os: ubuntu-24.04, compiler: gcc-13,   cc: gcc-13,   cxx: g++-13,     preset: dev }
+          - { os: ubuntu-24.04, compiler: gcc-13,   cc: gcc-13,   cxx: g++-13,     preset: ci-gcc }
+          - { os: ubuntu-24.04, compiler: gcc-14,   cc: gcc-14,   cxx: g++-14,     preset: dev }
+          - { os: ubuntu-24.04, compiler: gcc-14,   cc: gcc-14,   cxx: g++-14,     preset: ci-gcc }
+          - { os: ubuntu-24.04, compiler: clang-17, cc: clang-17, cxx: clang++-17, preset: dev }
+          - { os: ubuntu-24.04, compiler: clang-17, cc: clang-17, cxx: clang++-17, preset: ci-clang }
+          - { os: ubuntu-24.04, compiler: clang-19, cc: clang-19, cxx: clang++-19, preset: dev }
+          - { os: ubuntu-24.04, compiler: clang-19, cc: clang-19, cxx: clang++-19, preset: ci-clang }
+          # REQ-CI-003: ubuntu ARM64 (NEON platform from M5; framework coverage from M1)
+          - { os: ubuntu-24.04-arm, compiler: gcc-14,   cc: gcc-14,   cxx: g++-14,     preset: dev }
+          - { os: ubuntu-24.04-arm, compiler: gcc-14,   cc: gcc-14,   cxx: g++-14,     preset: ci-gcc }
+          - { os: ubuntu-24.04-arm, compiler: clang-19, cc: clang-19, cxx: clang++-19, preset: dev }
+          - { os: ubuntu-24.04-arm, compiler: clang-19, cc: clang-19, cxx: clang++-19, preset: ci-clang }
+          # REQ-CI-003: macOS AppleClang
+          - { os: macos-15, compiler: appleclang, cc: cc, cxx: c++, preset: dev }
+          - { os: macos-15, compiler: appleclang, cc: cc, cxx: c++, preset: release }
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install compiler (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -eu
+          case "${{ matrix.compiler }}" in
+            gcc-14)
+              command -v g++-14 >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q gcc-14 g++-14; } ;;
+            clang-17|clang-19)
+              v="${{ matrix.compiler }}"; v="${v#clang-}"
+              command -v "clang-$v" >/dev/null || { wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh && sudo bash /tmp/llvm.sh "$v"; } ;;
+            *) ;;
+          esac
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: cmake --preset ${{ matrix.preset }}
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }} -j 4
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
+  asan-ubsan:
+    name: sanitizers (ASan+UBSan, clang)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configure
+        env: { CC: clang-18, CXX: clang++-18 }
+        run: cmake --preset asan-ubsan
+      - name: Build
+        run: cmake --build --preset asan-ubsan -j 4
+      - name: Test
+        run: ctest --preset asan-ubsan --output-on-failure
+
+  tsan:
+    name: sanitizers (TSan, dispatch protocol)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configure
+        env: { CC: clang-18, CXX: clang++-18 }
+        run: cmake --preset tsan
+      - name: Build
+        run: cmake --build --preset tsan -j 4
+      - name: Test
+        run: ctest --preset tsan --output-on-failure
+
+  clang-tidy:
+    name: clang-tidy (pinned major 18, REQ-TEST-010)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned clang-tidy
+        run: sudo apt-get update -q && sudo apt-get install -y -q clang-tidy-18
+      - name: Configure (compile commands)
+        env: { CC: clang-18, CXX: clang++-18 }
+        run: cmake --preset dev
+      - name: Run clang-tidy over shipped library sources
+        run: |
+          set -eu
+          ${CLANG_TIDY} -p build/dev --warnings-as-errors='*' \
+            $(git ls-files 'src/*.cpp')
 
   dco-check:
     name: DCO sign-off (REQ-STD-009)

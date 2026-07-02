@@ -6,6 +6,15 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- M1 — Core, CPU detection, dispatch framework: Surface B vocabulary types
+  (`quiver/core.h`: `Element` concepts, enums, `BatchView`/`BitmapView`/`SelVec`/`Sma`,
+  `SumType`), Surface C dispatch/introspection (`quiver/dispatch.h`: `active_isa`,
+  `cpu_supports`, ISA override, `warmup`, `version`), first-party CPUID/XGETBV +
+  getauxval/sysctl feature detection, the lazy-atomic policy-epoch dispatch framework
+  (ADR-004) with an empty kernel registry until M3, the `quiver::quiver` static library
+  target, unit/TSan test suites, the CI build/test matrix (2×GCC + 2×Clang on x86-64,
+  GCC+Clang on ARM64, AppleClang on macOS; ASan/UBSan/TSan; pinned clang-tidy), and the
+  include-graph repository lint.
 - M0 — Repository bootstrap: governance files (LICENSE, CONTRIBUTING, SECURITY), documentation skeleton with per-directory ownership, materialized ADR-001…ADR-026 under `docs/adr/`, configure-only CMake skeleton with the full option surface (REQ-BUILD-006) and presets (REQ-BUILD-011), CI skeleton (format / repo-lint / docs-build / configure gates), MkDocs documentation site, and the M0 gate record (`docs/releases/gates/M0.md`).
 
-No library code exists yet; the first kernels ship with v0.1 (milestone M3).
+No kernels exist yet; the first kernel families ship with v0.1 (milestone M3).

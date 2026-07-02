@@ -76,6 +76,56 @@ def main() -> int:
         if indexed != set(range(1, want + 1)):
             err(f"REQ-DOC-004: docs/adr/README.md index does not list exactly ADR-001..{want:03d}")
 
+    # --- Include-graph lint (REQ-REPO-005/-006/-009; layering per PRD 02 §6) -----------------
+    std_headers = {
+        "algorithm", "array", "atomic", "bit", "cassert", "concepts", "cstddef", "cstdint",
+        "cstdio", "cstdlib", "cstring", "limits", "memory", "new", "numeric", "span",
+        "string", "string_view", "thread", "type_traits", "utility", "vector",
+    }
+    os_headers_by_file = {
+        "src/cpu/cpu_features.cpp": {"cpuid.h", "intrin.h", "immintrin.h",
+                                     "sys/auxv.h", "sys/sysctl.h"},
+    }
+    # module -> allowed quoted-include prefixes (dependency direction, PRD 02 §6)
+    quoted_rules = [
+        ("include/quiver/", ("quiver/",)),
+        ("src/cpu/", ("quiver/detail/", "src/cpu/")),
+        ("src/dispatch/", ("quiver/", "src/cpu/", "src/dispatch/")),
+        ("src/kernels/common/", ("quiver/", "src/kernels/common/")),
+        # kernel families: own dir + common only (REQ-REPO-009); family dirs checked generically
+        ("src/kernels/", ("quiver/", "src/kernels/common/", "src/dispatch/")),
+    ]
+    inc_re = re.compile(r'^\s*#\s*include\s+([<"])([^">]+)[">]', re.M)
+    for f in sorted(list(ROOT.glob("include/**/*.h")) + list(ROOT.glob("src/**/*.h"))
+                    + list(ROOT.glob("src/**/*.cpp"))):
+        rel = f.relative_to(ROOT).as_posix()
+        text = f.read_text(errors="replace")
+        for m2 in inc_re.finditer(text):
+            style, target = m2.group(1), m2.group(2)
+            if style == "<":
+                allowed = std_headers | os_headers_by_file.get(rel, set())
+                if target not in allowed:
+                    err(f"REQ-REPO-006: {rel} includes <{target}> — not in the std/OS "
+                        f"allow-list (shipped code: std + documented OS headers only)")
+            else:
+                rules = [pfx for base, pfx in quoted_rules if rel.startswith(base)]
+                prefixes = rules[0] if rules else ()
+                if not any(target.startswith(p) for p in prefixes):
+                    err(f"REQ-REPO-005/-009: {rel} includes \"{target}\" — violates the "
+                        f"module dependency rules of PRD 02 §6")
+                if not (ROOT / "include" / target).exists() and not (ROOT / target).exists():
+                    err(f"REQ-REPO-006: {rel} includes \"{target}\" which does not resolve "
+                        f"within include/ or the repo root")
+        # kernel-family cross-include check (REQ-REPO-009): a family may not include another
+        # family's directory (vacuous until M3; generic rule keeps it enforced forever).
+        fam = re.match(r"src/kernels/(?!common)([a-z0-9_]+)/", rel)
+        if fam:
+            for m3 in inc_re.finditer(text):
+                tgt = m3.group(2)
+                other = re.match(r"src/kernels/(?!common)([a-z0-9_]+)/", tgt)
+                if other and other.group(1) != fam.group(1):
+                    err(f"REQ-REPO-009: {rel} includes another family's internals: {tgt}")
+
     # --- Source scans (vacuous while no production code exists) ------------------------------
     src_globs = ["include/**/*.h", "src/**/*.h", "src/**/*.cpp"]
     for pattern in src_globs:
