@@ -26,7 +26,9 @@ QUIVER_FORCE_INLINE bool is_valid(const std::uint8_t* validity, std::int64_t i) 
   return validity == nullptr || bitmap_get(validity, i);
 }
 
-QUIVER_FORCE_INLINE std::int64_t bitmap_bytes(std::int64_t n) noexcept { return (n + 7) >> 3; }
+QUIVER_FORCE_INLINE std::int64_t bitmap_bytes(std::int64_t n) noexcept {
+  return (n + 7) >> 3;
+}
 
 // Mask covering the live bits of the final byte; producers zero everything above it
 // (ADR-016 tail-zeroing — what makes bitmap outputs memcmp-comparable).
@@ -44,7 +46,7 @@ QUIVER_FORCE_INLINE void zero_tail_bits(std::uint8_t* bits, std::int64_t n) noex
 // 64-bit word access over byte streams via memcpy — never a misaligned dereference
 // (REQ-SEC-002, REQ-SIMD-007 discipline applies to scalar code too).
 QUIVER_FORCE_INLINE std::uint64_t load_word(const std::uint8_t* p) noexcept {
-  std::uint64_t w;
+  std::uint64_t w = 0;
   std::memcpy(&w, p, sizeof(w));
   return w;
 }

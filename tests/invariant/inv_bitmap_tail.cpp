@@ -26,8 +26,8 @@ TEST(InvBitmapTail, AllProducersZeroTails) {
     quiver_test::fill_bitmap_uniform(rng, b.data(), n, 50);
     std::vector<std::uint8_t> out(bytes, 0xFF);
 
-    quiver::compare_bitmap(quiver::CompareOp::kNe, quiver::BatchView<std::int32_t>{v.data(), n},
-                           0, quiver::BitmapView{nullptr}, out.data());
+    quiver::compare_bitmap(quiver::CompareOp::kNe, quiver::BatchView<std::int32_t>{v.data(), n}, 0,
+                           quiver::BitmapView{nullptr}, out.data());
     ASSERT_TRUE(quiver_test::ref::tail_bits_zero(out.data(), n)) << "K1 n=" << n;
 
     quiver::mask_not(quiver::BitmapView{a.data()}, n, out.data());  // NOT sets high bits
@@ -37,8 +37,7 @@ TEST(InvBitmapTail, AllProducersZeroTails) {
     ASSERT_TRUE(quiver_test::ref::tail_bits_zero(out.data(), n)) << "K4 xor n=" << n;
 
     std::vector<std::uint32_t> idx(static_cast<std::size_t>(n));
-    const std::int64_t cnt =
-        quiver::bitmap_to_selvec(quiver::BitmapView{a.data()}, n, idx.data());
+    const std::int64_t cnt = quiver::bitmap_to_selvec(quiver::BitmapView{a.data()}, n, idx.data());
     std::fill(out.begin(), out.end(), 0xFF);
     quiver::selvec_to_bitmap(quiver::SelVec{idx.data(), cnt}, n, out.data());
     ASSERT_TRUE(quiver_test::ref::tail_bits_zero(out.data(), n)) << "K3 n=" << n;

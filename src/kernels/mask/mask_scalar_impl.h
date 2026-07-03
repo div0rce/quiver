@@ -19,20 +19,20 @@ namespace detail::scalar_impl {
 QUIVER_FORCE_INLINE std::uint64_t apply_mask_op(MaskOp op, std::uint64_t a,
                                                 std::uint64_t b) noexcept {
   switch (op) {
-    case MaskOp::kAnd:
-      return a & b;
-    case MaskOp::kOr:
-      return a | b;
-    case MaskOp::kAndNot:
-      return a & ~b;
-    case MaskOp::kXor:
-      return a ^ b;
+  case MaskOp::kAnd:
+    return a & b;
+  case MaskOp::kOr:
+    return a | b;
+  case MaskOp::kAndNot:
+    return a & ~b;
+  case MaskOp::kXor:
+    return a ^ b;
   }
   return 0;  // unreachable for in-contract op values
 }
 
-inline void mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b,
-                         std::int64_t n, std::uint8_t* out) noexcept {
+inline void mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
+                         std::uint8_t* out) noexcept {
   const std::int64_t bytes = bitmap_bytes(n);
   const std::int64_t words = bytes >> 3;
   for (std::int64_t w = 0; w < words; ++w) {

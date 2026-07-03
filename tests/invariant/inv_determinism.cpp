@@ -13,8 +13,8 @@
 namespace {
 
 TEST(InvDeterminism, TwoRunsAreByteIdentical) {
-  for (const quiver::Isa isa : {quiver::Isa::kScalar, quiver::Isa::kNeon, quiver::Isa::kAvx2,
-                                quiver::Isa::kAvx512}) {
+  for (const quiver::Isa isa :
+       {quiver::Isa::kScalar, quiver::Isa::kNeon, quiver::Isa::kAvx2, quiver::Isa::kAvx512}) {
     if (isa != quiver::Isa::kScalar && !quiver::cpu_supports(isa)) {
       continue;
     }
@@ -27,10 +27,9 @@ TEST(InvDeterminism, TwoRunsAreByteIdentical) {
     std::vector<std::uint8_t> validity((n + 7) / 8);
     quiver_test::fill_bitmap_uniform(rng, validity.data(), n, 90);
 
-    auto run = [&](std::vector<std::uint8_t>& bits, std::vector<std::uint32_t>& idx,
-                   double& sum) {
-      quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<double>{v.data(), n},
-                             5.0e5, quiver::BitmapView{validity.data()}, bits.data());
+    auto run = [&](std::vector<std::uint8_t>& bits, std::vector<std::uint32_t>& idx, double& sum) {
+      quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<double>{v.data(), n}, 5.0e5,
+                             quiver::BitmapView{validity.data()}, bits.data());
       quiver::bitmap_to_selvec(quiver::BitmapView{bits.data()}, n, idx.data());
       sum = quiver::reduce_sum_wrap(quiver::BatchView<double>{v.data(), n},
                                     quiver::BitmapView{validity.data()});

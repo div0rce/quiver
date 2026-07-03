@@ -8,17 +8,16 @@
 
 #include <gtest/gtest.h>
 
-#include "tests/testkit/generators.h"
-#include "tests/testkit/reference.h"
 #include "quiver/filter.h"
 #include "quiver/mask.h"
 #include "quiver/select.h"
+#include "tests/testkit/generators.h"
+#include "tests/testkit/reference.h"
 
 namespace {
 
 using quiver_test::Rng;
 namespace ref = quiver_test::ref;
-
 
 TEST(PropFilter, RepresentationEquivalenceAndSubsequence) {
   Rng rng(0x9E0902);
@@ -31,8 +30,7 @@ TEST(PropFilter, RepresentationEquivalenceAndSubsequence) {
     const quiver::BatchView<std::uint64_t> in{v.data(), n};
 
     std::vector<std::uint64_t> via_bitmap(static_cast<std::size_t>(n));
-    const std::int64_t c1 =
-        quiver::filter(in, quiver::BitmapView{bits.data()}, via_bitmap.data());
+    const std::int64_t c1 = quiver::filter(in, quiver::BitmapView{bits.data()}, via_bitmap.data());
     ASSERT_EQ(c1, quiver::mask_popcount(quiver::BitmapView{bits.data()}, n));
 
     std::vector<std::uint32_t> idx(static_cast<std::size_t>(n));
@@ -40,14 +38,14 @@ TEST(PropFilter, RepresentationEquivalenceAndSubsequence) {
         quiver::bitmap_to_selvec(quiver::BitmapView{bits.data()}, n, idx.data());
     std::vector<std::uint64_t> via_selvec(static_cast<std::size_t>(n));
     ASSERT_EQ(quiver::filter(in, quiver::SelVec{idx.data(), c2}, via_selvec.data()), c1);
-    ASSERT_EQ(std::memcmp(via_bitmap.data(), via_selvec.data(),
-                          static_cast<std::size_t>(c1) * 8), 0);
+    ASSERT_EQ(std::memcmp(via_bitmap.data(), via_selvec.data(), static_cast<std::size_t>(c1) * 8),
+              0);
 
     // Subsequence check: outputs appear in input order.
     std::int64_t cursor = 0;
     for (std::int64_t j = 0; j < c1; ++j) {
-      while (cursor < n && v[static_cast<std::size_t>(cursor)] !=
-                               via_bitmap[static_cast<std::size_t>(j)]) {
+      while (cursor < n &&
+             v[static_cast<std::size_t>(cursor)] != via_bitmap[static_cast<std::size_t>(j)]) {
         ++cursor;
       }
       ASSERT_LT(cursor, n) << "output element not found in order";

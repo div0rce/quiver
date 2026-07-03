@@ -9,19 +9,18 @@
 #if defined(__x86_64__) || defined(_M_X64)
 
 #if defined(__clang__)
-#define QUIVER_TARGET_AVX2_BEGIN \
+#define QUIVER_TARGET_AVX2_BEGIN                                                                   \
   _Pragma("clang attribute push(__attribute__((target(\"avx2,bmi2\"))), apply_to = function)")
 #define QUIVER_TARGET_AVX2_END _Pragma("clang attribute pop")
-#define QUIVER_TARGET_AVX512_BEGIN                                                            \
-  _Pragma("clang attribute push(__attribute__((target(\"avx512f,avx512bw,avx512dq,avx512vl," \
+#define QUIVER_TARGET_AVX512_BEGIN                                                                 \
+  _Pragma("clang attribute push(__attribute__((target(\"avx512f,avx512bw,avx512dq,avx512vl,"       \
           "avx512vbmi2,avx512vpopcntdq\"))), apply_to = function)")
 #define QUIVER_TARGET_AVX512_END _Pragma("clang attribute pop")
 #elif defined(__GNUC__)
-#define QUIVER_TARGET_AVX2_BEGIN \
-  _Pragma("GCC push_options") _Pragma("GCC target(\"avx2,bmi2\")")
+#define QUIVER_TARGET_AVX2_BEGIN _Pragma("GCC push_options") _Pragma("GCC target(\"avx2,bmi2\")")
 #define QUIVER_TARGET_AVX2_END _Pragma("GCC pop_options")
-#define QUIVER_TARGET_AVX512_BEGIN                                                     \
-  _Pragma("GCC push_options")                                                          \
+#define QUIVER_TARGET_AVX512_BEGIN                                                                 \
+  _Pragma("GCC push_options")                                                                      \
       _Pragma("GCC target(\"avx512f,avx512bw,avx512dq,avx512vl,avx512vbmi2,avx512vpopcntdq\")")
 #define QUIVER_TARGET_AVX512_END _Pragma("GCC pop_options")
 #else  // MSVC: per-TU /arch flags (REQ-SIMD-002 exception; docs/prd/03 §3)

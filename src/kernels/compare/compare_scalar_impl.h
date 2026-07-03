@@ -24,18 +24,18 @@ namespace detail::scalar_impl {
 template <class T>
 QUIVER_FORCE_INLINE bool compare_one(CompareOp op, T a, T b) noexcept {
   switch (op) {
-    case CompareOp::kEq:
-      return a == b;
-    case CompareOp::kNe:
-      return !(a == b);
-    case CompareOp::kLt:
-      return a < b;
-    case CompareOp::kLe:
-      return a <= b;
-    case CompareOp::kGt:
-      return a > b;
-    case CompareOp::kGe:
-      return a >= b;
+  case CompareOp::kEq:
+    return a == b;
+  case CompareOp::kNe:
+    return !(a == b);
+  case CompareOp::kLt:
+    return a < b;
+  case CompareOp::kLe:
+    return a <= b;
+  case CompareOp::kGt:
+    return a > b;
+  case CompareOp::kGe:
+    return a >= b;
   }
   return false;  // unreachable for in-contract op values
 }

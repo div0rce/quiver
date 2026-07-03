@@ -21,8 +21,7 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB001ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
-                std::int64_t values) {
+void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
   state.SetItemsProcessed(state.iterations() * values);
   if (c.valid) {
     const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
@@ -36,7 +35,6 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
   }
 }
 
-
 void bm_compare_bitmap(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const int sel_pct = static_cast<int>(state.range(1));
@@ -44,14 +42,13 @@ void bm_compare_bitmap(benchmark::State& state) {
   std::vector<std::int64_t> v(static_cast<std::size_t>(n));
   quiver::bench::fill_uniform(rng, v.data(), n);
   // Comparand at the requested selectivity percentile of the uniform range.
-  const std::int64_t comparand =
-      static_cast<std::int64_t>(static_cast<std::uint64_t>(~0ull) / 100 * (100 - sel_pct) -
-                                (~0ull >> 1));
+  const std::int64_t comparand = static_cast<std::int64_t>(
+      static_cast<std::uint64_t>(~0ull) / 100 * (100 - sel_pct) - (~0ull >> 1));
   std::vector<std::uint8_t> bits(static_cast<std::size_t>((n + 7) / 8));
 
-  const std::int64_t got = quiver::compare_bitmap(
-      quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{v.data(), n}, comparand,
-      quiver::BitmapView{nullptr}, bits.data());
+  const std::int64_t got =
+      quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{v.data(), n},
+                             comparand, quiver::BitmapView{nullptr}, bits.data());
   std::int64_t want = 0;  // independent recompute (REQ-BENCH-004)
   for (std::int64_t i = n - 1; i >= 0; --i) {
     want += v[static_cast<std::size_t>(i)] > comparand ? 1 : 0;
@@ -60,9 +57,9 @@ void bm_compare_bitmap(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(quiver::compare_bitmap(
-        quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{v.data(), n}, comparand,
-        quiver::BitmapView{nullptr}, bits.data()));
+    benchmark::DoNotOptimize(
+        quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{v.data(), n},
+                               comparand, quiver::BitmapView{nullptr}, bits.data()));
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }

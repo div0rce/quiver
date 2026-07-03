@@ -38,11 +38,11 @@ void bm_call_path(benchmark::State& state) {
   std::vector<std::uint8_t> bits(static_cast<std::size_t>((n + 7) / 8));
   quiver::warmup();
 
-  const std::int64_t a = quiver::compare_bitmap(
-      quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{v.data(), n}, std::int64_t{0},
-      quiver::BitmapView{nullptr}, bits.data());
-  const std::int64_t b = quiver::detail::scalar::k1_compare_bitmap(
-      quiver::CompareOp::kGt, v.data(), n, 0, nullptr, bits.data());
+  const std::int64_t a =
+      quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{v.data(), n},
+                             std::int64_t{0}, quiver::BitmapView{nullptr}, bits.data());
+  const std::int64_t b = quiver::detail::scalar::k1_compare_bitmap(quiver::CompareOp::kGt, v.data(),
+                                                                   n, 0, nullptr, bits.data());
   quiver::bench::validate_or_abort("BM_dispatch", a == b, "dispatched vs direct disagree");
 
   for (auto _ : state) {
@@ -66,15 +66,13 @@ void bm_warmup_cost(benchmark::State& state) {
 
 void register_benchmarks() {
   for (const std::int64_t n : {1, 64, 4096}) {
-    benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("dispatch", "compare_gt", "dispatched", "i64",
-                                  "n=" + std::to_string(n)),
-        bm_call_path<true>)
+    benchmark::RegisterBenchmark(quiver::bench::bench_name("dispatch", "compare_gt", "dispatched",
+                                                           "i64", "n=" + std::to_string(n)),
+                                 bm_call_path<true>)
         ->Args({n});
-    benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("dispatch", "compare_gt", "direct", "i64",
-                                  "n=" + std::to_string(n)),
-        bm_call_path<false>)
+    benchmark::RegisterBenchmark(quiver::bench::bench_name("dispatch", "compare_gt", "direct",
+                                                           "i64", "n=" + std::to_string(n)),
+                                 bm_call_path<false>)
         ->Args({n});
   }
   benchmark::RegisterBenchmark("BM_dispatch/warmup/steady/none/n=1", bm_warmup_cost);

@@ -7,7 +7,8 @@
 QUIVER_BEGIN_NAMESPACE
 namespace detail::scalar {
 
-void k4_mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n, std::uint8_t* out) noexcept {
+void k4_mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
+                     std::uint8_t* out) noexcept {
   return scalar_impl::mask_combine(op, a, b, n, out);
 }
 

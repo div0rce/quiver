@@ -19,8 +19,7 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB001ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
-                std::int64_t values) {
+void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
   state.SetItemsProcessed(state.iterations() * values);
   if (c.valid) {
     const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
@@ -33,7 +32,6 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
             : 0.0;
   }
 }
-
 
 void bm_mask_and(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
@@ -71,9 +69,9 @@ void register_benchmarks() {
                         : quiver::active_isa() == quiver::Isa::kAvx2 ? "avx2"
                                                                      : "avx512";
   for (const std::int64_t n : {4096, 65536, 1 << 20}) {
-    benchmark::RegisterBenchmark(quiver::bench::bench_name("mask", "and", variant, "bitmap",
-                                                           "n=" + std::to_string(n)),
-                                 bm_mask_and)
+    benchmark::RegisterBenchmark(
+        quiver::bench::bench_name("mask", "and", variant, "bitmap", "n=" + std::to_string(n)),
+        bm_mask_and)
         ->Args({n});
   }
 }

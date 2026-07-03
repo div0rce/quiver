@@ -8,17 +8,16 @@
 
 #include <gtest/gtest.h>
 
-#include "tests/testkit/generators.h"
-#include "tests/testkit/reference.h"
 #include "quiver/compare.h"
 #include "quiver/mask.h"
 #include "quiver/select.h"
+#include "tests/testkit/generators.h"
+#include "tests/testkit/reference.h"
 
 namespace {
 
 using quiver_test::Rng;
 namespace ref = quiver_test::ref;
-
 
 TEST(PropCompare, RepresentationsAgreeAndComposeWithK4) {
   Rng rng(0x9E0901);
@@ -35,15 +34,13 @@ TEST(PropCompare, RepresentationsAgreeAndComposeWithK4) {
 
     const std::int64_t cnt_bm = quiver::compare_bitmap(quiver::CompareOp::kGt, in, c,
                                                        quiver::BitmapView{nullptr}, bits.data());
-    const std::int64_t cnt_sv = quiver::compare_selvec(quiver::CompareOp::kGt, in, c,
-                                                       quiver::BitmapView{nullptr},
-                                                       idx_direct.data());
+    const std::int64_t cnt_sv = quiver::compare_selvec(
+        quiver::CompareOp::kGt, in, c, quiver::BitmapView{nullptr}, idx_direct.data());
     ASSERT_EQ(cnt_bm, cnt_sv);
     ASSERT_EQ(cnt_bm, quiver::mask_popcount(quiver::BitmapView{bits.data()}, n));
-    ASSERT_EQ(quiver::bitmap_to_selvec(quiver::BitmapView{bits.data()}, n, idx_via.data()),
-              cnt_bm);
-    ASSERT_EQ(std::memcmp(idx_direct.data(), idx_via.data(),
-                          static_cast<std::size_t>(cnt_bm) * 4), 0);
+    ASSERT_EQ(quiver::bitmap_to_selvec(quiver::BitmapView{bits.data()}, n, idx_via.data()), cnt_bm);
+    ASSERT_EQ(std::memcmp(idx_direct.data(), idx_via.data(), static_cast<std::size_t>(cnt_bm) * 4),
+              0);
 
     // kNe ≡ NOT(kEq) for integers.
     std::vector<std::uint8_t> eq(static_cast<std::size_t>(bytes));

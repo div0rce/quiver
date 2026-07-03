@@ -7,16 +7,15 @@
 
 #include <gtest/gtest.h>
 
-#include "tests/testkit/generators.h"
-#include "tests/testkit/reference.h"
 #include "quiver/mask.h"
 #include "quiver/select.h"
+#include "tests/testkit/generators.h"
+#include "tests/testkit/reference.h"
 
 namespace {
 
 using quiver_test::Rng;
 namespace ref = quiver_test::ref;
-
 
 TEST(PropSelect, RoundTripsAreIdentities) {
   Rng rng(0x9E0903);
@@ -24,8 +23,7 @@ TEST(PropSelect, RoundTripsAreIdentities) {
     const std::int64_t n = 1 + static_cast<std::int64_t>(rng.next_below(2000));
     const std::int64_t bytes = (n + 7) / 8;
     std::vector<std::uint8_t> bits(static_cast<std::size_t>(bytes));
-    quiver_test::fill_bitmap_uniform(rng, bits.data(), n,
-                                     static_cast<int>(rng.next_below(101)));
+    quiver_test::fill_bitmap_uniform(rng, bits.data(), n, static_cast<int>(rng.next_below(101)));
     std::vector<std::uint32_t> idx(static_cast<std::size_t>(n));
     const std::int64_t count =
         quiver::bitmap_to_selvec(quiver::BitmapView{bits.data()}, n, idx.data());

@@ -19,8 +19,7 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB001ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
-                std::int64_t values) {
+void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
   state.SetItemsProcessed(state.iterations() * values);
   if (c.valid) {
     const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
@@ -33,7 +32,6 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
             : 0.0;
   }
 }
-
 
 void bm_filter_bitmap(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));

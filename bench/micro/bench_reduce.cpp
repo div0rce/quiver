@@ -20,8 +20,7 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB001ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
-                std::int64_t values) {
+void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
   state.SetItemsProcessed(state.iterations() * values);
   if (c.valid) {
     const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
@@ -35,7 +34,6 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
   }
 }
 
-
 void bm_sum_i64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const int null_pct = static_cast<int>(state.range(1));
@@ -46,8 +44,8 @@ void bm_sum_i64(benchmark::State& state) {
   quiver::bench::fill_bitmap_uniform(rng, validity.data(), n, 100 - null_pct);
   const std::uint8_t* vd = null_pct == 0 ? nullptr : validity.data();
 
-  const std::int64_t got = quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{v.data(), n},
-                                                   quiver::BitmapView{vd});
+  const std::int64_t got =
+      quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{v.data(), n}, quiver::BitmapView{vd});
   std::uint64_t want = 0;
   for (std::int64_t i = 0; i < n; ++i) {
     const bool ok = vd == nullptr || ((vd[static_cast<std::size_t>(i) >> 3] >> (i & 7)) & 1u);
@@ -60,8 +58,8 @@ void bm_sum_i64(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(quiver::reduce_sum_wrap(
-        quiver::BatchView<std::int64_t>{v.data(), n}, quiver::BitmapView{vd}));
+    benchmark::DoNotOptimize(quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{v.data(), n},
+                                                     quiver::BitmapView{vd}));
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
@@ -94,17 +92,15 @@ void register_benchmarks() {
                                                                      : "avx512";
   for (const std::int64_t n : {4096, 65536}) {
     for (const int null_pct : {0, 10, 50}) {
-      benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("reduce", "sum_wrap", variant, "i64",
-                                    "n=" + std::to_string(n) + "/nulls=" +
-                                        std::to_string(null_pct)),
-          bm_sum_i64)
+      benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", variant, "i64",
+                                                             "n=" + std::to_string(n) + "/nulls=" +
+                                                                 std::to_string(null_pct)),
+                                   bm_sum_i64)
           ->Args({n, null_pct});
     }
-    benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("reduce", "sum_wrap", variant, "f64",
-                                  "n=" + std::to_string(n) + "/nulls=0"),
-        bm_sum_f64)
+    benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", variant, "f64",
+                                                           "n=" + std::to_string(n) + "/nulls=0"),
+                                 bm_sum_f64)
         ->Args({n});
   }
 }

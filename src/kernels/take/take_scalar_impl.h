@@ -16,8 +16,8 @@ QUIVER_BEGIN_NAMESPACE
 namespace detail::scalar_impl {
 
 template <class T>
-void take(const T* values, std::int64_t values_len, const std::uint32_t* idx,
-          std::int64_t idx_len, T* out) noexcept {
+void take(const T* values, std::int64_t values_len, const std::uint32_t* idx, std::int64_t idx_len,
+          T* out) noexcept {
 #if defined(QUIVER_ENABLE_ASSERTS)
   for (std::int64_t j = 0; j < idx_len; ++j) {
     QUIVER_ASSERT(idx[j] < static_cast<std::uint64_t>(values_len),
@@ -74,8 +74,8 @@ void dict_decode(const T* dict, std::int64_t dict_len, const C* codes, std::int6
 // Fused decode: out[j] = dict[codes[sel[j]]], packed; unselected code positions are never
 // read (REQ-K5-003 — validated by the guard-page decode test).
 template <class T, class C>
-void dict_decode_sel(const T* dict, std::int64_t dict_len, const C* codes,
-                     const std::uint32_t* sel, std::int64_t sel_len, T* out) noexcept {
+void dict_decode_sel(const T* dict, std::int64_t dict_len, const C* codes, const std::uint32_t* sel,
+                     std::int64_t sel_len, T* out) noexcept {
   for (std::int64_t j = 0; j < sel_len; ++j) {
     const C code = codes[sel[j]];
     QUIVER_ASSERT(static_cast<std::uint64_t>(code) < static_cast<std::uint64_t>(dict_len),

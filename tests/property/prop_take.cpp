@@ -8,16 +8,15 @@
 
 #include <gtest/gtest.h>
 
-#include "tests/testkit/generators.h"
-#include "tests/testkit/reference.h"
 #include "quiver/filter.h"
 #include "quiver/take.h"
+#include "tests/testkit/generators.h"
+#include "tests/testkit/reference.h"
 
 namespace {
 
 using quiver_test::Rng;
 namespace ref = quiver_test::ref;
-
 
 TEST(PropTake, GatherIdentities) {
   Rng rng(0x9E0905);
@@ -35,11 +34,11 @@ TEST(PropTake, GatherIdentities) {
     quiver::take(quiver::BatchView<double>{v.data(), n}, quiver::SelVec{iota.data(), n},
                  out.data());
     ASSERT_EQ(std::memcmp(out.data(), v.data(), static_cast<std::size_t>(n) * 8), 0);
-    quiver::take(quiver::BatchView<double>{v.data(), n}, quiver::SelVec{rev.data(), n},
-                 out.data());
+    quiver::take(quiver::BatchView<double>{v.data(), n}, quiver::SelVec{rev.data(), n}, out.data());
     for (std::int64_t i = 0; i < n; ++i) {
       ASSERT_EQ(std::memcmp(&out[static_cast<std::size_t>(i)],
-                            &v[static_cast<std::size_t>(n - 1 - i)], 8), 0);
+                            &v[static_cast<std::size_t>(n - 1 - i)], 8),
+                0);
     }
 
     // dict_decode ≡ take with codes as indices.
@@ -57,8 +56,8 @@ TEST(PropTake, GatherIdentities) {
     std::vector<double> tak(static_cast<std::size_t>(n));
     quiver::dict_decode(quiver::BatchView<double>{dict.data(), kDict}, codes8.data(), n,
                         dec.data());
-    quiver::take(quiver::BatchView<double>{dict.data(), kDict},
-                 quiver::SelVec{codes32.data(), n}, tak.data());
+    quiver::take(quiver::BatchView<double>{dict.data(), kDict}, quiver::SelVec{codes32.data(), n},
+                 tak.data());
     ASSERT_EQ(std::memcmp(dec.data(), tak.data(), static_cast<std::size_t>(n) * 8), 0);
 
     // Fused decode ≡ (filter codes) ∘ decode.

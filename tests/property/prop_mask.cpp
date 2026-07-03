@@ -8,15 +8,14 @@
 
 #include <gtest/gtest.h>
 
+#include "quiver/mask.h"
 #include "tests/testkit/generators.h"
 #include "tests/testkit/reference.h"
-#include "quiver/mask.h"
 
 namespace {
 
 using quiver_test::Rng;
 namespace ref = quiver_test::ref;
-
 
 TEST(PropMask, AlgebraicIdentities) {
   Rng rng(0x9E0904);
