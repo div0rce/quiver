@@ -86,6 +86,13 @@ def main() -> int:
         "src/cpu/cpu_features.cpp": {"cpuid.h", "intrin.h", "immintrin.h",
                                      "sys/auxv.h", "sys/sysctl.h"},
     }
+    # Per-ISA kernel TUs use the compiler-provided intrinsic headers — toolchain surface,
+    # not a third-party dependency; same class as <cpuid.h> (PRD 09, ADR-003).
+    isa_headers_by_suffix = {
+        "_avx2.cpp": {"immintrin.h"},
+        "_avx512.cpp": {"immintrin.h"},
+        "_neon.cpp": {"arm_neon.h"},
+    }
     # module -> allowed quoted-include prefixes (dependency direction, PRD 02 §6)
     quoted_rules = [
         ("include/quiver/", ("quiver/",)),
@@ -104,6 +111,9 @@ def main() -> int:
             style, target = m2.group(1), m2.group(2)
             if style == "<":
                 allowed = std_headers | os_headers_by_file.get(rel, set())
+                for suffix, hdrs in isa_headers_by_suffix.items():
+                    if rel.endswith(suffix):
+                        allowed = allowed | hdrs
                 if target not in allowed:
                     err(f"REQ-REPO-006: {rel} includes <{target}> — not in the std/OS "
                         f"allow-list (shipped code: std + documented OS headers only)")

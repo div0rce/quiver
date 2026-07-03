@@ -24,7 +24,8 @@ The family's semantics are defined by `src/kernels/mask/mask_scalar_impl.h` (Cha
 ## Per-ISA notes
 
 - **scalar** (v0.1): 64-bit word loops via `memcpy` (never a misaligned dereference). A designated honest-verdict candidate: auto-vectorization is expected to match explicit SIMD here, and the ledger will say so either way (Charter T7; Survey §4.4).
-- **AVX2 (M4) / NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **AVX2** (v0.2): `combine`/`not` run 256-bit bitwise ops over the byte stream with a scalar byte tail and tail-bit zeroing (ADR-016). `popcount`/`all`/`any`/`none` intentionally delegate to the scalar word cores — no distinct AVX2 technique exists for them short of AVX-512 `VPOPCNTDQ`, and the honest-verdict expectation is that autovec ties explicit SIMD for this family anyway (Charter T7).
+- **NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
 
 ## Ledger
 

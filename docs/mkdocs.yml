@@ -70,11 +70,15 @@ nav:
       - Overview: benchmarks/README.md
   - Testing:
       - Testkit: testing/testkit.md
+      - Differential fuzzing: testing/fuzzing.md
       - Overview: testing/README.md
   - Internals:
       - CPU detection: internals/cpu-detection.md
       - Dispatch state machine: internals/dispatch-state-machine.md
+      - Kernel common (MOD-KCOMMON): internals/kernel-common.md
       - Coding standards: internals/coding-standards.md
+  - Investigations:
+      - K5 gather vs scalar (AVX2): investigations/k5-gather-avx2.md
   - ADRs: adr/README.md
   - Specifications:
       - Design Charter: design/DESIGN_CHARTER.md
@@ -85,4 +89,6 @@ nav:
       - Gate M1: releases/gates/M1.md
       - Gate M2: releases/gates/M2.md
       - Gate M3: releases/gates/M3.md
+      - Gate M4: releases/gates/M4.md
       - v0.1.0: releases/v0.1.0.md
+      - v0.2.0: releases/v0.2.0.md

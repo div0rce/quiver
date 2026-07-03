@@ -7,6 +7,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include "bench/baselines/baseline_avx2.h"
 #include "bench/harness/bench_common.h"
 #include "bench/harness/distributions.h"
 #include "bench/harness/meta.h"
@@ -32,6 +33,7 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, st
   }
 }
 
+template <bool kAutovec>
 void bm_bitmap_to_selvec(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const int pct = static_cast<int>(state.range(1));
@@ -40,7 +42,15 @@ void bm_bitmap_to_selvec(benchmark::State& state) {
   quiver::bench::fill_bitmap_uniform(rng, bits.data(), n, pct);
   std::vector<std::uint32_t> idx(static_cast<std::size_t>(n));
 
-  const std::int64_t got = quiver::bitmap_to_selvec(quiver::BitmapView{bits.data()}, n, idx.data());
+  const auto run = [&]() {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      return quiver::bench::autovec_avx2::bitmap_to_selvec(bits.data(), n, idx.data());
+    }
+#endif
+    return quiver::bitmap_to_selvec(quiver::BitmapView{bits.data()}, n, idx.data());
+  };
+  const std::int64_t got = run();
   std::int64_t want = 0;
   for (std::int64_t i = 0; i < n; ++i) {
     want += (bits[static_cast<std::size_t>(i) >> 3] >> (i & 7)) & 1u;
@@ -49,8 +59,7 @@ void bm_bitmap_to_selvec(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(
-        quiver::bitmap_to_selvec(quiver::BitmapView{bits.data()}, n, idx.data()));
+    benchmark::DoNotOptimize(run());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
@@ -65,10 +74,24 @@ void register_benchmarks() {
       benchmark::RegisterBenchmark(
           quiver::bench::bench_name("select", "bitmap_to_selvec", variant, "u32",
                                     "n=" + std::to_string(n) + "/density=" + std::to_string(pct)),
-          bm_bitmap_to_selvec)
+          bm_bitmap_to_selvec<false>)
           ->Args({n, pct});
     }
   }
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+  // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
+  if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
+    for (const std::int64_t n : {4096, 65536}) {
+      for (const int pct : {1, 10, 50, 90, 99}) {
+        benchmark::RegisterBenchmark(
+            quiver::bench::bench_name("select", "bitmap_to_selvec", "autovec-avx2", "u32",
+                                      "n=" + std::to_string(n) + "/density=" + std::to_string(pct)),
+            bm_bitmap_to_selvec<true>)
+            ->Args({n, pct});
+      }
+    }
+  }
+#endif
 }
 
 }  // namespace

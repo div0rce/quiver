@@ -192,18 +192,34 @@ jobs:
           echo "validation abort path confirmed (non-zero exit)"
 
   fuzz-smoke:
-    name: fuzz smoke (scaffolding; targets activate at M4)
+    name: fuzz smoke (differential libFuzzer, >=30 s/family, REQ-CI-005/REQ-TEST-007)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Run fuzz targets when present
+      - name: Configure fuzz preset
+        env: { CC: clang-18, CXX: clang++-18 }
+        run: cmake --preset fuzz
+      - name: Build fuzz targets
+        run: cmake --build --preset fuzz -j 4
+      - name: Run each family target on its committed corpus, then 30 s of exploration
         run: |
           set -eu
-          if ls tests/fuzz/fuzz_*.cpp >/dev/null 2>&1; then
-            echo "::error::fuzz targets exist but the fuzz-smoke job still runs scaffolding — wire them (REQ-CI-005)"
-            exit 1
-          fi
-          echo "no fuzz targets until M4 (docs/prd/18-milestones.md) — scaffolding pass"
+          for fam in compare filter select mask take reduce; do
+            echo "== quiver_fuzz_${fam}"
+            build/fuzz/tests/quiver_fuzz_${fam} -runs=0 "tests/fuzz/corpus/${fam}"
+            build/fuzz/tests/quiver_fuzz_${fam} -max_total_time=30 -print_final_stats=1 \
+              "tests/fuzz/corpus/${fam}"
+          done
+      - name: Upload crash artifacts if any
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-crashes
+          path: |
+            crash-*
+            leak-*
+            timeout-*
+          if-no-files-found: ignore
 
   dco-check:
     name: DCO sign-off (REQ-STD-009)

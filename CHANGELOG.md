@@ -4,6 +4,45 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07-03
+
+### Added
+
+- M4 — Tier A AVX2 backends: explicit AVX2 implementations for all six Tier A families
+  (K1 movemask-packed vector compares with sign-bias unsigned orderings; K2/K3
+  LUT-driven emulated compress incl. BMI2 `PDEP`/`PEXT` byte/word compaction; K4 256-bit
+  mask algebra; K5 with the evidence-gated gather path compiled but defaulting to scalar
+  MLP loads; K6 vector min/max with canonical-qNaN and first-zero exactness rescues,
+  widen-to-64 wrapping sums, and the ADR-013 A=4 blocked float-sum policy), wired into
+  the dispatch AVX2 row on x86-64.
+- Differential libFuzzer targets for all six families (contract-valid decoding,
+  cross-backend equality under ASan+UBSan) with committed corpora, a `fuzz` CMake
+  preset, an enforced CI fuzz-smoke job (>= 30 s/family) and a 4-hour nightly fuzz leg.
+- Equal-ISA autovec baselines (`bench/baselines/baseline_avx2.cpp`): the family scalar
+  references recompiled under the AVX2 target region into a private namespace, exported
+  as `autovec-avx2` benchmark variants for every family microbenchmark.
+- Testkit blocked float-sum policy oracle (per-backend `{w, a}` parameterization) and
+  ISA-aware float-sum expectations in the differential suite.
+- Regression suite (first activation per REQ-TEST-011): `reg_empty_selvec.cpp`.
+- Docs: per-ISA notes for all six family pages, `internals/kernel-common.md`,
+  `testing/fuzzing.md`, `investigations/k5-gather-avx2.md` (gather decision held by
+  prior — no hardware evidence yet, honestly recorded).
+
+### Fixed
+
+- Empty selection vectors (`SelVec{nullptr, 0}`, e.g. from an empty `std::vector`) were
+  forwarded as a null pointer into the K5/K6 concrete symbols, whose convention reads
+  null as "no selection" — so an empty selection silently processed **all** elements
+  (heap overflow in fused `dict_decode`, wrong values from selected reductions). Found
+  by the first differential-fuzzing session; façades now disambiguate via a non-null
+  empty-selection sentinel.
+
+### Changed
+
+- The `avx2` dispatch tier now requires BMI2 alongside AVX2 (the AVX2 kernels emit
+  `PDEP`/`PEXT`); every mainstream AVX2 CPU has BMI2, so this is a correctness guard,
+  not a practical exclusion.
+
 ## [0.1.0] — 2026-07-03
 
 ### Added

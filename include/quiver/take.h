@@ -35,7 +35,7 @@ void dict_decode(BatchView<T> dict, const C* codes, std::int64_t n, SelVec sel, 
   QUIVER_ASSERT(sel.idx != nullptr || sel.len == 0,
                 "dict_decode: sel.idx must be non-null when sel.len > 0 [REQ-API-008]");
   QUIVER_ASSERT(n >= 0 && n <= kMaxBatchLen, "dict_decode: 0 <= n <= kMaxBatchLen [REQ-API-005]");
-  detail::k5_dict_decode(dict.data, dict.len, codes, n, sel.idx, sel.len, out);
+  detail::k5_dict_decode(dict.data, dict.len, codes, n, detail::nonnull_sel(sel.idx), sel.len, out);
 }
 
 QUIVER_END_NAMESPACE

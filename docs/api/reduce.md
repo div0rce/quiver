@@ -25,7 +25,8 @@ The family's semantics are defined by `src/kernels/reduce/reduce_scalar_impl.h` 
 ## Per-ISA notes
 
 - **scalar** (v0.1): SIMD variants (M4+) use the ADR-013 blocked policy (A=4 vectors) and will quantify the reassociation win against this strict scalar baseline honestly.
-- **AVX2 (M4) / NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **AVX2** (v0.2): *min/max* use native vector min/max with validity lane-mask expansion plus two exactness rescues that make lane blocking bit-identical to the scalar fold: any valid NaN yields the canonical qNaN (PRD 08 §3.3), and a result equal to 0.0 triggers a rescan for the first participating zero (±0.0 is the only bit-visible float tie). *Integer sums* widen elements to 64-bit lanes before wrap-adding (wrapping is defined at `SumType` width; commutative, so blocking is exact). *Float sums* follow ADR-013 with A=4 vector accumulators (f32 W=8, f64 W=4): masked lanes add `-0.0` (the exact neutral), accumulators combine in the frozen `(0+2),(1+3), then +` order, lanes fold low→high from `+0.0`, and the tail adds sequentially — mirrored exactly by the testkit policy oracle for non-NaN results. **NaN sums compare as a class:** IEEE addition propagates whichever operand's payload the hardware sees first and C++ does not pin FP operand order, so payloads stay deterministic per (version, ISA, build) but are not oracle-reproducible (M4 gate amendment). *Selected shapes* (`SelVec` overloads) delegate to the scalar core — the AVX2 backend's selected float sum is therefore the strict fold (documented policy). *SMA* fuses vector min+max with a validity popcount.
+- **NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
 
 ## Ledger
 

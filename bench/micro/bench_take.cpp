@@ -9,6 +9,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include "bench/baselines/baseline_avx2.h"
 #include "bench/harness/bench_common.h"
 #include "bench/harness/distributions.h"
 #include "bench/harness/meta.h"
@@ -34,6 +35,7 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, st
   }
 }
 
+template <bool kAutovec>
 void bm_dict_decode(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const auto dict_bytes = static_cast<std::size_t>(state.range(1));
@@ -48,8 +50,18 @@ void bm_dict_decode(benchmark::State& state) {
   }
   std::vector<std::int64_t> out(static_cast<std::size_t>(n));
 
-  quiver::dict_decode(quiver::BatchView<std::int64_t>{dict.data(), dict_len}, codes.data(), n,
-                      out.data());
+  const auto run = [&]() {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      quiver::bench::autovec_avx2::dict_decode_i64_u32(dict.data(), dict_len, codes.data(), n,
+                                                       out.data());
+      return;
+    }
+#endif
+    quiver::dict_decode(quiver::BatchView<std::int64_t>{dict.data(), dict_len}, codes.data(), n,
+                        out.data());
+  };
+  run();
   std::int64_t checksum_got = 0;
   std::int64_t checksum_want = 0;
   for (std::int64_t i = 0; i < n; ++i) {
@@ -61,8 +73,7 @@ void bm_dict_decode(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    quiver::dict_decode(quiver::BatchView<std::int64_t>{dict.data(), dict_len}, codes.data(), n,
-                        out.data());
+    run();
     benchmark::DoNotOptimize(out.data());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
@@ -78,9 +89,21 @@ void register_benchmarks() {
     benchmark::RegisterBenchmark(
         quiver::bench::bench_name("take", "dict_decode", variant, "i64_u32",
                                   "n=65536/dict=" + std::to_string(dict_bytes >> 10) + "KiB"),
-        bm_dict_decode)
+        bm_dict_decode<false>)
         ->Args({65536, dict_bytes});
   }
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+  // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
+  if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
+    for (const std::int64_t dict_bytes : {4 << 10, 32 << 10, 256 << 10, 8 << 20, 64 << 20}) {
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name("take", "dict_decode", "autovec-avx2", "i64_u32",
+                                    "n=65536/dict=" + std::to_string(dict_bytes >> 10) + "KiB"),
+          bm_dict_decode<true>)
+          ->Args({65536, dict_bytes});
+    }
+  }
+#endif
 }
 
 }  // namespace

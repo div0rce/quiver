@@ -49,6 +49,7 @@ option(QUIVER_ENABLE_BENCH    "Build Quiver benchmark suites"            OFF)
 option(QUIVER_ENABLE_EXAMPLES "Build Quiver examples"                    ${_quiver_dev_default})
 option(QUIVER_ENABLE_ASSERTS  "Enable QUIVER_ASSERT contract checks"     ${_quiver_asserts_default})
 option(QUIVER_ENABLE_WERROR   "Treat warnings as errors (CI)"            OFF)
+option(QUIVER_ENABLE_FUZZERS  "Build differential libFuzzer targets (Clang-only, REQ-TEST-007)" OFF)
 option(QUIVER_DISABLE_AVX512  "Escape hatch: skip AVX-512 backend TUs (broken-toolchain only)" OFF)
 set(QUIVER_SANITIZE "" CACHE STRING
     "Semicolon list of sanitizers: address;undefined;thread;memory (REQ-BUILD-012)")
@@ -81,6 +82,15 @@ if(QUIVER_SANITIZE AND NOT QUIVER_ENABLE_ASSERTS)
 endif()
 
 # --- The library (REQ-BUILD-002: single static target; ADR-002) -------------------------------
+# Per-ISA TUs are always listed: each guards itself to its architecture with the preprocessor
+# and compiles empty elsewhere (ADR-003; no global ISA flags, REQ-BUILD-005).
+set(QUIVER_AVX2_SOURCES
+  src/kernels/compare/compare_avx2.cpp
+  src/kernels/filter/filter_avx2.cpp
+  src/kernels/select/select_avx2.cpp
+  src/kernels/mask/mask_avx2.cpp
+  src/kernels/take/take_avx2.cpp
+  src/kernels/reduce/reduce_avx2.cpp)
 add_library(quiver STATIC
   src/cpu/cpu_features.cpp
   src/dispatch/dispatch_tables.cpp
@@ -91,8 +101,16 @@ add_library(quiver STATIC
   src/kernels/select/select_scalar.cpp
   src/kernels/mask/mask_scalar.cpp
   src/kernels/take/take_scalar.cpp
-  src/kernels/reduce/reduce_scalar.cpp)
+  src/kernels/reduce/reduce_scalar.cpp
+  ${QUIVER_AVX2_SOURCES})
 add_library(quiver::quiver ALIAS quiver)
+
+# MSVC has no per-function target attribute; the AVX2 TUs get /arch:AVX2 per-source instead
+# (ADR-003 — the per-TU equivalent of the GCC/Clang target regions; safe because these TUs
+# only execute after CPUID gating).
+if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
+  set_source_files_properties(${QUIVER_AVX2_SOURCES} PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+endif()
 
 target_include_directories(quiver
   PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

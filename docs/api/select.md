@@ -22,7 +22,8 @@ The family's semantics are defined by `src/kernels/select/select_scalar_impl.h` 
 ## Per-ISA notes
 
 - **scalar** (v0.1): The primary instrument of the M9 bitmap-vs-selvec representation study (Charter §6.2; Survey §11.3 #3).
-- **AVX2 (M4) / NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **AVX2** (v0.2): `bitmap_to_selvec` uses the emulated-compress core directly — each selection byte's `kCompactLut32` row *is* its compacted lane-index list; add a broadcast base, store 8 lanes, advance the cursor by popcount (full-vector stores stay inside the n-element capacity region, REQ-MEM-008). `selvec_to_bitmap` stays on the scalar core (sorted scatter is scalar-dominant by design, PRD 08 K3).
+- **NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
 
 ## Ledger
 

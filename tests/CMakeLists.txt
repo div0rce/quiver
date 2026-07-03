@@ -84,12 +84,43 @@ quiver_add_test_suite(quiver_tests_differential
 quiver_add_test_suite(quiver_tests_invariant
   invariant/inv_bitmap_tail.cpp invariant/inv_determinism.cpp
   invariant/inv_selvec_sorted.cpp invariant/inv_noalloc.cpp invariant/inv_guard_pages.cpp)
+# Regression suite — activated by its first defect fix per REQ-TEST-011 (empty-SelVec
+# façade defect found by differential fuzzing at M4).
+quiver_add_test_suite(quiver_tests_regression regression/reg_empty_selvec.cpp)
 
 include(GoogleTest)
 gtest_discover_tests(quiver_tests_unit DISCOVERY_TIMEOUT 60)
 gtest_discover_tests(quiver_tests_property DISCOVERY_TIMEOUT 60)
 gtest_discover_tests(quiver_tests_differential DISCOVERY_TIMEOUT 60 PROPERTIES TIMEOUT 600)
 gtest_discover_tests(quiver_tests_invariant DISCOVERY_TIMEOUT 60)
+gtest_discover_tests(quiver_tests_regression DISCOVERY_TIMEOUT 60)
+
+# Differential libFuzzer targets (REQ-TEST-007; ADR-009): one per family, Clang-only
+# (libFuzzer), always built with fuzzer+ASan+UBSan baked in — independent of QUIVER_SANITIZE,
+# which must stay empty for these targets. Run by the CI fuzz-smoke and nightly fuzz jobs
+# (REQ-CI-005); corpora live in tests/fuzz/corpus/<family>/.
+if(QUIVER_ENABLE_FUZZERS)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "QUIVER_ENABLE_FUZZERS requires Clang (libFuzzer, ADR-009).")
+  endif()
+  if(NOT QUIVER_SANITIZE MATCHES "address")
+    # The LIBRARY must be instrumented, not just the harness TU (REQ-TEST-007/REQ-BUILD-012):
+    # sanitizer flags come from QUIVER_SANITIZE so they apply to libquiver uniformly.
+    message(FATAL_ERROR "QUIVER_ENABLE_FUZZERS requires QUIVER_SANITIZE=address,undefined "
+                        "(fuzzing runs under ASan+UBSan, REQ-TEST-007).")
+  endif()
+  foreach(fam compare filter select mask take reduce)
+    add_executable(quiver_fuzz_${fam} fuzz/fuzz_${fam}.cpp)
+    target_link_libraries(quiver_fuzz_${fam} PRIVATE quiver::quiver)
+    target_include_directories(quiver_fuzz_${fam} PRIVATE ${CMAKE_SOURCE_DIR})
+    target_compile_options(quiver_fuzz_${fam} PRIVATE -fsanitize=fuzzer -Wall -Wextra)
+    target_link_options(quiver_fuzz_${fam} PRIVATE -fsanitize=fuzzer)
+    if(QUIVER_ENABLE_WERROR)
+      target_compile_options(quiver_fuzz_${fam} PRIVATE -Werror)
+    endif()
+    quiver_apply_sanitizers(quiver_fuzz_${fam})
+  endforeach()
+endif()
 
 # Drift-alarm conformance runner (REQ-BENCH-015): compiles the bench-local distributions
 # source directly — free of BOTH GoogleTest and Google Benchmark (REQ-TEST-018).

@@ -9,7 +9,8 @@ Checks: >
   modernize-use-bit-cast,
   cppcoreguidelines-init-variables,
   misc-definitions-in-headers,
-  -bugprone-easily-swappable-parameters
+  -bugprone-easily-swappable-parameters,
+  -portability-simd-intrinsics
 WarningsAsErrors: ''
 HeaderFilterRegex: '(include/quiver|src)/.*'
 FormatStyle: file
@@ -19,3 +20,8 @@ CheckOptions:
 # Note: bugprone-easily-swappable-parameters is disabled globally with reason:
 # kernel signatures are pointer+length shaped by contract (REQ-API-* / ADR-006);
 # the check would flag the entire public surface. Recorded here per REQ-STD-007.
+# Note: portability-simd-intrinsics is disabled globally with reason: it exists to
+# suggest std::experimental::simd over raw intrinsics, but first-party per-ISA
+# intrinsics ARE the charter decision (no SIMD abstraction layer; Charter §7.2,
+# ADR-003) — every *_avx2/_avx512/_neon.cpp TU is intentionally non-portable and
+# architecture-guarded. Recorded here per REQ-STD-007 (added at M4).

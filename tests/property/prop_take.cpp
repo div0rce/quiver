@@ -68,7 +68,9 @@ TEST(PropTake, GatherIdentities) {
     std::vector<double> fused(selv.size() + 1);
     quiver::dict_decode(quiver::BatchView<double>{dict.data(), kDict}, codes8.data(), n, sel,
                         fused.data());
-    std::vector<std::uint8_t> fcodes(selv.size() + 1);
+    // Bitmap-driven compaction requires an n-element CAPACITY region even though only the
+    // first count entries are defined output (REQ-MEM-008).
+    std::vector<std::uint8_t> fcodes(static_cast<std::size_t>(n) + 1);
     quiver::filter(quiver::BatchView<std::uint8_t>{codes8.data(), n},
                    quiver::BitmapView{selbits.data()}, fcodes.data());
     std::vector<double> composed(selv.size() + 1);

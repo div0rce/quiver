@@ -73,6 +73,16 @@ struct SumTypeImpl {
       std::conditional_t<std::floating_point<T>, T,
                          std::conditional_t<std::signed_integral<T>, std::int64_t, std::uint64_t>>;
 };
+
+// The concrete K5/K6 symbols encode "no selection" (dense) as sel == nullptr, so façades
+// taking a SelVec must map a caller's EMPTY selection — idx == nullptr with len == 0, e.g.
+// std::vector::data() of an empty vector — to a non-null pointer, keeping "empty selection"
+// distinct from "no selection". Without this, an empty SelVec silently selected EVERYTHING
+// (defect found by differential fuzzing at M4; tests/regression/reg_empty_selvec.cpp).
+inline constexpr std::uint32_t kEmptySelSentinel = 0;
+constexpr const std::uint32_t* nonnull_sel(const std::uint32_t* idx) noexcept {
+  return idx != nullptr ? idx : &kEmptySelSentinel;
+}
 }  // namespace detail
 
 // int64_t for signed integers, uint64_t for unsigned, T for float/double (PRD 04 §3).

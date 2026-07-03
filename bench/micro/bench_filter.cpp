@@ -8,6 +8,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include "bench/baselines/baseline_avx2.h"
 #include "bench/harness/bench_common.h"
 #include "bench/harness/distributions.h"
 #include "bench/harness/meta.h"
@@ -33,6 +34,7 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, st
   }
 }
 
+template <bool kAutovec>
 void bm_filter_bitmap(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const int sel_pct = static_cast<int>(state.range(1));
@@ -48,8 +50,16 @@ void bm_filter_bitmap(benchmark::State& state) {
   }
   std::vector<std::int64_t> out(static_cast<std::size_t>(n));
 
-  const std::int64_t got = quiver::filter(quiver::BatchView<std::int64_t>{v.data(), n},
-                                          quiver::BitmapView{sel.data()}, out.data());
+  const auto run = [&]() {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      return quiver::bench::autovec_avx2::filter_bitmap_i64(v.data(), n, sel.data(), out.data());
+    }
+#endif
+    return quiver::filter(quiver::BatchView<std::int64_t>{v.data(), n},
+                          quiver::BitmapView{sel.data()}, out.data());
+  };
+  const std::int64_t got = run();
   std::int64_t want = 0;
   std::int64_t checksum_want = 0;
   for (std::int64_t i = 0; i < n; ++i) {
@@ -67,8 +77,7 @@ void bm_filter_bitmap(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(quiver::filter(quiver::BatchView<std::int64_t>{v.data(), n},
-                                            quiver::BitmapView{sel.data()}, out.data()));
+    benchmark::DoNotOptimize(run());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
@@ -85,11 +94,28 @@ void register_benchmarks() {
             quiver::bench::bench_name("filter", "bitmap", variant, "i64",
                                       "n=" + std::to_string(n) + "/sel=" + std::to_string(pct) +
                                           (clustered ? "/pat=clustered" : "/pat=uniform")),
-            bm_filter_bitmap)
+            bm_filter_bitmap<false>)
             ->Args({n, pct, clustered});
       }
     }
   }
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+  // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
+  if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
+    for (const std::int64_t n : {4096, 65536}) {
+      for (const int pct : {1, 10, 50, 90, 99}) {
+        for (const int clustered : {0, 1}) {
+          benchmark::RegisterBenchmark(
+              quiver::bench::bench_name("filter", "bitmap", "autovec-avx2", "i64",
+                                        "n=" + std::to_string(n) + "/sel=" + std::to_string(pct) +
+                                            (clustered ? "/pat=clustered" : "/pat=uniform")),
+              bm_filter_bitmap<true>)
+              ->Args({n, pct, clustered});
+        }
+      }
+    }
+  }
+#endif
 }
 
 }  // namespace
