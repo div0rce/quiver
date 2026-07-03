@@ -80,7 +80,11 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     build_dir = pathlib.Path(args.build_dir)
     bin_dir = build_dir / "bin"
-    binaries = sorted(p for p in bin_dir.glob("quiver_bench_*") if p.name != "quiver_bench_smoke")
+    # quiver_bench_smoke is harness plumbing; quiver_bench_dispatch measures dispatch MODES
+    # (dispatched vs direct), not kernel ISA variants — its third name segment is outside the
+    # QLS-1 variant vocabulary by design, so it is not ledger material (gate M5 note).
+    skip = {"quiver_bench_smoke", "quiver_bench_dispatch"}
+    binaries = sorted(p for p in bin_dir.glob("quiver_bench_*") if p.name not in skip)
     if not binaries:
         print(f"no bench binaries under {bin_dir} — build the bench preset first",
               file=sys.stderr)
