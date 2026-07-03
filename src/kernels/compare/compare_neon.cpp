@@ -241,22 +241,26 @@ QUIVER_FORCE_INLINE std::uint32_t pack_bits(uint16x8_t m) noexcept {  // 8 lanes
   const uint16x8_t w = {1, 2, 4, 8, 16, 32, 64, 128};
   return vaddvq_u16(vandq_u16(m, w));
 }
-// 32/64-bit lane masks NARROW first (vmovn chains — the PRD's narrowing idiom) so the whole
-// 8-element group packs with a single weight-AND + vaddv. The first ledger run measured the
-// scalar-extract alternative (per-vector vgetq_lane assembly) at ~2.5x SLOWER than autovec
-// on Apple M2 — the narrowing chain is what makes wide-lane K1 competitive.
+// 32/64-bit lane masks pack via weight-AND + a PAIRWISE-add tree (vpaddq) — no per-vector
+// scalar extracts and no long narrowing chain. First-ledger evidence on Apple M2: the
+// scalar-extract version ran ~2.5x behind autovec and a vmovn narrowing chain ~1.7x behind;
+// the pairwise tree is the cheapest packing found (whatever the ledger says about the final
+// verdict is what the family page publishes — Charter T7).
 QUIVER_FORCE_INLINE std::uint32_t pack2_bits(uint32x4_t m0, uint32x4_t m1) noexcept {
-  const uint16x8_t n = vcombine_u16(vmovn_u32(m0), vmovn_u32(m1));
-  const uint16x8_t w = {1, 2, 4, 8, 16, 32, 64, 128};
-  return vaddvq_u16(vandq_u16(n, w));
+  const uint32x4_t w_lo = {1, 2, 4, 8};
+  const uint32x4_t w_hi = {16, 32, 64, 128};
+  const uint32x4_t s = vpaddq_u32(vandq_u32(m0, w_lo), vandq_u32(m1, w_hi));
+  return vaddvq_u32(s);
 }
 QUIVER_FORCE_INLINE std::uint32_t pack4_bits(uint64x2_t m0, uint64x2_t m1, uint64x2_t m2,
                                              uint64x2_t m3) noexcept {
-  const uint32x4_t a = vcombine_u32(vmovn_u64(m0), vmovn_u64(m1));
-  const uint32x4_t b = vcombine_u32(vmovn_u64(m2), vmovn_u64(m3));
-  const uint16x8_t n = vcombine_u16(vmovn_u32(a), vmovn_u32(b));
-  const uint16x8_t w = {1, 2, 4, 8, 16, 32, 64, 128};
-  return vaddvq_u16(vandq_u16(n, w));
+  const uint64x2_t w01 = {1, 2};
+  const uint64x2_t w23 = {4, 8};
+  const uint64x2_t w45 = {16, 32};
+  const uint64x2_t w67 = {64, 128};
+  const uint64x2_t s0 = vpaddq_u64(vandq_u64(m0, w01), vandq_u64(m1, w23));
+  const uint64x2_t s1 = vpaddq_u64(vandq_u64(m2, w45), vandq_u64(m3, w67));
+  return static_cast<std::uint32_t>(vaddvq_u64(vpaddq_u64(s0, s1)));
 }
 
 // --- Vector predicates (mirroring the AVX2 backend's structure): mask(i) yields the lane
