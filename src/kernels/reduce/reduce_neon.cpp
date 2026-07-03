@@ -366,44 +366,58 @@ SumType<T> dense_sum_wrap_int(const T* in, std::int64_t n, const std::uint8_t* v
   using U = std::make_unsigned_t<S>;
   constexpr std::int64_t kW = vec_lanes<T>();
   constexpr bool kSigned = std::is_signed_v<T>;
-  // 64-bit lane accumulator; every vector fully widens before accumulating (exact — no
-  // intermediate stage can overflow; the 64-bit wrap IS the spec).
-  uint64x2_t acc = vdupq_n_u64(0);
-  std::int64_t i = 0;
-  for (; i + kW <= n; i += kW) {
-    Vec<T> v = load_vec(in + i);
+  // One vector's worth of elements, fully widened to 64-bit lanes (exact — no intermediate
+  // stage can overflow; the 64-bit wrap IS the spec).
+  const auto widened = [&](std::int64_t at) -> uint64x2_t {
+    Vec<T> v = load_vec(in + at);
     if (validity != nullptr) {
-      const auto lm = group_mask<T>(validity, i);
+      const auto lm = group_mask<T>(validity, at);
       v = blend<T>(lm, v, broadcast(T{0}));
     }
-    int64x2_t wide;
     if constexpr (sizeof(T) == 1) {
       if constexpr (kSigned) {
-        wide = vpaddlq_s32(vpaddlq_s16(vpaddlq_s8(v)));
+        return vreinterpretq_u64_s64(vpaddlq_s32(vpaddlq_s16(vpaddlq_s8(v))));
       } else {
-        wide = vreinterpretq_s64_u64(vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(v))));
+        return vpaddlq_u32(vpaddlq_u16(vpaddlq_u8(v)));
       }
     } else if constexpr (sizeof(T) == 2) {
       if constexpr (kSigned) {
-        wide = vpaddlq_s32(vpaddlq_s16(v));
+        return vreinterpretq_u64_s64(vpaddlq_s32(vpaddlq_s16(v)));
       } else {
-        wide = vreinterpretq_s64_u64(vpaddlq_u32(vpaddlq_u16(v)));
+        return vpaddlq_u32(vpaddlq_u16(v));
       }
     } else if constexpr (sizeof(T) == 4) {
       if constexpr (kSigned) {
-        wide = vpaddlq_s32(v);
+        return vreinterpretq_u64_s64(vpaddlq_s32(v));
       } else {
-        wide = vreinterpretq_s64_u64(vpaddlq_u32(v));
+        return vpaddlq_u32(v);
       }
     } else {
       if constexpr (kSigned) {
-        wide = v;
+        return vreinterpretq_u64_s64(v);
       } else {
-        wide = vreinterpretq_s64_u64(v);
+        return v;
       }
     }
-    acc = vaddq_u64(acc, vreinterpretq_u64_s64(wide));  // wrapping lanewise
+  };
+  // Four independent accumulators (REQ-SIMD-008: >=4 128-bit ops in flight — the first
+  // ledger run measured the single-accumulator loop ~4x behind autovec at nulls=0);
+  // wrapping addition is commutative, so any blocking is bit-exact.
+  uint64x2_t acc0 = vdupq_n_u64(0);
+  uint64x2_t acc1 = vdupq_n_u64(0);
+  uint64x2_t acc2 = vdupq_n_u64(0);
+  uint64x2_t acc3 = vdupq_n_u64(0);
+  std::int64_t i = 0;
+  for (; i + 4 * kW <= n; i += 4 * kW) {
+    acc0 = vaddq_u64(acc0, widened(i));
+    acc1 = vaddq_u64(acc1, widened(i + kW));
+    acc2 = vaddq_u64(acc2, widened(i + 2 * kW));
+    acc3 = vaddq_u64(acc3, widened(i + 3 * kW));
   }
+  for (; i + kW <= n; i += kW) {
+    acc0 = vaddq_u64(acc0, widened(i));
+  }
+  const uint64x2_t acc = vaddq_u64(vaddq_u64(acc0, acc1), vaddq_u64(acc2, acc3));
   U s = static_cast<U>(vgetq_lane_u64(acc, 0) + vgetq_lane_u64(acc, 1));
   for (; i < n; ++i) {
     if (is_valid(validity, i)) {

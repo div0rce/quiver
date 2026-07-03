@@ -241,14 +241,22 @@ QUIVER_FORCE_INLINE std::uint32_t pack_bits(uint16x8_t m) noexcept {  // 8 lanes
   const uint16x8_t w = {1, 2, 4, 8, 16, 32, 64, 128};
   return vaddvq_u16(vandq_u16(m, w));
 }
-QUIVER_FORCE_INLINE std::uint32_t pack_bits(uint32x4_t m) noexcept {  // 4 lanes -> 4 bits
-  const uint32x4_t w = {1, 2, 4, 8};
-  return vaddvq_u32(vandq_u32(m, w));
+// 32/64-bit lane masks NARROW first (vmovn chains — the PRD's narrowing idiom) so the whole
+// 8-element group packs with a single weight-AND + vaddv. The first ledger run measured the
+// scalar-extract alternative (per-vector vgetq_lane assembly) at ~2.5x SLOWER than autovec
+// on Apple M2 — the narrowing chain is what makes wide-lane K1 competitive.
+QUIVER_FORCE_INLINE std::uint32_t pack2_bits(uint32x4_t m0, uint32x4_t m1) noexcept {
+  const uint16x8_t n = vcombine_u16(vmovn_u32(m0), vmovn_u32(m1));
+  const uint16x8_t w = {1, 2, 4, 8, 16, 32, 64, 128};
+  return vaddvq_u16(vandq_u16(n, w));
 }
-QUIVER_FORCE_INLINE std::uint32_t pack_bits(uint64x2_t m) noexcept {  // 2 lanes -> 2 bits
-  const uint64x2_t w = {1, 2};
-  const uint64x2_t t = vandq_u64(m, w);
-  return static_cast<std::uint32_t>(vgetq_lane_u64(t, 0) | vgetq_lane_u64(t, 1));
+QUIVER_FORCE_INLINE std::uint32_t pack4_bits(uint64x2_t m0, uint64x2_t m1, uint64x2_t m2,
+                                             uint64x2_t m3) noexcept {
+  const uint32x4_t a = vcombine_u32(vmovn_u64(m0), vmovn_u64(m1));
+  const uint32x4_t b = vcombine_u32(vmovn_u64(m2), vmovn_u64(m3));
+  const uint16x8_t n = vcombine_u16(vmovn_u32(a), vmovn_u32(b));
+  const uint16x8_t w = {1, 2, 4, 8, 16, 32, 64, 128};
+  return vaddvq_u16(vandq_u16(n, w));
 }
 
 // --- Vector predicates (mirroring the AVX2 backend's structure): mask(i) yields the lane
@@ -393,10 +401,10 @@ QUIVER_FORCE_INLINE std::uint32_t group_bits(const Pred& pred, std::int64_t i) n
   if constexpr (sizeof(T) <= 2) {
     bits = pack_bits(pred.mask(i));
   } else if constexpr (sizeof(T) == 4) {
-    bits = pack_bits(pred.mask(i)) | (pack_bits(pred.mask(i + kV)) << 4);
+    bits = pack2_bits(pred.mask(i), pred.mask(i + kV));
   } else {
-    bits = pack_bits(pred.mask(i)) | (pack_bits(pred.mask(i + kV)) << 2) |
-           (pack_bits(pred.mask(i + 2 * kV)) << 4) | (pack_bits(pred.mask(i + 3 * kV)) << 6);
+    bits =
+        pack4_bits(pred.mask(i), pred.mask(i + kV), pred.mask(i + 2 * kV), pred.mask(i + 3 * kV));
   }
   if (pred.inv()) {
     bits = ~bits;  // complement first, then width-mask

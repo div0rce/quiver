@@ -24,10 +24,13 @@ def _run(cmd: list[str]) -> str:
 
 
 def git_state(repo: pathlib.Path) -> tuple[str, str]:
-    """(short commit, 'clean'|'dirty')."""
+    """(short commit, 'clean'|'dirty'). The runner's own output under ledger/results/ is
+    excluded — a run must not flag itself dirty by writing its results (everything else,
+    including untracked source files, still counts: provenance)."""
     sha = _run(["git", "-C", str(repo), "rev-parse", "--short=12", "HEAD"]) or "unknown"
-    dirty = "dirty" if _run(["git", "-C", str(repo), "status", "--porcelain"]) else "clean"
-    return sha, dirty
+    status = _run(["git", "-C", str(repo), "status", "--porcelain", "--",
+                   ".", ":(exclude)ledger/results"])
+    return sha, ("dirty" if status else "clean")
 
 
 def cpu_model() -> str:
