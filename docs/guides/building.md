@@ -49,3 +49,5 @@ mkdocs serve -f docs/mkdocs.yml            # local preview
 ## Consuming Quiver (from M8)
 
 Three supported modes — installed package (`find_package(Quiver CONFIG)`), `FetchContent`/`add_subdirectory`, and the two-file amalgamation — all CI-verified from milestone M8 (REQ-BUILD-010; vendoring guide arrives then).
+
+[deliberately broken link](does-not-exist.md)
