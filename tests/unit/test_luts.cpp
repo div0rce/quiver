@@ -64,30 +64,32 @@ TEST(Luts, PopcountLutRederives) {
 }
 
 // Generic check for the TBL control tables: selected lanes' byte indices front-packed,
-// 0xFF elsewhere.
-template <class Lut>
-void check_tbl_ctrl(const Lut& lut, int sel_bits, int lane_bytes, int ctrl_bytes) {
-  for (int s = 0; s < (1 << sel_bits); ++s) {
+// 0xFF elsewhere. Bounds are template parameters so every subscript is provably in-range
+// (gcc -Warray-bounds cannot see through runtime bounds when the assert machinery keeps
+// this from inlining).
+template <int kSelBits, int kLaneBytes, int kCtrlBytes, class Lut>
+void check_tbl_ctrl(const Lut& lut) {
+  for (int s = 0; s < (1 << kSelBits); ++s) {
     int c = 0;
-    for (int lane = 0; lane < sel_bits; ++lane) {
+    for (int lane = 0; lane < kSelBits; ++lane) {
       if ((s >> lane) & 1) {
-        for (int byte = 0; byte < lane_bytes; ++byte) {
-          ASSERT_EQ(lut.ctrl[s][c], lane * lane_bytes + byte) << "s=" << s << " pos=" << c;
+        for (int byte = 0; byte < kLaneBytes; ++byte) {
+          ASSERT_EQ(lut.ctrl[s][c], lane * kLaneBytes + byte) << "s=" << s << " pos=" << c;
           ++c;
         }
       }
     }
-    for (; c < ctrl_bytes; ++c) {
+    for (; c < kCtrlBytes; ++c) {
       ASSERT_EQ(lut.ctrl[s][c], 0xFF) << "s=" << s << " fill pos=" << c;
     }
   }
 }
 
 TEST(Luts, NeonTblControlsRederive) {
-  check_tbl_ctrl(kCompactNib8, 4, 1, 8);
-  check_tbl_ctrl(kCompactNib16, 4, 2, 8);
-  check_tbl_ctrl(kCompactNib32, 4, 4, 16);
-  check_tbl_ctrl(kCompactPair64, 2, 8, 16);
+  check_tbl_ctrl<4, 1, 8>(kCompactNib8);
+  check_tbl_ctrl<4, 2, 8>(kCompactNib16);
+  check_tbl_ctrl<4, 4, 16>(kCompactNib32);
+  check_tbl_ctrl<2, 8, 16>(kCompactPair64);
 }
 
 }  // namespace
