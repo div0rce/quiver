@@ -103,6 +103,7 @@ CpuFeatures detect_x86() noexcept {
 
   const CpuidRegs l7 = cpuid_count(7, 0);
   const bool has_avx2 = (l7.ebx & (1u << 5)) != 0;
+  const bool has_bmi2 = (l7.ebx & (1u << 8)) != 0;
   const bool has_512f = (l7.ebx & (1u << 16)) != 0;
   const bool has_512dq = (l7.ebx & (1u << 17)) != 0;
   const bool has_512bw = (l7.ebx & (1u << 30)) != 0;
@@ -110,7 +111,9 @@ CpuFeatures detect_x86() noexcept {
   const bool has_vbmi2 = (l7.ecx & (1u << 6)) != 0;
   const bool has_vpopcntdq = (l7.ecx & (1u << 14)) != 0;
 
-  f.avx2 = ymm_state && has_avx2;
+  // Quiver's avx2 tier compiles with target("avx2,bmi2") and emits PDEP/PEXT, so the tier
+  // is reported only when BOTH are present (REQ-DISP-004; docs/internals/cpu-detection.md).
+  f.avx2 = ymm_state && has_avx2 && has_bmi2;
   f.avx512 = zmm_state && has_512f && has_512bw && has_512dq && has_512vl;
   f.avx512 = f.avx512 && f.avx2;  // monotone by construction (REQ-DISP-004)
   f.avx512vbmi2 = f.avx512 && has_vbmi2;

@@ -56,6 +56,15 @@
       }
     },
     {
+      "name": "fuzz",
+      "displayName": "Clang libFuzzer differential targets (ASan+UBSan, REQ-TEST-007)",
+      "inherits": "asan-ubsan",
+      "binaryDir": "${sourceDir}/build/fuzz",
+      "cacheVariables": {
+        "QUIVER_ENABLE_FUZZERS": "ON"
+      }
+    },
+    {
       "name": "tsan",
       "displayName": "ThreadSanitizer (dispatch tests)",
       "inherits": "base",
@@ -120,6 +129,10 @@
     {
       "name": "asan-ubsan",
       "configurePreset": "asan-ubsan"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz"
     },
     {
       "name": "tsan",

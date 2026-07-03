@@ -112,16 +112,29 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 #undef QUIVER_DECLARE_BACKEND
 }  // namespace scalar
 
+// --- AVX2 backend declarations (defined in the family *_avx2.cpp TUs, x86-64 builds only;
+// --- the Tier A inventory has full AVX2 coverage, so the whole list declares) ---------------
+#if defined(__x86_64__) || defined(_M_X64)
+namespace avx2 {
+#define QUIVER_DECLARE_BACKEND(uid, ret, name, params, args) ret name params noexcept;
+QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
+#undef QUIVER_DECLARE_BACKEND
+}  // namespace avx2
+#define QUIVER_AVX2_BACKEND(name) &avx2::name
+#else
+#define QUIVER_AVX2_BACKEND(name) nullptr
+#endif
+
 // --- Entries + typed rows, one per concrete symbol (REQ-DISP-007; constinit, REQ-CORE-004).
 // Rows hold typed pointers so no (non-constexpr) function-pointer cast is needed at init;
-// AVX2/NEON/AVX-512 slots populate at their milestones (M4/M5/M7). ------------------------
+// AVX2 populates on x86-64 builds; NEON/AVX-512 slots populate at their milestones (M5/M7).
 namespace {
 // NOLINTBEGIN(bugprone-macro-parentheses): ret/params/args are type, signature, and call
 // syntax — parenthesizing them is not valid C++.
 #define QUIVER_DEFINE_ENTRY(uid, ret, name, params, args)                                          \
   constinit DispatchEntry g_entry_##uid;                                                           \
   constinit BackendRow<ret(*) params noexcept> g_row_##uid{                                        \
-      {&scalar::name, nullptr, nullptr, nullptr}};                                                 \
+      {&scalar::name, nullptr, QUIVER_AVX2_BACKEND(name), nullptr}};                               \
   KernelFn warm_##uid(DispatchEntry& e) noexcept {                                                 \
     return reinterpret_cast<KernelFn>(resolve(e, g_row_##uid));                                    \
   }

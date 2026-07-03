@@ -22,7 +22,8 @@ The family's semantics are defined by `src/kernels/filter/filter_scalar_impl.h` 
 ## Per-ISA notes
 
 - **scalar** (v0.1): Unconditional-store forward scan (scratch stays inside the capacity region, REQ-MEM-008). AVX-512's `vpcompress` showcase lands at M7 (Survey §4.1).
-- **AVX2 (M4) / NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **AVX2** (v0.2): emulated-compress compaction. 32-bit lanes: per selection byte, `kCompactLut32` row → `vpermd`, full-vector store at the cursor, advance by popcount — all stores stay inside the n-element capacity region (REQ-MEM-008). 64-bit lanes: per nibble via `kCompactLut64` expanded to `epi32` pair indices. 8/16-bit lanes: BMI2 `PDEP`/`PEXT` byte/word compaction — a documented technique substitution for the PRD's `pshufb` nibble sketch (same output, simpler and exact; recorded in the M4 gate). Note for the ledger: `PEXT` is microcoded on Zen 1/2 (fast from Zen 3) — the per-µarch verdicts must call this out. Exact-alias in-place (`out == in`) stays safe: every block's lanes are fully loaded before its stores. The selvec-driven form delegates to the scalar core (random access). Requires BMI2 — the `avx2` dispatch tier is reported only on AVX2+BMI2 CPUs ([cpu-detection](../internals/cpu-detection.md)).
+- **NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
 
 ## Ledger
 

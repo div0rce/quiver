@@ -8,6 +8,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include "bench/baselines/baseline_avx2.h"
 #include "bench/harness/bench_common.h"
 #include "bench/harness/distributions.h"
 #include "bench/harness/meta.h"
@@ -33,6 +34,7 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, st
   }
 }
 
+template <bool kAutovec>
 void bm_mask_and(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   quiver::bench::Rng rng(kSeed);
@@ -43,8 +45,18 @@ void bm_mask_and(benchmark::State& state) {
   quiver::bench::fill_bitmap_uniform(rng, b.data(), n, 50);
   std::vector<std::uint8_t> out(bytes);
 
-  quiver::mask_combine(quiver::MaskOp::kAnd, quiver::BitmapView{a.data()},
-                       quiver::BitmapView{b.data()}, n, out.data());
+  const auto run = [&]() {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      quiver::bench::autovec_avx2::mask_combine(quiver::MaskOp::kAnd, a.data(), b.data(), n,
+                                                out.data());
+      return;
+    }
+#endif
+    quiver::mask_combine(quiver::MaskOp::kAnd, quiver::BitmapView{a.data()},
+                         quiver::BitmapView{b.data()}, n, out.data());
+  };
+  run();
   bool ok = true;  // independent per-bit recompute (REQ-BENCH-004)
   for (std::int64_t i = 0; i < n; ++i) {
     const bool av = (a[static_cast<std::size_t>(i) >> 3] >> (i & 7)) & 1u;
@@ -56,8 +68,7 @@ void bm_mask_and(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    quiver::mask_combine(quiver::MaskOp::kAnd, quiver::BitmapView{a.data()},
-                         quiver::BitmapView{b.data()}, n, out.data());
+    run();
     benchmark::DoNotOptimize(out.data());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
@@ -71,9 +82,20 @@ void register_benchmarks() {
   for (const std::int64_t n : {4096, 65536, 1 << 20}) {
     benchmark::RegisterBenchmark(
         quiver::bench::bench_name("mask", "and", variant, "bitmap", "n=" + std::to_string(n)),
-        bm_mask_and)
+        bm_mask_and<false>)
         ->Args({n});
   }
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+  // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
+  if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
+    for (const std::int64_t n : {4096, 65536, 1 << 20}) {
+      benchmark::RegisterBenchmark(quiver::bench::bench_name("mask", "and", "autovec-avx2",
+                                                             "bitmap", "n=" + std::to_string(n)),
+                                   bm_mask_and<true>)
+          ->Args({n});
+    }
+  }
+#endif
 }
 
 }  // namespace

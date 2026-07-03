@@ -9,6 +9,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include "bench/baselines/baseline_avx2.h"
 #include "bench/harness/bench_common.h"
 #include "bench/harness/distributions.h"
 #include "bench/harness/meta.h"
@@ -34,6 +35,7 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, st
   }
 }
 
+template <bool kAutovec>
 void bm_sum_i64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const int null_pct = static_cast<int>(state.range(1));
@@ -44,8 +46,16 @@ void bm_sum_i64(benchmark::State& state) {
   quiver::bench::fill_bitmap_uniform(rng, validity.data(), n, 100 - null_pct);
   const std::uint8_t* vd = null_pct == 0 ? nullptr : validity.data();
 
-  const std::int64_t got =
-      quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{v.data(), n}, quiver::BitmapView{vd});
+  const auto run = [&]() {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      return quiver::bench::autovec_avx2::sum_wrap_i64(v.data(), n, vd);
+    }
+#endif
+    return quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{v.data(), n},
+                                   quiver::BitmapView{vd});
+  };
+  const std::int64_t got = run();
   std::uint64_t want = 0;
   for (std::int64_t i = 0; i < n; ++i) {
     const bool ok = vd == nullptr || ((vd[static_cast<std::size_t>(i) >> 3] >> (i & 7)) & 1u);
@@ -58,29 +68,71 @@ void bm_sum_i64(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{v.data(), n},
-                                                     quiver::BitmapView{vd}));
+    benchmark::DoNotOptimize(run());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
 
+// Same-order recompute of the dense float-sum policy the measured path is DOCUMENTED to use
+// (ADR-013): the strict fold for the scalar spec and the autovec baseline; the blocked
+// {w=4, a=4} shape when the dispatched path resolves to AVX2. Bench-local on purpose —
+// bench code never links test oracles (REQ-TEST-018).
+inline double expected_dense_sum_f64(const double* v, std::int64_t n, bool blocked_avx2) {
+  if (!blocked_avx2) {
+    double s = 0.0;
+    for (std::int64_t i = 0; i < n; ++i) {
+      s += v[i];
+    }
+    return s;
+  }
+  constexpr int kW = 4;
+  constexpr int kA = 4;
+  double acc[kW * kA] = {};
+  std::int64_t i = 0;
+  for (; i + kW * kA <= n; i += kW * kA) {
+    for (int k = 0; k < kA; ++k) {
+      for (int lane = 0; lane < kW; ++lane) {
+        acc[k * kW + lane] += v[i + k * kW + lane];
+      }
+    }
+  }
+  double vsum[kW];
+  for (int lane = 0; lane < kW; ++lane) {  // ADR-013 frozen combine: (0+2),(1+3), then +
+    vsum[lane] = (acc[lane] + acc[2 * kW + lane]) + (acc[kW + lane] + acc[3 * kW + lane]);
+  }
+  double s = 0.0;
+  for (int lane = 0; lane < kW; ++lane) {
+    s += vsum[lane];
+  }
+  for (; i < n; ++i) {
+    s += v[i];
+  }
+  return s;
+}
+
+template <bool kAutovec>
 void bm_sum_f64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   quiver::bench::Rng rng(kSeed);
   std::vector<double> v(static_cast<std::size_t>(n));
   quiver::bench::fill_uniform(rng, v.data(), n);
-  double want = 0.0;  // the strict fold IS the scalar spec — same order recompute
-  for (std::int64_t i = 0; i < n; ++i) {
-    want += v[static_cast<std::size_t>(i)];
-  }
-  const double got =
-      quiver::reduce_sum_wrap(quiver::BatchView<double>{v.data(), n}, quiver::BitmapView{nullptr});
+  const auto run = [&]() {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      return quiver::bench::autovec_avx2::sum_wrap_f64(v.data(), n, nullptr);
+    }
+#endif
+    return quiver::reduce_sum_wrap(quiver::BatchView<double>{v.data(), n},
+                                   quiver::BitmapView{nullptr});
+  };
+  const bool blocked = !kAutovec && quiver::active_isa() == quiver::Isa::kAvx2;
+  const double want = expected_dense_sum_f64(v.data(), n, blocked);
+  const double got = run();
   quiver::bench::validate_or_abort("BM_reduce_f64", got == want,
-                                   "strict-fold sum vs same-order recompute");
+                                   "policy sum vs same-order recompute");
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(quiver::reduce_sum_wrap(quiver::BatchView<double>{v.data(), n},
-                                                     quiver::BitmapView{nullptr}));
+    benchmark::DoNotOptimize(run());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
@@ -95,14 +147,35 @@ void register_benchmarks() {
       benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", variant, "i64",
                                                              "n=" + std::to_string(n) + "/nulls=" +
                                                                  std::to_string(null_pct)),
-                                   bm_sum_i64)
+                                   bm_sum_i64<false>)
           ->Args({n, null_pct});
     }
     benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", variant, "f64",
                                                            "n=" + std::to_string(n) + "/nulls=0"),
-                                 bm_sum_f64)
+                                 bm_sum_f64<false>)
         ->Args({n});
   }
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+  // Equal-ISA autovec baseline variants (ADR-011): registered only where the explicit AVX2
+  // path also runs, so every verdict pair exists on the same machine (REQ-BENCH-002).
+  if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
+    for (const std::int64_t n : {4096, 65536}) {
+      for (const int null_pct : {0, 10, 50}) {
+        benchmark::RegisterBenchmark(
+            quiver::bench::bench_name("reduce", "sum_wrap", "autovec-avx2", "i64",
+                                      "n=" + std::to_string(n) +
+                                          "/nulls=" + std::to_string(null_pct)),
+            bm_sum_i64<true>)
+            ->Args({n, null_pct});
+      }
+      benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", "autovec-avx2",
+                                                             "f64",
+                                                             "n=" + std::to_string(n) + "/nulls=0"),
+                                   bm_sum_f64<true>)
+          ->Args({n});
+    }
+  }
+#endif
 }
 
 }  // namespace

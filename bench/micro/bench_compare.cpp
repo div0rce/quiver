@@ -10,6 +10,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include "bench/baselines/baseline_avx2.h"
 #include "bench/harness/bench_common.h"
 #include "bench/harness/distributions.h"
 #include "bench/harness/meta.h"
@@ -35,6 +36,7 @@ void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, st
   }
 }
 
+template <bool kAutovec>
 void bm_compare_bitmap(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const int sel_pct = static_cast<int>(state.range(1));
@@ -46,9 +48,18 @@ void bm_compare_bitmap(benchmark::State& state) {
       static_cast<std::uint64_t>(~0ull) / 100 * (100 - sel_pct) - (~0ull >> 1));
   std::vector<std::uint8_t> bits(static_cast<std::size_t>((n + 7) / 8));
 
-  const std::int64_t got =
-      quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{v.data(), n},
-                             comparand, quiver::BitmapView{nullptr}, bits.data());
+  const auto run = [&]() {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      return quiver::bench::autovec_avx2::compare_bitmap_i64(quiver::CompareOp::kGt, v.data(), n,
+                                                             comparand, nullptr, bits.data());
+    }
+#endif
+    return quiver::compare_bitmap(quiver::CompareOp::kGt,
+                                  quiver::BatchView<std::int64_t>{v.data(), n}, comparand,
+                                  quiver::BitmapView{nullptr}, bits.data());
+  };
+  const std::int64_t got = run();
   std::int64_t want = 0;  // independent recompute (REQ-BENCH-004)
   for (std::int64_t i = n - 1; i >= 0; --i) {
     want += v[static_cast<std::size_t>(i)] > comparand ? 1 : 0;
@@ -57,9 +68,7 @@ void bm_compare_bitmap(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(
-        quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{v.data(), n},
-                               comparand, quiver::BitmapView{nullptr}, bits.data()));
+    benchmark::DoNotOptimize(run());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
@@ -74,10 +83,24 @@ void register_benchmarks() {
       benchmark::RegisterBenchmark(
           quiver::bench::bench_name("compare", "bitmap_gt", variant, "i64",
                                     "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),
-          bm_compare_bitmap)
+          bm_compare_bitmap<false>)
           ->Args({n, pct});
     }
   }
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+  // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
+  if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
+    for (const std::int64_t n : {1024, 4096, 65536}) {
+      for (const int pct : {1, 10, 50, 90, 99}) {
+        benchmark::RegisterBenchmark(
+            quiver::bench::bench_name("compare", "bitmap_gt", "autovec-avx2", "i64",
+                                      "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),
+            bm_compare_bitmap<true>)
+            ->Args({n, pct});
+      }
+    }
+  }
+#endif
 }
 
 }  // namespace

@@ -51,10 +51,23 @@ target_link_libraries(quiver_bench_smoke PRIVATE quiver_bench_harness)
 set_target_properties(quiver_bench_smoke PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Family microbenchmarks (bench/baselines/ arrives M4; bench/pipeline/ at M8).
+# Equal-ISA autovec baselines (ADR-011, REQ-BENCH-010): the reference recompiled under the
+# AVX2 target region; compiles empty off x86 (arch-guarded TU, ADR-003).
+add_library(quiver_bench_baselines STATIC baselines/baseline_avx2.cpp)
+target_link_libraries(quiver_bench_baselines PUBLIC quiver::quiver)
+target_include_directories(quiver_bench_baselines PUBLIC ${CMAKE_SOURCE_DIR})
+if(NOT MSVC)
+  target_compile_options(quiver_bench_baselines PRIVATE -Wall -Wextra)
+endif()
+if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
+  # MSVC has no target pragma; the baseline TU gets /arch:AVX2 per-source (ADR-003).
+  set_source_files_properties(baselines/baseline_avx2.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+endif()
+
+# Family microbenchmarks (bench/pipeline/ arrives at M8).
 foreach(fam compare filter select mask take reduce dispatch)
   add_executable(quiver_bench_${fam} micro/bench_${fam}.cpp)
-  target_link_libraries(quiver_bench_${fam} PRIVATE quiver_bench_harness)
+  target_link_libraries(quiver_bench_${fam} PRIVATE quiver_bench_harness quiver_bench_baselines)
   set_target_properties(quiver_bench_${fam} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 endforeach()

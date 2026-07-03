@@ -194,4 +194,48 @@ quiver::SumType<T> sum_expected(const T* in, std::int64_t n, const Participation
   }
 }
 
+// ADR-013 SIMD dense float-sum policy oracle (REQ-TEST-004), parameterized per backend
+// (AVX2: f32 {w=8, a=4}, f64 {w=4, a=4}). Mirrors the backend arithmetic operation-for-
+// operation so comparisons are bit-exact for non-NaN results: w*a-element blocks add
+// elementwise into a*w scalar accumulators (invalid lanes add -0.0, the exact masked
+// neutral); accumulators combine in the ADR-013 frozen pairwise order ((0+2),(1+3), then +),
+// lanewise; lanes fold strictly low->high starting from +0.0; the tail (n mod w*a) adds
+// sequentially, valid-only. Dense shape only — selected shapes use the strict fold
+// (sum_expected) on every backend. NaN results must be compared as a CLASS (both-NaN ⇒
+// match): IEEE add propagates the payload of whichever operand the hardware sees first, and
+// C++ does not pin FP operand order, so payloads are not reproducible by any oracle.
+template <class T>
+T sum_blocked_expected(const T* in, std::int64_t n, const std::uint8_t* validity, int w, int a) {
+  static_assert(std::is_floating_point_v<T>, "blocked-sum policy applies to floats only");
+  std::vector<T> acc(static_cast<std::size_t>(w) * static_cast<std::size_t>(a), T{0});
+  const std::int64_t block = static_cast<std::int64_t>(w) * a;
+  std::int64_t i = 0;
+  for (; i + block <= n; i += block) {
+    for (int k = 0; k < a; ++k) {
+      for (int lane = 0; lane < w; ++lane) {
+        const std::int64_t idx = i + static_cast<std::int64_t>(k) * w + lane;
+        acc[static_cast<std::size_t>(k * w + lane)] += valid(validity, idx) ? in[idx] : T{-0.0};
+      }
+    }
+  }
+  for (int step = a / 2; step >= 1; step /= 2) {  // frozen combine: (0+2),(1+3), then +
+    for (int k = 0; k < step; ++k) {
+      for (int lane = 0; lane < w; ++lane) {
+        acc[static_cast<std::size_t>(k * w + lane)] +=
+            acc[static_cast<std::size_t>((k + step) * w + lane)];
+      }
+    }
+  }
+  T s = T{0};
+  for (int lane = 0; lane < w; ++lane) {
+    s += acc[static_cast<std::size_t>(lane)];
+  }
+  for (; i < n; ++i) {
+    if (valid(validity, i)) {
+      s += in[i];
+    }
+  }
+  return s;
+}
+
 }  // namespace quiver_test::ref

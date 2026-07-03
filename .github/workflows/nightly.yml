@@ -1,6 +1,8 @@
 # Quiver nightly validation (MOD-CI) — created at M3 per docs/prd/18-milestones.md.
 # REQ-CI-006: full differential cross product, MSan, LSan, coverage artifact,
 # -Rpass-missed vectorization report (REQ-SIMD-009, informational).
+# REQ-CI-005: nightly fuzz — >= 4 h total across the six family targets, with corpus
+# minimization and crash-artifact upload.
 # Action pins per REQ-CI-001/REQ-SEC-006.
 
 name: nightly
@@ -28,6 +30,40 @@ jobs:
       - name: Full-axis test sweep
         env: { QUIVER_NIGHTLY: "1" }
         run: ctest --preset release --output-on-failure
+
+  fuzz-long:
+    name: differential fuzz, 40 min/family (REQ-CI-005 nightly >= 4 h total)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 320
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configure + build fuzz preset
+        env: { CC: clang-18, CXX: clang++-18 }
+        run: cmake --preset fuzz && cmake --build --preset fuzz -j 4
+      - name: Run each family target 40 minutes, then minimize its corpus in place
+        run: |
+          set -eu
+          for fam in compare filter select mask take reduce; do
+            echo "== quiver_fuzz_${fam}"
+            build/fuzz/tests/quiver_fuzz_${fam} -max_total_time=2400 -print_final_stats=1 \
+              "tests/fuzz/corpus/${fam}"
+            mkdir -p "min-corpus/${fam}"
+            build/fuzz/tests/quiver_fuzz_${fam} -merge=1 "min-corpus/${fam}" \
+              "tests/fuzz/corpus/${fam}"
+          done
+      - name: Upload minimized corpora (informational; committed corpora update via PR)
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with: { name: minimized-corpora, path: min-corpus }
+      - name: Upload crash artifacts if any
+        if: failure()
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: nightly-fuzz-crashes
+          path: |
+            crash-*
+            leak-*
+            timeout-*
+          if-no-files-found: ignore
 
   msan:
     name: MemorySanitizer (clang, instrumented libc++)

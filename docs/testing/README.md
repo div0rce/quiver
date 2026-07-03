@@ -1,5 +1,9 @@
 # Testing documentation
 
-Test taxonomy, testkit guide, and reproduction how-tos (PRD [12](../prd/12-testing-architecture.md)). Empty at M0 by design; `testkit.md` arrives at M2 (REQ-INT-002 docs).
+Test taxonomy, testkit guide, and reproduction how-tos (PRD [12](../prd/12-testing-architecture.md)).
+
+- [Testkit](testkit.md) — seeded generators, oracles, drift alarm (M2).
+- [Differential fuzzing](fuzzing.md) — per-family libFuzzer targets, corpus policy,
+  reproduction (M4).
 
 Owner: MOD-TESTKIT.

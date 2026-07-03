@@ -8,8 +8,9 @@ QUIVER_BEGIN_NAMESPACE
 namespace detail {
 
 // Field semantics (PRD 05 §4): a tier is reported only if the CPU has the instructions AND
-// the OS saves the register state (XGETBV on x86). avx512 means the full required set
-// F+BW+DQ+VL with opmask/ZMM/Hi16 OS state (REQ-DISP-004); vbmi2/vpopcntdq are optional
+// the OS saves the register state (XGETBV on x86). avx2 means AVX2+BMI2 — the exact set the
+// avx2 target regions compile against (PDEP/PEXT compaction). avx512 means the full required
+// set F+BW+DQ+VL with opmask/ZMM/Hi16 OS state (REQ-DISP-004); vbmi2/vpopcntdq are optional
 // sub-features used at resolution time from M7 (REQ-DISP-011). Monotone by construction:
 // avx512 implies avx2.
 struct CpuFeatures {

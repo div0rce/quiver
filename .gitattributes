@@ -6,3 +6,6 @@
 
 # Keep GitHub language stats honest once C++ lands.
 docs/** linguist-documentation
+
+# Fuzz corpora are raw byte streams — never normalize (REQ-TEST-007 reproduction).
+tests/fuzz/corpus/** binary
