@@ -116,7 +116,8 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 // Rows hold typed pointers so no (non-constexpr) function-pointer cast is needed at init;
 // AVX2/NEON/AVX-512 slots populate at their milestones (M4/M5/M7). ------------------------
 namespace {
-// NOLINTNEXTLINE(bugprone-macro-parentheses): ret/params are type syntax; unparenthesizable
+// NOLINTBEGIN(bugprone-macro-parentheses): ret/params/args are type, signature, and call
+// syntax — parenthesizing them is not valid C++.
 #define QUIVER_DEFINE_ENTRY(uid, ret, name, params, args)                                          \
   constinit DispatchEntry g_entry_##uid;                                                           \
   constinit BackendRow<ret(*) params noexcept> g_row_##uid{                                        \
@@ -136,13 +137,13 @@ static_assert(sizeof(g_registry) / sizeof(g_registry[0]) == kKernelEntryCount);
 }  // namespace
 
 // --- Dispatched wrappers: the concrete symbols the public facades call (ADR-006) ------------
-// NOLINTNEXTLINE(bugprone-macro-parentheses): params/args are signature/call syntax
 #define QUIVER_DEFINE_WRAPPER(uid, ret, name, params, args)                                        \
   ret name params noexcept {                                                                       \
     return dispatch_get(g_entry_##uid, g_row_##uid) args;                                          \
   }
 QUIVER_KERNEL_ENTRY_LIST(QUIVER_DEFINE_WRAPPER)
 #undef QUIVER_DEFINE_WRAPPER
+// NOLINTEND(bugprone-macro-parentheses)
 
 std::uint32_t current_policy_epoch() noexcept {
   return g_policy_epoch.load(std::memory_order_relaxed);
