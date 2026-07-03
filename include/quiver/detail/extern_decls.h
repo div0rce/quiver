@@ -19,9 +19,9 @@ namespace detail {
 
 // Number of concrete kernel symbols in the inventory.
 inline constexpr int kKernelEntryCount = 0
-// NOLINTNEXTLINE(bugprone-macro-parentheses): X-macro summation idiom — `+1` terms
-// concatenate onto the leading 0; parenthesizing would break the expression.
-#define QUIVER_COUNT_ENTRY(idx, family, api, type, repr) +1
+// X-macro summation idiom: `+1` terms concatenate onto the leading 0; parenthesizing
+// would break the expression.
+#define QUIVER_COUNT_ENTRY(idx, family, api, type, repr) +1  // NOLINT(bugprone-macro-parentheses)
     QUIVER_KERNEL_ENTRY_LIST(QUIVER_COUNT_ENTRY)
 #undef QUIVER_COUNT_ENTRY
     ;

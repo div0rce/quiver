@@ -70,8 +70,8 @@ void read_brand_x86(char (&brand)[64]) noexcept {
     return;
   }
   char raw[48];
-  for (unsigned i = 0; i < 3; ++i) {
-    const CpuidRegs r = cpuid_count(0x80000002u + i, 0);
+  for (std::size_t i = 0; i < 3; ++i) {
+    const CpuidRegs r = cpuid_count(0x80000002u + static_cast<unsigned>(i), 0);
     std::memcpy(raw + 16 * i + 0, &r.eax, 4);
     std::memcpy(raw + 16 * i + 4, &r.ebx, 4);
     std::memcpy(raw + 16 * i + 8, &r.ecx, 4);

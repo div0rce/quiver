@@ -106,7 +106,12 @@ jobs:
               command -v g++-14 >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q gcc-14 g++-14; } ;;
             clang-17|clang-19)
               v="${{ matrix.compiler }}"; v="${v#clang-}"
-              command -v "clang-$v" >/dev/null || { wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh && sudo bash /tmp/llvm.sh "$v"; } ;;
+              command -v "clang-$v" >/dev/null || { wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh && sudo bash /tmp/llvm.sh "$v"; }
+              # clang-17 predates libstdc++-14's C++23 <tuple>; pair it with the image's
+              # gcc-13 standard library (toolchain selection, same class as $CC/$CXX).
+              if [ "$v" = "17" ]; then
+                echo "CXXFLAGS=--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13" >> "$GITHUB_ENV"
+              fi ;;
             *) ;;
           esac
       - name: Configure
