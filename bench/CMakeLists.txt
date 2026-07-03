@@ -51,5 +51,10 @@ target_link_libraries(quiver_bench_smoke PRIVATE quiver_bench_harness)
 set_target_properties(quiver_bench_smoke PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# bench/micro/, bench/baselines/, bench/pipeline/ arrive at M3/M4/M8
-# (docs/prd/18-milestones.md).
+# Family microbenchmarks (bench/baselines/ arrives M4; bench/pipeline/ at M8).
+foreach(fam compare filter select mask take reduce dispatch)
+  add_executable(quiver_bench_${fam} micro/bench_${fam}.cpp)
+  target_link_libraries(quiver_bench_${fam} PRIVATE quiver_bench_harness)
+  set_target_properties(quiver_bench_${fam} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endforeach()

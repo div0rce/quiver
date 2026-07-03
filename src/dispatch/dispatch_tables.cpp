@@ -103,12 +103,44 @@ Isa hw_max(std::uint8_t mask) noexcept {
   return Isa::kScalar;
 }
 
-// --- Kernel entry registry (emitted from the extern_decls.h X-macro; empty until M3) --------
-constexpr int kRegistrySize = kKernelEntryCount > 0 ? kKernelEntryCount : 1;
-constinit DispatchEntry g_entries[kRegistrySize];
-constinit BackendRow g_rows[kRegistrySize] = {};
-
 }  // namespace
+
+// --- Scalar backend declarations (defined in the family *_scalar.cpp TUs) -------------------
+namespace scalar {
+#define QUIVER_DECLARE_BACKEND(uid, ret, name, params, args) ret name params noexcept;
+QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
+#undef QUIVER_DECLARE_BACKEND
+}  // namespace scalar
+
+// --- Entries + typed rows, one per concrete symbol (REQ-DISP-007; constinit, REQ-CORE-004).
+// Rows hold typed pointers so no (non-constexpr) function-pointer cast is needed at init;
+// AVX2/NEON/AVX-512 slots populate at their milestones (M4/M5/M7). ------------------------
+namespace {
+#define QUIVER_DEFINE_ENTRY(uid, ret, name, params, args)                                          \
+  constinit DispatchEntry g_entry_##uid;                                                           \
+  constinit BackendRow<ret(*) params noexcept> g_row_##uid{                                        \
+      {&scalar::name, nullptr, nullptr, nullptr}};                                                 \
+  KernelFn warm_##uid(DispatchEntry& e) noexcept {                                                 \
+    return reinterpret_cast<KernelFn>(resolve(e, g_row_##uid));                                    \
+  }
+QUIVER_KERNEL_ENTRY_LIST(QUIVER_DEFINE_ENTRY)
+#undef QUIVER_DEFINE_ENTRY
+
+constinit const WarmupEntry g_registry[] = {
+#define QUIVER_REGISTRY_ROW(uid, ret, name, params, args) {&g_entry_##uid, &warm_##uid},
+    QUIVER_KERNEL_ENTRY_LIST(QUIVER_REGISTRY_ROW)
+#undef QUIVER_REGISTRY_ROW
+};
+static_assert(sizeof(g_registry) / sizeof(g_registry[0]) == kKernelEntryCount);
+}  // namespace
+
+// --- Dispatched wrappers: the concrete symbols the public facades call (ADR-006) ------------
+#define QUIVER_DEFINE_WRAPPER(uid, ret, name, params, args)                                        \
+  ret name params noexcept {                                                                       \
+    return dispatch_get(g_entry_##uid, g_row_##uid) args;                                          \
+  }
+QUIVER_KERNEL_ENTRY_LIST(QUIVER_DEFINE_WRAPPER)
+#undef QUIVER_DEFINE_WRAPPER
 
 std::uint32_t current_policy_epoch() noexcept {
   return g_policy_epoch.load(std::memory_order_relaxed);
@@ -129,24 +161,6 @@ Isa current_policy_cap() noexcept {
     cap = static_cast<Isa>(ovr);
   }
   return cap;
-}
-
-KernelFn resolve(DispatchEntry& entry, const BackendRow& row) noexcept {
-  const std::uint32_t now = current_policy_epoch();
-  const Isa cap = current_policy_cap();
-  KernelFn fn = nullptr;
-  for (int i = static_cast<int>(cap); i >= 0; --i) {
-    if (row.backends[i] != nullptr) {
-      fn = row.backends[i];
-      break;
-    }
-  }
-  QUIVER_ASSERT(fn != nullptr, "dispatch: scalar backend row must be non-null [REQ-DISP-001]");
-  // Publication order is the protocol (REQ-DISP-008): fn first (relaxed), epoch second
-  // (release). dispatch_get()'s acquire on fn_epoch pairs with this release.
-  entry.fn.store(fn, std::memory_order_relaxed);
-  entry.fn_epoch.store(now, std::memory_order_release);
-  return fn;
 }
 
 }  // namespace detail
@@ -179,10 +193,10 @@ void clear_isa_override() noexcept {
 
 void warmup() noexcept {
   // Forces detection + env read, then resolves every registry entry under the current policy
-  // (REQ-DISP-010). Idempotent; kKernelEntryCount is 0 until M3.
+  // (REQ-DISP-010). Idempotent.
   (void)detail::current_policy_cap();
-  for (int i = 0; i < detail::kKernelEntryCount; ++i) {
-    (void)detail::resolve(detail::g_entries[i], detail::g_rows[i]);
+  for (const detail::WarmupEntry& w : detail::g_registry) {
+    (void)w.resolve_thunk(*w.entry);
   }
 }
 

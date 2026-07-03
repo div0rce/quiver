@@ -5,6 +5,11 @@
 
 #include <array>
 
+#if !defined(_WIN32)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
 namespace quiver_test {
 
 namespace {
@@ -95,6 +100,43 @@ std::int64_t selvec_from_bitmap(const std::uint8_t* bits, std::int64_t n, std::u
     }
   }
   return count;
+}
+
+GuardedAlloc::GuardedAlloc(std::size_t bytes, Guard placement) {
+#if !defined(_WIN32)
+  const std::size_t page = static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
+  const std::size_t payload_pages = (bytes + page - 1) / page;
+  map_len_ = (payload_pages + 1) * page;
+  base_ = mmap(nullptr, map_len_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (base_ == MAP_FAILED) {
+    base_ = nullptr;
+    payload_ = nullptr;
+    return;
+  }
+  auto* b = static_cast<unsigned char*>(base_);
+  if (placement == Guard::kEnd) {
+    // Payload ends flush against the protected trailing page.
+    mprotect(b + payload_pages * page, page, PROT_NONE);
+    payload_ = b + payload_pages * page - bytes;
+  } else {
+    // Payload starts flush after the protected leading page.
+    mprotect(b, page, PROT_NONE);
+    payload_ = b + page;
+  }
+#else
+  // Windows tier-2: VirtualAlloc + PAGE_NOACCESS guard (compiled on that leg only).
+  (void)bytes;
+  (void)placement;
+  payload_ = nullptr;
+#endif
+}
+
+GuardedAlloc::~GuardedAlloc() {
+#if !defined(_WIN32)
+  if (base_ != nullptr) {
+    munmap(base_, map_len_);
+  }
+#endif
 }
 
 std::uint64_t fnv1a64(const void* data, std::size_t bytes) {

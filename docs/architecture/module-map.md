@@ -2,7 +2,7 @@
 
 The file → module ownership record required by REQ-REPO-008: every file belongs to exactly one module. The authoritative module inventory, layering, and dependency rules live in PRD [02 §5–§6](../prd/02-repository-architecture.md); this page tracks the concrete mapping as the repository grows and is updated in every PR that adds files.
 
-**State at M2:** MOD-CORE, MOD-CPU, MOD-DISPATCH, MOD-TESTKIT, and MOD-BENCH (harness) are live; kernels arrive at M3. Rows below marked *predetermined* describe ownership fixed by the PRD for files that do not exist yet; they become *live* at the listed milestone.
+**State at M3:** MOD-CORE, MOD-CPU, MOD-DISPATCH, MOD-KCOMMON, MOD-K1…K6 (scalar backends), MOD-TESTKIT, and MOD-BENCH are live; Tier B families arrive at M6, SIMD backends at M4/M5/M7. Rows below marked *predetermined* describe ownership fixed by the PRD for files that do not exist yet; they become *live* at the listed milestone.
 
 ## Live
 
@@ -18,14 +18,17 @@ The file → module ownership record required by REQ-REPO-008: every file belong
 | `src/cpu/{cpu_features.h,cpu_features.cpp}` | MOD-CPU | live since M1 |
 | `tests/CMakeLists.txt`, `tests/unit/{test_main,test_core,test_dispatch}.cpp` | test suites (MOD-CORE/MOD-DISPATCH validation) | live since M1 |
 | `tests/testkit/{generators.h,generators.cpp,reference.h,assertions.h,drift_check.cpp}`, `tests/unit/test_testkit.cpp` | MOD-TESTKIT | live since M2 |
-| `bench/CMakeLists.txt`, `bench/harness/**` | MOD-BENCH (harness; micro/baselines/pipeline arrive M3/M4/M8) | live since M2 |
+| `bench/CMakeLists.txt`, `bench/harness/**`, `bench/micro/**` | MOD-BENCH | live since M2/M3 |
+| `src/kernels/common/**` | MOD-KCOMMON | live since M3 |
+| `include/quiver/{compare,filter,select,mask,take,reduce}.h`, `src/kernels/<family>/**` | MOD-K1…MOD-K6 | live since M3 (scalar; AVX2 M4, NEON M5, AVX-512 M7) |
+| `tests/{unit,property,differential,invariant}/**` (family suites) | owning family | live since M3 |
 
 ## Predetermined (from PRD 02 §3/§8; 73 production files total)
 
 | Path pattern | Module | Arrives |
 |---|---|---|
-| `src/kernels/common/**` | MOD-KCOMMON | M3 |
-| `include/quiver/<family>.h`, `src/kernels/<family>/**` (5-file pattern) | MOD-K1…MOD-K10 | M3 (Tier A) / M6 (Tier B) |
+| `include/quiver/{hash,unpack,arith}.h`, `src/kernels/{hash,unpack,arith,arith_guarded}/**` | MOD-K7…MOD-K10 | M6 (Tier B) |
+| `src/kernels/<family>/<family>_{avx2,neon,avx512}.cpp` | owning family | M4 / M5 / M7 |
 | `tests/{unit,property,differential,invariant,fuzz,regression}/**` | owning kernel family / MOD-DISPATCH / MOD-CORE | M1–M7 |
 | `bench/baselines/**`, `bench/micro/**`, `bench/pipeline/**` | MOD-BENCH | M3–M8 |
 | `ledger/**` | MOD-LEDGER | M5 |

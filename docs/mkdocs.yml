@@ -48,10 +48,17 @@ validation:
 nav:
   - Home: README.md
   - Guides:
+      - Getting started: guides/getting-started.md
       - Building: guides/building.md
   - API reference:
       - Core types: api/core.md
       - Dispatch: api/dispatch.md
+      - K1 compare: api/compare.md
+      - K2 filter: api/filter.md
+      - K3 sel_convert: api/select.md
+      - K4 mask_algebra: api/mask.md
+      - K5 take / dict_decode: api/take.md
+      - K6 reduce / SMA: api/reduce.md
   - Architecture:
       - Module map: architecture/module-map.md
       - Core (MOD-CORE): architecture/core.md
@@ -77,3 +84,5 @@ nav:
       - Gate M0: releases/gates/M0.md
       - Gate M1: releases/gates/M1.md
       - Gate M2: releases/gates/M2.md
+      - Gate M3: releases/gates/M3.md
+      - v0.1.0: releases/v0.1.0.md

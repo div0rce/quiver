@@ -109,7 +109,10 @@ def main() -> int:
                         f"allow-list (shipped code: std + documented OS headers only)")
             else:
                 rules = [pfx for base, pfx in quoted_rules if rel.startswith(base)]
-                prefixes = rules[0] if rules else ()
+                prefixes = tuple(rules[0]) if rules else ()
+                fam_dir = re.match(r"(src/kernels/[a-z0-9_]+/)", rel)
+                if fam_dir:  # a family may include its own directory (the 5-file pattern)
+                    prefixes = prefixes + (fam_dir.group(1),)
                 if not any(target.startswith(p) for p in prefixes):
                     err(f"REQ-REPO-005/-009: {rel} includes \"{target}\" — violates the "
                         f"module dependency rules of PRD 02 §6")

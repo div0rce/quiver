@@ -84,7 +84,14 @@ endif()
 add_library(quiver STATIC
   src/cpu/cpu_features.cpp
   src/dispatch/dispatch_tables.cpp
-  src/dispatch/version.cpp)
+  src/dispatch/version.cpp
+  src/kernels/common/luts.cpp
+  src/kernels/compare/compare_scalar.cpp
+  src/kernels/filter/filter_scalar.cpp
+  src/kernels/select/select_scalar.cpp
+  src/kernels/mask/mask_scalar.cpp
+  src/kernels/take/take_scalar.cpp
+  src/kernels/reduce/reduce_scalar.cpp)
 add_library(quiver::quiver ALIAS quiver)
 
 target_include_directories(quiver
