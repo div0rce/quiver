@@ -166,6 +166,45 @@ jobs:
           ${CLANG_TIDY} -p build/dev --warnings-as-errors='*' \
             $(git ls-files 'src/*.cpp')
 
+  bench-smoke:
+    name: bench smoke (harness pipeline + validation abort, REQ-CI-007)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configure bench preset
+        run: cmake --preset bench
+      - name: Build
+        run: cmake --build --preset bench -j 4
+      - name: Run every bench binary (validation must pass; no timing gates in CI)
+        run: |
+          set -eu
+          for b in build/bench/bin/quiver_bench_*; do
+            echo "== $b"
+            "$b" --benchmark_min_time=0.01s
+          done
+      - name: Negative demo — corrupted validation must abort (REQ-BENCH-004)
+        run: |
+          set -eu
+          if build/bench/bin/quiver_bench_smoke --quiver_validate_fail; then
+            echo "::error::bench binary emitted output despite failed validation"
+            exit 1
+          fi
+          echo "validation abort path confirmed (non-zero exit)"
+
+  fuzz-smoke:
+    name: fuzz smoke (scaffolding; targets activate at M4)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run fuzz targets when present
+        run: |
+          set -eu
+          if ls tests/fuzz/fuzz_*.cpp >/dev/null 2>&1; then
+            echo "::error::fuzz targets exist but the fuzz-smoke job still runs scaffolding — wire them (REQ-CI-005)"
+            exit 1
+          fi
+          echo "no fuzz targets until M4 (docs/prd/18-milestones.md) — scaffolding pass"
+
   dco-check:
     name: DCO sign-off (REQ-STD-009)
     if: github.event_name == 'pull_request'
