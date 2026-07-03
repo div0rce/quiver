@@ -28,8 +28,7 @@ std::int64_t k3_bitmap_to_selvec(const std::uint8_t* selection, std::int64_t n,
     const __m256i lanes =
         _mm256_loadu_si256(reinterpret_cast<const __m256i*>(kCompactLut32.perm[byte]));
     const __m256i base = _mm256_set1_epi32(static_cast<int>(b << 3));
-    _mm256_storeu_si256(reinterpret_cast<__m256i*>(out + count),
-                        _mm256_add_epi32(lanes, base));
+    _mm256_storeu_si256(reinterpret_cast<__m256i*>(out + count), _mm256_add_epi32(lanes, base));
     count += kPopcountLut.count[byte];
   }
   // Scalar tail (< 8 elements), identical to the reference (ADR-015).

@@ -72,13 +72,13 @@ void run(quiver_fuzz::Decoder& d) {
     }
     quiver_fuzz::check(count == count0, "K1 count mismatch");
     if (form < 3) {
-      quiver_fuzz::check(std::memcmp(bits.data(), bits0.data(),
-                                     static_cast<std::size_t>(bytes)) == 0,
+      quiver_fuzz::check(std::memcmp(bits.data(), bits0.data(), static_cast<std::size_t>(bytes)) ==
+                             0,
                          "K1 bitmap mismatch");
     } else {
-      quiver_fuzz::check(std::memcmp(idx.data(), idx0.data(),
-                                     static_cast<std::size_t>(count) * 4) == 0,
-                         "K1 selvec mismatch");
+      quiver_fuzz::check(
+          std::memcmp(idx.data(), idx0.data(), static_cast<std::size_t>(count) * 4) == 0,
+          "K1 selvec mismatch");
     }
   }
   quiver::clear_isa_override();

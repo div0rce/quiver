@@ -65,14 +65,13 @@ std::int64_t bitmap_to_selvec(const std::uint8_t* selection, std::int64_t n,
   return impl::bitmap_to_selvec(selection, n, out);
 }
 
-void mask_combine(quiver::MaskOp op, const std::uint8_t* a, const std::uint8_t* b,
-                  std::int64_t n, std::uint8_t* out) noexcept {
+void mask_combine(quiver::MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
+                  std::uint8_t* out) noexcept {
   impl::mask_combine(op, a, b, n, out);
 }
 
 void dict_decode_i64_u32(const std::int64_t* dict, std::int64_t dict_len,
-                         const std::uint32_t* codes, std::int64_t n,
-                         std::int64_t* out) noexcept {
+                         const std::uint32_t* codes, std::int64_t n, std::int64_t* out) noexcept {
   impl::dict_decode<std::int64_t, std::uint32_t>(dict, dict_len, codes, n, out);
 }
 

@@ -35,9 +35,9 @@ void run(quiver_fuzz::Decoder& d) {
     T* dst = in_place ? buf.data() : out.data();
     std::int64_t count = 0;
     if (use_selvec) {
-      count = quiver::filter(quiver::BatchView<T>{buf.data(), n},
-                             quiver::SelVec{sel.data(), static_cast<std::int64_t>(sel.size())},
-                             dst);
+      count =
+          quiver::filter(quiver::BatchView<T>{buf.data(), n},
+                         quiver::SelVec{sel.data(), static_cast<std::int64_t>(sel.size())}, dst);
     } else {
       count = quiver::filter(quiver::BatchView<T>{buf.data(), n},
                              quiver::BitmapView{selection.data()}, dst);

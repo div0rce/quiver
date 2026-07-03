@@ -62,8 +62,7 @@ TEST(RegEmptySelvec, ReductionsYieldIdentities) {
   const quiver::BitmapView val{nullptr};
   for_each_backend([&] {
     EXPECT_EQ(quiver::reduce_min(in, val, kEmptySel), std::numeric_limits<std::int32_t>::max());
-    EXPECT_EQ(quiver::reduce_max(in, val, kEmptySel),
-              std::numeric_limits<std::int32_t>::lowest());
+    EXPECT_EQ(quiver::reduce_max(in, val, kEmptySel), std::numeric_limits<std::int32_t>::lowest());
     EXPECT_EQ(quiver::reduce_sum_wrap(in, val, kEmptySel), 0);
     std::int64_t sum = -1;
     EXPECT_FALSE(quiver::reduce_sum_checked(in, val, kEmptySel, &sum));
@@ -81,8 +80,7 @@ TEST(RegEmptySelvec, FilterAndConvertHandleEmpty) {
   std::vector<std::uint64_t> v(static_cast<std::size_t>(n), 9);
   std::vector<std::uint64_t> out(1, 0xDEADull);
   for_each_backend([&] {
-    EXPECT_EQ(quiver::filter(quiver::BatchView<std::uint64_t>{v.data(), n}, kEmptySel,
-                             out.data()),
+    EXPECT_EQ(quiver::filter(quiver::BatchView<std::uint64_t>{v.data(), n}, kEmptySel, out.data()),
               0);
     EXPECT_EQ(out[0], 0xDEADull);
     std::vector<std::uint8_t> bits(static_cast<std::size_t>((n + 7) / 8), 0xFF);

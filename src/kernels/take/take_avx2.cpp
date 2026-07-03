@@ -35,8 +35,7 @@ void take_gather(const T* values, std::int64_t values_len, const std::uint32_t* 
   for (std::int64_t j = 0; j < idx_len; ++j) {
     QUIVER_ASSERT(idx[j] < static_cast<std::uint64_t>(values_len),
                   "take: index out of bounds [REQ-K5-002]");
-    QUIVER_ASSERT(idx[j] < (1u << 31),
-                  "take(gather): vpgatherd* sign-extends 32-bit indices");
+    QUIVER_ASSERT(idx[j] < (1u << 31), "take(gather): vpgatherd* sign-extends 32-bit indices");
   }
 #else
   (void)values_len;
@@ -49,8 +48,7 @@ void take_gather(const T* values, std::int64_t values_len, const std::uint32_t* 
         _mm256_storeu_ps(out + j, _mm256_i32gather_ps(values, vidx, 4));
       } else {
         _mm256_storeu_si256(reinterpret_cast<__m256i*>(out + j),
-                            _mm256_i32gather_epi32(reinterpret_cast<const int*>(values),
-                                                   vidx, 4));
+                            _mm256_i32gather_epi32(reinterpret_cast<const int*>(values), vidx, 4));
       }
     }
   } else {
@@ -86,25 +84,24 @@ QUIVER_FORCE_INLINE void take_dispatch(const T* values, std::int64_t values_len,
 }  // namespace
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T/C expand to type names inside declarators.
-#define QUIVER_K5_TAKE_DEFINE(T)                                                             \
-  void k5_take(const T* values, std::int64_t values_len, const std::uint32_t* idx,          \
-               std::int64_t idx_len, T* out) noexcept {                                     \
-    take_dispatch<T>(values, values_len, idx, idx_len, out);                                \
+#define QUIVER_K5_TAKE_DEFINE(T)                                                                   \
+  void k5_take(const T* values, std::int64_t values_len, const std::uint32_t* idx,                 \
+               std::int64_t idx_len, T* out) noexcept {                                            \
+    take_dispatch<T>(values, values_len, idx, idx_len, out);                                       \
   }
 
-#define QUIVER_K5_DECODE_DEFINE(T, C)                                                        \
-  void k5_dict_decode(const T* dict, std::int64_t dict_len, const C* codes, std::int64_t n, \
-                      const std::uint32_t* sel, std::int64_t sel_len, T* out) noexcept {    \
-    return sel == nullptr                                                                   \
-               ? scalar_impl::dict_decode<T, C>(dict, dict_len, codes, n, out)              \
-               : scalar_impl::dict_decode_sel<T, C>(dict, dict_len, codes, sel, sel_len,    \
-                                                    out);                                   \
+#define QUIVER_K5_DECODE_DEFINE(T, C)                                                              \
+  void k5_dict_decode(const T* dict, std::int64_t dict_len, const C* codes, std::int64_t n,        \
+                      const std::uint32_t* sel, std::int64_t sel_len, T* out) noexcept {           \
+    return sel == nullptr                                                                          \
+               ? scalar_impl::dict_decode<T, C>(dict, dict_len, codes, n, out)                     \
+               : scalar_impl::dict_decode_sel<T, C>(dict, dict_len, codes, sel, sel_len, out);     \
   }
 
-#define QUIVER_K5_DEFINE(T)                                                                  \
-  QUIVER_K5_TAKE_DEFINE(T)                                                                   \
-  QUIVER_K5_DECODE_DEFINE(T, std::uint8_t)                                                   \
-  QUIVER_K5_DECODE_DEFINE(T, std::uint16_t)                                                  \
+#define QUIVER_K5_DEFINE(T)                                                                        \
+  QUIVER_K5_TAKE_DEFINE(T)                                                                         \
+  QUIVER_K5_DECODE_DEFINE(T, std::uint8_t)                                                         \
+  QUIVER_K5_DECODE_DEFINE(T, std::uint16_t)                                                        \
   QUIVER_K5_DECODE_DEFINE(T, std::uint32_t)
 
 QUIVER_K5_DEFINE(std::int8_t)

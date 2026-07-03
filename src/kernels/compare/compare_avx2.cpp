@@ -68,8 +68,7 @@ QUIVER_FORCE_INLINE __m256i bias_unsigned(__m256i v) noexcept {
   } else if constexpr (sizeof(T) == 4) {
     return _mm256_xor_si256(v, _mm256_set1_epi32(static_cast<int>(0x80000000u)));
   } else {
-    return _mm256_xor_si256(v,
-                            _mm256_set1_epi64x(static_cast<long long>(0x8000000000000000ull)));
+    return _mm256_xor_si256(v, _mm256_set1_epi64x(static_cast<long long>(0x8000000000000000ull)));
   }
 }
 
@@ -186,9 +185,7 @@ struct CmpRhs {  // in[i] <op> comparand
   QUIVER_FORCE_INLINE auto mask(std::int64_t i) const noexcept {
     return typed_mask<T>(op, load_vec(in + i), bvec);
   }
-  QUIVER_FORCE_INLINE bool inv() const noexcept {
-    return std::is_integral_v<T> && int_invert(op);
-  }
+  QUIVER_FORCE_INLINE bool inv() const noexcept { return std::is_integral_v<T> && int_invert(op); }
   QUIVER_FORCE_INLINE bool one(std::int64_t i) const noexcept {
     return scalar_impl::compare_one(op, in[i], comparand);
   }
@@ -202,9 +199,7 @@ struct CmpBatch {  // a[i] <op> b[i]
   QUIVER_FORCE_INLINE auto mask(std::int64_t i) const noexcept {
     return typed_mask<T>(op, load_vec(a + i), load_vec(b + i));
   }
-  QUIVER_FORCE_INLINE bool inv() const noexcept {
-    return std::is_integral_v<T> && int_invert(op);
-  }
+  QUIVER_FORCE_INLINE bool inv() const noexcept { return std::is_integral_v<T> && int_invert(op); }
   QUIVER_FORCE_INLINE bool one(std::int64_t i) const noexcept {
     return scalar_impl::compare_one(op, a[i], b[i]);
   }
@@ -275,7 +270,7 @@ constexpr std::int64_t group_lanes() noexcept {
 // Packed predicate bits for the group starting at element i (inversion applied, width-masked).
 template <class T, class Pred>
 QUIVER_FORCE_INLINE std::uint32_t group_bits(const Pred& pred, std::int64_t i) noexcept {
-  std::uint32_t bits;
+  std::uint32_t bits = 0;
   if constexpr (std::is_same_v<T, float>) {
     bits = static_cast<std::uint32_t>(_mm256_movemask_ps(pred.mask(i)));
   } else if constexpr (std::is_same_v<T, double>) {
@@ -286,8 +281,7 @@ QUIVER_FORCE_INLINE std::uint32_t group_bits(const Pred& pred, std::int64_t i) n
     bits = static_cast<std::uint32_t>(_mm256_movemask_epi8(pred.mask(i)));
   } else if constexpr (sizeof(T) == 2) {
     // movemask_epi8 yields two identical bits per 16-bit lane; PEXT keeps one per lane.
-    bits = _pext_u32(static_cast<std::uint32_t>(_mm256_movemask_epi8(pred.mask(i))),
-                     0xAAAAAAAAu);
+    bits = _pext_u32(static_cast<std::uint32_t>(_mm256_movemask_epi8(pred.mask(i))), 0xAAAAAAAAu);
   } else if constexpr (sizeof(T) == 4) {
     bits = static_cast<std::uint32_t>(_mm256_movemask_ps(_mm256_castsi256_ps(pred.mask(i))));
   } else {
@@ -357,11 +351,11 @@ std::int64_t emit_selvec_avx2(std::int64_t n, const Pred& pred, const Validity& 
     const std::uint32_t bits = group_bits<T>(pred, i) & val.bytes(i >> 3, kBytes);
     for (int byte_k = 0; byte_k < kBytes; ++byte_k) {
       const auto byte = static_cast<std::uint8_t>((bits >> (8 * byte_k)) & 0xFFu);
+      const std::int64_t base_idx = i + std::int64_t{8} * byte_k;
       const __m256i lanes =
           _mm256_loadu_si256(reinterpret_cast<const __m256i*>(kCompactLut32.perm[byte]));
-      const __m256i base = _mm256_set1_epi32(static_cast<int>(i + 8 * byte_k));
-      _mm256_storeu_si256(reinterpret_cast<__m256i*>(out + count),
-                          _mm256_add_epi32(lanes, base));
+      const __m256i base = _mm256_set1_epi32(static_cast<int>(base_idx));
+      _mm256_storeu_si256(reinterpret_cast<__m256i*>(out + count), _mm256_add_epi32(lanes, base));
       count += kPopcountLut.count[byte];
     }
   }
@@ -377,42 +371,40 @@ std::int64_t emit_selvec_avx2(std::int64_t n, const Pred& pred, const Validity& 
 // --- Concrete overloads (mirroring the scalar backend set; ADR-006) --------------------------
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
-#define QUIVER_K1_DEFINE(T)                                                                    \
-  std::int64_t k1_compare_bitmap(CompareOp op, const T* in, std::int64_t n, T comparand,      \
-                                 const std::uint8_t* validity, std::uint8_t* out) noexcept {  \
-    return emit_bitmap_avx2<T>(n, CmpRhs<T>{op, in, comparand, broadcast(comparand)},         \
-                               OneValidity{validity}, out);                                   \
-  }                                                                                           \
-  std::int64_t k1_compare_bitmap2(CompareOp op, const T* a, const T* b, std::int64_t n,       \
-                                  const std::uint8_t* a_validity,                             \
-                                  const std::uint8_t* b_validity,                             \
-                                  std::uint8_t* out) noexcept {                               \
-    return emit_bitmap_avx2<T>(n, CmpBatch<T>{op, a, b}, TwoValidity{a_validity, b_validity}, \
-                               out);                                                          \
-  }                                                                                           \
-  std::int64_t k1_compare_between_bitmap(const T* in, std::int64_t n, T lo, T hi,             \
-                                         const std::uint8_t* validity,                        \
-                                         std::uint8_t* out) noexcept {                        \
-    return emit_bitmap_avx2<T>(n, CmpBetween<T>{in, lo, hi, broadcast(lo), broadcast(hi)},    \
-                               OneValidity{validity}, out);                                   \
-  }                                                                                           \
-  std::int64_t k1_compare_selvec(CompareOp op, const T* in, std::int64_t n, T comparand,      \
-                                 const std::uint8_t* validity, std::uint32_t* out) noexcept { \
-    return emit_selvec_avx2<T>(n, CmpRhs<T>{op, in, comparand, broadcast(comparand)},         \
-                               OneValidity{validity}, out);                                   \
-  }                                                                                           \
-  std::int64_t k1_compare_selvec2(CompareOp op, const T* a, const T* b, std::int64_t n,       \
-                                  const std::uint8_t* a_validity,                             \
-                                  const std::uint8_t* b_validity,                             \
-                                  std::uint32_t* out) noexcept {                              \
-    return emit_selvec_avx2<T>(n, CmpBatch<T>{op, a, b}, TwoValidity{a_validity, b_validity}, \
-                               out);                                                          \
-  }                                                                                           \
-  std::int64_t k1_compare_between_selvec(const T* in, std::int64_t n, T lo, T hi,             \
-                                         const std::uint8_t* validity,                        \
-                                         std::uint32_t* out) noexcept {                       \
-    return emit_selvec_avx2<T>(n, CmpBetween<T>{in, lo, hi, broadcast(lo), broadcast(hi)},    \
-                               OneValidity{validity}, out);                                   \
+#define QUIVER_K1_DEFINE(T)                                                                        \
+  std::int64_t k1_compare_bitmap(CompareOp op, const T* in, std::int64_t n, T comparand,           \
+                                 const std::uint8_t* validity, std::uint8_t* out) noexcept {       \
+    return emit_bitmap_avx2<T>(n, CmpRhs<T>{op, in, comparand, broadcast(comparand)},              \
+                               OneValidity{validity}, out);                                        \
+  }                                                                                                \
+  std::int64_t k1_compare_bitmap2(CompareOp op, const T* a, const T* b, std::int64_t n,            \
+                                  const std::uint8_t* a_validity, const std::uint8_t* b_validity,  \
+                                  std::uint8_t* out) noexcept {                                    \
+    return emit_bitmap_avx2<T>(n, CmpBatch<T>{op, a, b}, TwoValidity{a_validity, b_validity},      \
+                               out);                                                               \
+  }                                                                                                \
+  std::int64_t k1_compare_between_bitmap(const T* in, std::int64_t n, T lo, T hi,                  \
+                                         const std::uint8_t* validity,                             \
+                                         std::uint8_t* out) noexcept {                             \
+    return emit_bitmap_avx2<T>(n, CmpBetween<T>{in, lo, hi, broadcast(lo), broadcast(hi)},         \
+                               OneValidity{validity}, out);                                        \
+  }                                                                                                \
+  std::int64_t k1_compare_selvec(CompareOp op, const T* in, std::int64_t n, T comparand,           \
+                                 const std::uint8_t* validity, std::uint32_t* out) noexcept {      \
+    return emit_selvec_avx2<T>(n, CmpRhs<T>{op, in, comparand, broadcast(comparand)},              \
+                               OneValidity{validity}, out);                                        \
+  }                                                                                                \
+  std::int64_t k1_compare_selvec2(CompareOp op, const T* a, const T* b, std::int64_t n,            \
+                                  const std::uint8_t* a_validity, const std::uint8_t* b_validity,  \
+                                  std::uint32_t* out) noexcept {                                   \
+    return emit_selvec_avx2<T>(n, CmpBatch<T>{op, a, b}, TwoValidity{a_validity, b_validity},      \
+                               out);                                                               \
+  }                                                                                                \
+  std::int64_t k1_compare_between_selvec(const T* in, std::int64_t n, T lo, T hi,                  \
+                                         const std::uint8_t* validity,                             \
+                                         std::uint32_t* out) noexcept {                            \
+    return emit_selvec_avx2<T>(n, CmpBetween<T>{in, lo, hi, broadcast(lo), broadcast(hi)},         \
+                               OneValidity{validity}, out);                                        \
   }
 
 QUIVER_K1_DEFINE(std::int8_t)

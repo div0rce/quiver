@@ -125,7 +125,10 @@ void bm_sum_f64(benchmark::State& state) {
     return quiver::reduce_sum_wrap(quiver::BatchView<double>{v.data(), n},
                                    quiver::BitmapView{nullptr});
   };
-  const bool blocked = !kAutovec && quiver::active_isa() == quiver::Isa::kAvx2;
+  // Effective backend, not the cap: empty dispatch rows fall through, so an avx512-capable
+  // host still executes the AVX2 backend until the AVX-512 rows land (M7).
+  const bool blocked = !kAutovec && quiver::active_isa() >= quiver::Isa::kAvx2 &&
+                       quiver::cpu_supports(quiver::Isa::kAvx2);
   const double want = expected_dense_sum_f64(v.data(), n, blocked);
   const double got = run();
   quiver::bench::validate_or_abort("BM_reduce_f64", got == want,

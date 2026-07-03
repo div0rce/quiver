@@ -18,14 +18,14 @@ namespace {
 
 QUIVER_FORCE_INLINE __m256i apply_op256(MaskOp op, __m256i a, __m256i b) noexcept {
   switch (op) {
-    case MaskOp::kAnd:
-      return _mm256_and_si256(a, b);
-    case MaskOp::kOr:
-      return _mm256_or_si256(a, b);
-    case MaskOp::kAndNot:
-      return _mm256_andnot_si256(b, a);  // note operand order: (~b) & a
-    case MaskOp::kXor:
-      return _mm256_xor_si256(a, b);
+  case MaskOp::kAnd:
+    return _mm256_and_si256(a, b);
+  case MaskOp::kOr:
+    return _mm256_or_si256(a, b);
+  case MaskOp::kAndNot:
+    return _mm256_andnot_si256(b, a);  // note operand order: (~b) & a
+  case MaskOp::kXor:
+    return _mm256_xor_si256(a, b);
   }
   return _mm256_setzero_si256();
 }

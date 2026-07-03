@@ -57,14 +57,18 @@ void for_each_backend(Body body) {
   quiver::clear_isa_override();
 }
 
-// Float-sum expectation per (backend, shape): dense shapes follow each backend's documented
-// ADR-013 policy (scalar = strict fold; AVX2 = blocked, f32 {w=8,a=4} / f64 {w=4,a=4});
-// selected shapes are the strict fold on every backend (REQ-TEST-004).
+// Float-sum expectation per (backend, shape): dense shapes follow the EFFECTIVE backend's
+// documented ADR-013 policy (scalar = strict fold; AVX2 = blocked, f32 {w=8,a=4} / f64
+// {w=4,a=4}); selected shapes are the strict fold on every backend (REQ-TEST-004). The
+// effective backend can sit below the ISA cap: dispatch falls through empty row slots, so
+// a kAvx512 cap resolves to the AVX2 backend until the AVX-512 rows land at M7 (update the
+// policy map then).
 template <class T>
 quiver::SumType<T> expected_sum(quiver::Isa isa, const T* data, std::int64_t n,
                                 const ref::Participation& p) {
   if constexpr (std::is_floating_point_v<T>) {
-    if (p.sel == nullptr && isa == quiver::Isa::kAvx2) {
+    const bool avx2_backend = isa >= quiver::Isa::kAvx2 && quiver::cpu_supports(quiver::Isa::kAvx2);
+    if (p.sel == nullptr && avx2_backend) {
       return ref::sum_blocked_expected<T>(data, n, p.validity, sizeof(T) == 4 ? 8 : 4, 4);
     }
   }

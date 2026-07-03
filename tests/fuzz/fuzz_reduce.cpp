@@ -55,10 +55,13 @@ void run(quiver_fuzz::Decoder& d) {
 
     if constexpr (std::is_floating_point_v<T>) {
       // Per-backend policy oracle for sums (dense AVX2 = blocked {w,a}; else strict fold).
-      // NaN results compare as a class — payloads follow hardware operand order, which C++
-      // does not pin (gate M4 amendment to the ADR-013 oracle claim).
+      // The EFFECTIVE backend can sit below the ISA cap (empty rows fall through): a
+      // kAvx512 cap resolves to the AVX2 backend until M7. NaN results compare as a class —
+      // payloads follow hardware operand order, which C++ does not pin (gate M4 amendment).
+      const bool avx2_backend =
+          isa >= quiver::Isa::kAvx2 && quiver::cpu_supports(quiver::Isa::kAvx2);
       const auto want =
-          (!with_sel && isa == quiver::Isa::kAvx2)
+          (!with_sel && avx2_backend)
               ? ref::sum_blocked_expected<T>(v.data(), n, vd, sizeof(T) == 4 ? 8 : 4, 4)
               : ref::sum_expected(v.data(), n, p);
       const bool nan_class = (sm != sm) && (want != want);

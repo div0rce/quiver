@@ -30,7 +30,7 @@ inline void check(bool ok, const char* what) {
 }
 
 class Decoder {
- public:
+public:
   Decoder(const std::uint8_t* data, std::size_t size) : p_(data), left_(size) {}
 
   std::uint8_t u8() {
@@ -67,7 +67,7 @@ class Decoder {
     return v;
   }
 
- private:
+private:
   void fill_bytes(void* dst, std::size_t want) {
     const std::size_t got = want < left_ ? want : left_;
     std::memcpy(dst, p_, got);

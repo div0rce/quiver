@@ -35,20 +35,20 @@ void run(quiver_fuzz::Decoder& d) {
         idx0 = idx;
       } else {
         quiver_fuzz::check(count == count0, "K3 count mismatch");
-        quiver_fuzz::check(std::memcmp(idx.data(), idx0.data(),
-                                       static_cast<std::size_t>(count) * 4) == 0,
-                           "K3 selvec mismatch");
+        quiver_fuzz::check(
+            std::memcmp(idx.data(), idx0.data(), static_cast<std::size_t>(count) * 4) == 0,
+            "K3 selvec mismatch");
       }
     } else {
       std::vector<std::uint8_t> bits(static_cast<std::size_t>(bytes) + 1);
-      quiver::selvec_to_bitmap(quiver::SelVec{sel.data(), static_cast<std::int64_t>(sel.size())},
-                               n, bits.data());
+      quiver::selvec_to_bitmap(quiver::SelVec{sel.data(), static_cast<std::int64_t>(sel.size())}, n,
+                               bits.data());
       if (first) {
         bits0 = bits;
       } else {
-        quiver_fuzz::check(std::memcmp(bits.data(), bits0.data(),
-                                       static_cast<std::size_t>(bytes)) == 0,
-                           "K3 bitmap mismatch");
+        quiver_fuzz::check(
+            std::memcmp(bits.data(), bits0.data(), static_cast<std::size_t>(bytes)) == 0,
+            "K3 bitmap mismatch");
       }
     }
     first = false;

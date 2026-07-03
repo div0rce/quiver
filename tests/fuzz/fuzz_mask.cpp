@@ -50,8 +50,7 @@ void run(quiver_fuzz::Decoder& d) {
       first = false;
       continue;
     }
-    quiver_fuzz::check(std::memcmp(comb.data(), comb0.data(), static_cast<std::size_t>(bytes)) ==
-                           0,
+    quiver_fuzz::check(std::memcmp(comb.data(), comb0.data(), static_cast<std::size_t>(bytes)) == 0,
                        "K4 combine mismatch");
     quiver_fuzz::check(std::memcmp(neg.data(), not0.data(), static_cast<std::size_t>(bytes)) == 0,
                        "K4 not mismatch");

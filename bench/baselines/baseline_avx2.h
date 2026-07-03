@@ -22,11 +22,10 @@ std::int64_t filter_bitmap_i64(const std::int64_t* in, std::int64_t n,
                                const std::uint8_t* selection, std::int64_t* out) noexcept;
 std::int64_t bitmap_to_selvec(const std::uint8_t* selection, std::int64_t n,
                               std::uint32_t* out) noexcept;
-void mask_combine(quiver::MaskOp op, const std::uint8_t* a, const std::uint8_t* b,
-                  std::int64_t n, std::uint8_t* out) noexcept;
+void mask_combine(quiver::MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
+                  std::uint8_t* out) noexcept;
 void dict_decode_i64_u32(const std::int64_t* dict, std::int64_t dict_len,
-                         const std::uint32_t* codes, std::int64_t n,
-                         std::int64_t* out) noexcept;
+                         const std::uint32_t* codes, std::int64_t n, std::int64_t* out) noexcept;
 std::int64_t sum_wrap_i64(const std::int64_t* in, std::int64_t n,
                           const std::uint8_t* validity) noexcept;
 double sum_wrap_f64(const double* in, std::int64_t n, const std::uint8_t* validity) noexcept;

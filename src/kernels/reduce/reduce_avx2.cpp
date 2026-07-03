@@ -71,24 +71,22 @@ QUIVER_FORCE_INLINE __m256i lane_mask16(std::uint32_t bits16) noexcept {
   // Words 0..7 take validity byte 0, words 8..15 byte 1 (shuffle_epi8 zero-extends via the
   // 0x80 control bytes), then each word tests its bit weight.
   const __m256i v = _mm256_set1_epi16(static_cast<short>(bits16));
-  const __m256i ctrl = _mm256_setr_epi8(0, -128, 0, -128, 0, -128, 0, -128, 0, -128, 0, -128,
-                                        0, -128, 0, -128, 1, -128, 1, -128, 1, -128, 1, -128,
-                                        1, -128, 1, -128, 1, -128, 1, -128);
+  const __m256i ctrl =
+      _mm256_setr_epi8(0, -128, 0, -128, 0, -128, 0, -128, 0, -128, 0, -128, 0, -128, 0, -128, 1,
+                       -128, 1, -128, 1, -128, 1, -128, 1, -128, 1, -128, 1, -128, 1, -128);
   const __m256i bytes = _mm256_shuffle_epi8(v, ctrl);
-  const __m256i bit =
-      _mm256_setr_epi16(1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128);
+  const __m256i bit = _mm256_setr_epi16(1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128);
   return _mm256_cmpeq_epi16(_mm256_and_si256(bytes, bit), bit);
 }
 
 QUIVER_FORCE_INLINE __m256i lane_mask8(std::uint32_t bits32) noexcept {
   // Byte lane g takes validity byte g/8, then tests bit weight g%8.
   const __m256i v = _mm256_set1_epi32(static_cast<int>(bits32));
-  const __m256i ctrl = _mm256_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2,
-                                        2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3);
+  const __m256i ctrl = _mm256_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,
+                                        2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3);
   const __m256i bytes = _mm256_shuffle_epi8(v, ctrl);
-  const __m256i bit = _mm256_setr_epi8(1, 2, 4, 8, 16, 32, 64, -128, 1, 2, 4, 8, 16, 32, 64,
-                                       -128, 1, 2, 4, 8, 16, 32, 64, -128, 1, 2, 4, 8, 16, 32,
-                                       64, -128);
+  const __m256i bit = _mm256_setr_epi8(1, 2, 4, 8, 16, 32, 64, -128, 1, 2, 4, 8, 16, 32, 64, -128,
+                                       1, 2, 4, 8, 16, 32, 64, -128, 1, 2, 4, 8, 16, 32, 64, -128);
   return _mm256_cmpeq_epi8(_mm256_and_si256(bytes, bit), bit);
 }
 
@@ -205,7 +203,7 @@ MinMax<T> dense_minmax_int(const T* in, std::int64_t n, const std::uint8_t* vali
         accmax = int_minmax_step<T, false>(accmax, vm);
       }
     }
-    alignas(32) T lanes[kW];
+    alignas(32) T lanes[static_cast<std::size_t>(kW)];
     if constexpr (WantMin) {
       _mm256_storeu_si256(reinterpret_cast<__m256i*>(lanes), accmin);
       for (std::int64_t k = 0; k < kW; ++k) {
@@ -248,8 +246,7 @@ T first_participating_zero(const T* in, std::int64_t n, const std::uint8_t* vali
 }
 
 template <class T, bool WantMin, bool WantMax>
-MinMax<T> dense_minmax_float(const T* in, std::int64_t n,
-                             const std::uint8_t* validity) noexcept {
+MinMax<T> dense_minmax_float(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
   constexpr bool kF32 = std::is_same_v<T, float>;
   constexpr std::int64_t kW = kF32 ? 8 : 4;
   constexpr T kIdMin = std::numeric_limits<T>::max();
@@ -283,7 +280,7 @@ MinMax<T> dense_minmax_float(const T* in, std::int64_t n,
         }
       }
       saw_nan = _mm256_movemask_ps(nans) != 0;
-      alignas(32) T lanes[kW];
+      alignas(32) T lanes[static_cast<std::size_t>(kW)];
       if constexpr (WantMin) {
         _mm256_storeu_ps(lanes, accmin);
         for (std::int64_t k = 0; k < kW; ++k) {
@@ -319,7 +316,7 @@ MinMax<T> dense_minmax_float(const T* in, std::int64_t n,
         }
       }
       saw_nan = _mm256_movemask_pd(nans) != 0;
-      alignas(32) T lanes[kW];
+      alignas(32) T lanes[static_cast<std::size_t>(kW)];
       if constexpr (WantMin) {
         _mm256_storeu_pd(lanes, accmin);
         for (std::int64_t k = 0; k < kW; ++k) {
@@ -396,8 +393,7 @@ QUIVER_FORCE_INLINE __m256i widen4(const T* p) noexcept {
 }
 
 template <class T>
-SumType<T> dense_sum_wrap_int(const T* in, std::int64_t n,
-                              const std::uint8_t* validity) noexcept {
+SumType<T> dense_sum_wrap_int(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
   using S = SumType<T>;
   using U = std::make_unsigned_t<S>;
   __m256i acc = _mm256_setzero_si256();
@@ -446,7 +442,7 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
     }
     const __m256 vsum =  // ADR-013 frozen combine: (0+2),(1+3), then +
         _mm256_add_ps(_mm256_add_ps(acc[0], acc[2]), _mm256_add_ps(acc[1], acc[3]));
-    alignas(32) T lanes[kW];
+    alignas(32) T lanes[static_cast<std::size_t>(kW)];
     _mm256_storeu_ps(lanes, vsum);
     for (std::int64_t k = 0; k < kW; ++k) {
       s += lanes[k];
@@ -468,7 +464,7 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
     }
     const __m256d vsum =  // ADR-013 frozen combine: (0+2),(1+3), then +
         _mm256_add_pd(_mm256_add_pd(acc[0], acc[2]), _mm256_add_pd(acc[1], acc[3]));
-    alignas(32) T lanes[kW];
+    alignas(32) T lanes[static_cast<std::size_t>(kW)];
     _mm256_storeu_pd(lanes, vsum);
     for (std::int64_t k = 0; k < kW; ++k) {
       s += lanes[k];
@@ -488,53 +484,53 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
 // --- (sel != nullptr) delegate to the scalar core — see file comment. -----------------------
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T/S expand to type names inside declarators.
-#define QUIVER_K6_MINMAX_SMA_DEFINE(T)                                                        \
-  T k6_reduce_min(const T* in, std::int64_t n, const std::uint8_t* validity,                 \
-                  const std::uint32_t* sel, std::int64_t sel_len) noexcept {                 \
-    if (sel != nullptr) {                                                                    \
-      return scalar_impl::reduce_min<T>(in, n, validity, sel, sel_len);                      \
-    }                                                                                        \
-    return dense_minmax<T, true, false>(in, n, validity).min;                                \
-  }                                                                                          \
-  T k6_reduce_max(const T* in, std::int64_t n, const std::uint8_t* validity,                 \
-                  const std::uint32_t* sel, std::int64_t sel_len) noexcept {                 \
-    if (sel != nullptr) {                                                                    \
-      return scalar_impl::reduce_max<T>(in, n, validity, sel, sel_len);                      \
-    }                                                                                        \
-    return dense_minmax<T, false, true>(in, n, validity).max;                                \
-  }                                                                                          \
-  Sma<T> k6_compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,           \
-                        const std::uint32_t* sel, std::int64_t sel_len) noexcept {           \
-    if (sel != nullptr) {                                                                    \
-      return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                     \
-    }                                                                                        \
-    const MinMax<T> mm = dense_minmax<T, true, true>(in, n, validity);                       \
-    return Sma<T>{mm.min, mm.max, n - valid_count(validity, n)};                             \
+#define QUIVER_K6_MINMAX_SMA_DEFINE(T)                                                             \
+  T k6_reduce_min(const T* in, std::int64_t n, const std::uint8_t* validity,                       \
+                  const std::uint32_t* sel, std::int64_t sel_len) noexcept {                       \
+    if (sel != nullptr) {                                                                          \
+      return scalar_impl::reduce_min<T>(in, n, validity, sel, sel_len);                            \
+    }                                                                                              \
+    return dense_minmax<T, true, false>(in, n, validity).min;                                      \
+  }                                                                                                \
+  T k6_reduce_max(const T* in, std::int64_t n, const std::uint8_t* validity,                       \
+                  const std::uint32_t* sel, std::int64_t sel_len) noexcept {                       \
+    if (sel != nullptr) {                                                                          \
+      return scalar_impl::reduce_max<T>(in, n, validity, sel, sel_len);                            \
+    }                                                                                              \
+    return dense_minmax<T, false, true>(in, n, validity).max;                                      \
+  }                                                                                                \
+  Sma<T> k6_compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,                 \
+                        const std::uint32_t* sel, std::int64_t sel_len) noexcept {                 \
+    if (sel != nullptr) {                                                                          \
+      return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                           \
+    }                                                                                              \
+    const MinMax<T> mm = dense_minmax<T, true, true>(in, n, validity);                             \
+    return Sma<T>{mm.min, mm.max, n - valid_count(validity, n)};                                   \
   }
 
-#define QUIVER_K6_INT_DEFINE(T, S)                                                            \
-  QUIVER_K6_MINMAX_SMA_DEFINE(T)                                                              \
-  S k6_reduce_sum_wrap(const T* in, std::int64_t n, const std::uint8_t* validity,            \
-                       const std::uint32_t* sel, std::int64_t sel_len) noexcept {            \
-    if (sel != nullptr) {                                                                    \
-      return scalar_impl::reduce_sum_wrap<T>(in, n, validity, sel, sel_len);                 \
-    }                                                                                        \
-    return dense_sum_wrap_int<T>(in, n, validity);                                          \
-  }                                                                                          \
-  bool k6_reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validity,      \
-                             const std::uint32_t* sel, std::int64_t sel_len,                 \
-                             S* out_sum) noexcept {                                          \
-    return scalar_impl::reduce_sum_checked<T>(in, n, validity, sel, sel_len, out_sum);       \
+#define QUIVER_K6_INT_DEFINE(T, S)                                                                 \
+  QUIVER_K6_MINMAX_SMA_DEFINE(T)                                                                   \
+  S k6_reduce_sum_wrap(const T* in, std::int64_t n, const std::uint8_t* validity,                  \
+                       const std::uint32_t* sel, std::int64_t sel_len) noexcept {                  \
+    if (sel != nullptr) {                                                                          \
+      return scalar_impl::reduce_sum_wrap<T>(in, n, validity, sel, sel_len);                       \
+    }                                                                                              \
+    return dense_sum_wrap_int<T>(in, n, validity);                                                 \
+  }                                                                                                \
+  bool k6_reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validity,            \
+                             const std::uint32_t* sel, std::int64_t sel_len,                       \
+                             S* out_sum) noexcept {                                                \
+    return scalar_impl::reduce_sum_checked<T>(in, n, validity, sel, sel_len, out_sum);             \
   }
 
-#define QUIVER_K6_FLOAT_DEFINE(T)                                                             \
-  QUIVER_K6_MINMAX_SMA_DEFINE(T)                                                              \
-  T k6_reduce_sum_wrap(const T* in, std::int64_t n, const std::uint8_t* validity,            \
-                       const std::uint32_t* sel, std::int64_t sel_len) noexcept {            \
-    if (sel != nullptr) {                                                                    \
-      return scalar_impl::reduce_sum_wrap<T>(in, n, validity, sel, sel_len);                 \
-    }                                                                                        \
-    return dense_sum_float<T>(in, n, validity);                                             \
+#define QUIVER_K6_FLOAT_DEFINE(T)                                                                  \
+  QUIVER_K6_MINMAX_SMA_DEFINE(T)                                                                   \
+  T k6_reduce_sum_wrap(const T* in, std::int64_t n, const std::uint8_t* validity,                  \
+                       const std::uint32_t* sel, std::int64_t sel_len) noexcept {                  \
+    if (sel != nullptr) {                                                                          \
+      return scalar_impl::reduce_sum_wrap<T>(in, n, validity, sel, sel_len);                       \
+    }                                                                                              \
+    return dense_sum_float<T>(in, n, validity);                                                    \
   }
 
 QUIVER_K6_INT_DEFINE(std::int8_t, std::int64_t)

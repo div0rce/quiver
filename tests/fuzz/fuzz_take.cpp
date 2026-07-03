@@ -38,17 +38,16 @@ void run_decode(quiver_fuzz::Decoder& d, const std::vector<T>& dict) {
                           quiver::SelVec{sel.data(), static_cast<std::int64_t>(sel.size())},
                           out.data());
     } else {
-      quiver::dict_decode(quiver::BatchView<T>{dict.data(), dict_len}, codes.data(), n,
-                          out.data());
+      quiver::dict_decode(quiver::BatchView<T>{dict.data(), dict_len}, codes.data(), n, out.data());
     }
     if (first) {
       out0 = out;
       first = false;
       continue;
     }
-    quiver_fuzz::check(std::memcmp(out.data(), out0.data(),
-                                   static_cast<std::size_t>(out_len) * sizeof(T)) == 0,
-                       "K5 dict_decode mismatch");
+    quiver_fuzz::check(
+        std::memcmp(out.data(), out0.data(), static_cast<std::size_t>(out_len) * sizeof(T)) == 0,
+        "K5 dict_decode mismatch");
   }
 }
 
@@ -76,9 +75,9 @@ void run(quiver_fuzz::Decoder& d) {
         first = false;
         continue;
       }
-      quiver_fuzz::check(std::memcmp(out.data(), out0.data(),
-                                     static_cast<std::size_t>(idx_len) * sizeof(T)) == 0,
-                         "K5 take mismatch");
+      quiver_fuzz::check(
+          std::memcmp(out.data(), out0.data(), static_cast<std::size_t>(idx_len) * sizeof(T)) == 0,
+          "K5 take mismatch");
     }
   } else {  // --- dict_decode, code type from the stream ---
     switch (d.pick(3)) {
