@@ -1,0 +1,21 @@
+{
+  "cpu_model": "Apple M2",
+  "machine_id": "apple-m2-mba",
+  "uarch": "Apple M2 (Avalanche/Blizzard)",
+  "core_used": "OS-scheduled; macOS exposes no user core pinning — recorded per run",
+  "pinning": "none (macOS)",
+  "frequency_governor": "n/a (macOS: OS-managed DVFS, no user governor)",
+  "turbo_boost": "OS-managed DVFS (no user control on Apple Silicon)",
+  "smt": "n/a (Apple Silicon has no SMT)",
+  "aslr": "on (macOS default, not user-controllable per-process here)",
+  "os": "Darwin 25.2.0",
+  "kernel": "Darwin Kernel Version 25.2.0",
+  "compiler": "Apple clang version 17.0.0",
+  "compiler_flags": "-O3 -DNDEBUG [Release]",
+  "lto": "OFF",
+  "google_benchmark_version": "v1.9.1",
+  "library_commit": "abcdef123456",
+  "timestamp_utc": "2026-07-03T12:00:00+00:00",
+  "repetition_seed": 20260703,
+  "deviations": []
+}

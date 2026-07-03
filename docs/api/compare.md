@@ -25,7 +25,8 @@ The family's semantics are defined by `src/kernels/compare/compare_scalar_impl.h
 
 - **scalar** (v0.1): Branch-free byte-assembly core (cost flat in selectivity — the `bench_compare` selectivity sweep is this family's headline evidence; Survey §3.4).
 - **AVX2** (v0.2): vector compares packed to predicate bits via width-specific movemask idioms (8-bit `movemask_epi8`; 16-bit BMI2 `PEXT` of the per-lane high-byte bits; 32-bit `movemask_ps`; 64-bit `movemask_pd` nibbles from two vectors). Unsigned orderings sign-bias both operands then compare signed; `ne/le/ge` derive by bit inversion after packing (exact for total-ordered integers); floats use `_mm256_cmp_ps/pd` ordered-quiet predicates directly (`NEQ_UQ` keeps NaN-true `!=`); `between` ANDs the `GE(lo)`/`LE(hi)` lane masks. Validity ANDs at byte granularity; selvec forms feed predicate bytes into the K3 LUT index-store core; tails are scalar and byte-assembled exactly like the reference (ADR-015/ADR-016). Bit-identical to scalar on all forms.
-- **NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **NEON** (v0.3): 128-bit vector compares packed to predicate bits per 8-element group (16 for byte lanes) via bit-weight AND + horizontal add (`vaddv`) — NEON has no movemask; the PRD's `shrn` narrowing idiom is the noted alternative to evaluate against ledger data. Unsigned orderings are native (`vcgtq_u*`, no bias trick); floats use native ordered compares with `kNe` as post-pack inversion of `eq` (exactly C++ `!=` NaN semantics); `between` ANDs `GE/LE` lane masks. Selvec forms share the K3 LUT index-store core.
+- **AVX-512 (M7):** lands with its milestone; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
 
 ## Ledger
 

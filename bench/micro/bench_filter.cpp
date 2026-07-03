@@ -83,10 +83,7 @@ void bm_filter_bitmap(benchmark::State& state) {
 }
 
 void register_benchmarks() {
-  const char* variant = quiver::active_isa() == quiver::Isa::kScalar ? "scalar"
-                        : quiver::active_isa() == quiver::Isa::kNeon ? "neon"
-                        : quiver::active_isa() == quiver::Isa::kAvx2 ? "avx2"
-                                                                     : "avx512";
+  const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536}) {
     for (const int pct : {1, 10, 50, 90, 99}) {
       for (const int clustered : {0, 1}) {

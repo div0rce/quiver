@@ -1,6 +1,6 @@
 # Benchmark methodology — QLM-1
 
-The Quiver Ledger Methodology, version **QLM-1**. Normative source: PRD [10](../prd/10-benchmark-architecture.md) and [11](../prd/11-performance-ledger.md); any change to axes, statistics, or orchestration bumps the QLM version (REQ-LEDGER-014). **M2 status:** the in-process measurement layer (this page's §1–§3) is live; the ledger runner, statistics, and publication workflow (§4) arrive at M5 and are marked accordingly.
+The Quiver Ledger Methodology, version **QLM-1**, complete as of v0.3: the in-process measurement layer (§1–§3) and the ledger runner, statistics, and publication workflow (§4) are all live. Normative source: PRD [10](../prd/10-benchmark-architecture.md) and [11](../prd/11-performance-ledger.md); any change to axes, statistics, or orchestration bumps the QLM version (REQ-LEDGER-014).
 
 ## 1. Principles
 
@@ -17,9 +17,13 @@ The Quiver Ledger Methodology, version **QLM-1**. Normative source: PRD [10](../
 
 batch {256, 1024, 4096, 16384, 65536} · selectivity {1, 10, 50, 90, 99}% · pattern {uniform, clustered(geometric runs, mean 64)} · null density {0, 1, 10, 50}% · value distribution {sequential, uniform_random, zipf(θ=1.0, 1000 values)} · alignment {aligned64, offset1} · plus family-specific axes (dict size, bit width, overflow density). Input generation is seeded and identical between the testkit and the bench harness (drift-checked, REQ-BENCH-015).
 
-## 4. Statistics and publication (M5; recorded here for completeness)
+## 4. Statistics and publication (live from v0.3)
 
-≥10 process-level repetitions with seeded shuffled interleaving; median + min with seeded percentile-bootstrap 95% CIs (B=10,000); CV screening (>5% excluded, 3–5% flagged); environment manifests per run; append-only results under `ledger/results/`; reproduction via a single documented runner command. Registered machines only — never CI runners.
+≥10 process-level repetitions, each a **fresh process**, run order shuffled per repetition with a recorded seed (REQ-LEDGER-006 interleaving defense); median + min with seeded percentile-bootstrap 95% CIs (B=10,000, ADR-020 — the entry's CI pair reports the **median** estimator; the min is a point estimate); CV screening (>5% excluded until rerun, 3–5% published with the `noisy` flag and a note); environment manifests per run with an empty-`deviations` requirement for publishability (REQ-LEDGER-013); append-only results under `ledger/results/` (ADR-021). Registered machines only — never CI runners.
+
+Run it: `python3 ledger/runner/quiver_ledger.py run --machine <id> [--filter <regex>]` from a clean checkout with the bench preset built. Variant selection is per-process via the `QUIVER_ISA` env cap; on ARM the scalar cap registers under the `autovec` name (the portable scalar build IS the NEON-baseline autovec variant, REQ-BENCH-010). Validation: `quiver_ledger.py validate` structurally checks every committed run against QLS-1 and runs in ctest.
+
+Docs reference entries as `` `qle:<entry_id>` `` inline code; the repo lint verifies every referenced id exists in a committed `entries.json` (REQ-LEDGER-015).
 
 ## 5. PMU collection (ADR-022)
 

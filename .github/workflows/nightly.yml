@@ -65,6 +65,9 @@ jobs:
             timeout-*
           if-no-files-found: ignore
 
+  # avalanche (K7 hash quality, REQ-TEST-016): placeholder — activates at M6 with the Tier B
+  # families. The suite is nightly-scoped (≥100k seeded samples per type is too heavy for PR).
+
   msan:
     name: MemorySanitizer (clang, instrumented libc++)
     runs-on: ubuntu-24.04

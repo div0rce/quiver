@@ -31,6 +31,31 @@ inline std::string bench_name(const char* family, const char* api, const char* v
   return s;
 }
 
+// Variant name for the ACTIVE tier (REQ-BENCH-002/-010): the vocabulary is platform-
+// dependent — on ARM the portable scalar build IS the NEON-baseline autovec variant and is
+// reported as `autovec` (no separate `scalar` variant exists there: it would be the same
+// binary code); on x86 the baseline build is reported once, as `scalar`. The ledger runner
+// selects tiers per repetition process via the QUIVER_ISA env cap, so this single mapping
+// covers every variant a bench binary can register.
+inline const char* variant_name(quiver::Isa isa) {
+#if defined(__aarch64__) || defined(_M_ARM64)
+  constexpr const char* kBaseline = "autovec";
+#else
+  constexpr const char* kBaseline = "scalar";
+#endif
+  switch (isa) {
+  case quiver::Isa::kScalar:
+    return kBaseline;
+  case quiver::Isa::kNeon:
+    return "neon";
+  case quiver::Isa::kAvx2:
+    return "avx2";
+  case quiver::Isa::kAvx512:
+    return "avx512";
+  }
+  return kBaseline;
+}
+
 // Validation failure is fatal by contract: diagnostic to stderr, then abort, so no timing
 // output can be emitted for incorrect code (REQ-BENCH-004; format per REQ-ERR-008).
 inline void validate_or_abort(const char* bench, bool ok, const char* detail) {

@@ -24,6 +24,9 @@ project(Quiver
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+# No C++20 modules in v1: CMake's Ninja+clang module scanning would require clang-scan-deps,
+# which minimal build environments lack — disable the scan outright.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 # --- Shared-library builds are out of scope for v1 (REQ-BUILD-002, F-10 in future work) ------
 if(BUILD_SHARED_LIBS)
@@ -91,6 +94,13 @@ set(QUIVER_AVX2_SOURCES
   src/kernels/mask/mask_avx2.cpp
   src/kernels/take/take_avx2.cpp
   src/kernels/reduce/reduce_avx2.cpp)
+set(QUIVER_NEON_SOURCES
+  src/kernels/compare/compare_neon.cpp
+  src/kernels/filter/filter_neon.cpp
+  src/kernels/select/select_neon.cpp
+  src/kernels/mask/mask_neon.cpp
+  src/kernels/take/take_neon.cpp
+  src/kernels/reduce/reduce_neon.cpp)
 add_library(quiver STATIC
   src/cpu/cpu_features.cpp
   src/dispatch/dispatch_tables.cpp
@@ -102,7 +112,8 @@ add_library(quiver STATIC
   src/kernels/mask/mask_scalar.cpp
   src/kernels/take/take_scalar.cpp
   src/kernels/reduce/reduce_scalar.cpp
-  ${QUIVER_AVX2_SOURCES})
+  ${QUIVER_AVX2_SOURCES}
+  ${QUIVER_NEON_SOURCES})
 add_library(quiver::quiver ALIAS quiver)
 
 # MSVC has no per-function target attribute; the AVX2 TUs get /arch:AVX2 per-source instead

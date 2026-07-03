@@ -1,0 +1,27 @@
+{
+  "entry_id": "apple-m2-20260703-abcdef123456-bm-reduce-sum-wrap-neon-f64-n-4096-nulls-0",
+  "schema": "QLS-1",
+  "methodology": "QLM-1",
+  "benchmark": "BM_reduce/sum_wrap/neon/f64/n=4096/nulls=0",
+  "family": "reduce",
+  "api": "sum_wrap",
+  "variant": "neon",
+  "element_type": "f64",
+  "axes": { "n": 4096, "nulls": 0 },
+  "machine_id": "apple-m2-mba",
+  "manifest_ref": "manifest.json",
+  "library_version": "0.3.0",
+  "git_commit": "abcdef123456",
+  "git_dirty": "clean",
+  "timestamp_utc": "2026-07-03T12:00:00+00:00",
+  "repetitions": 10,
+  "bootstrap_seed": 20260703,
+  "results": {
+    "ns_per_batch": { "median": 470.0, "min": 466.1, "ci95_lo": 468.0, "ci95_hi": 474.2, "cv": 0.012 },
+    "values_per_s": { "median": 8712000000.0, "min": 8650000000.0, "ci95_lo": 8640000000.0, "ci95_hi": 8760000000.0, "cv": 0.012 }
+  },
+  "metrics": ["ns_per_batch", "values_per_s"],
+  "pmu": null,
+  "flags": ["no_pmu", "secondary_platform"],
+  "notes": ""
+}

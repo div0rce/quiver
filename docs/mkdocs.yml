@@ -50,6 +50,7 @@ nav:
   - Guides:
       - Getting started: guides/getting-started.md
       - Building: guides/building.md
+      - Disputing a ledger number: guides/disputes.md
   - API reference:
       - Core types: api/core.md
       - Dispatch: api/dispatch.md
@@ -90,5 +91,7 @@ nav:
       - Gate M2: releases/gates/M2.md
       - Gate M3: releases/gates/M3.md
       - Gate M4: releases/gates/M4.md
+      - Gate M5: releases/gates/M5.md
       - v0.1.0: releases/v0.1.0.md
       - v0.2.0: releases/v0.2.0.md
+      - v0.3.0: releases/v0.3.0.md

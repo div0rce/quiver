@@ -54,16 +54,20 @@ void run(quiver_fuzz::Decoder& d) {
         with_sel ? quiver::compute_sma(in, val, sel) : quiver::compute_sma(in, val);
 
     if constexpr (std::is_floating_point_v<T>) {
-      // Per-backend policy oracle for sums (dense AVX2 = blocked {w,a}; else strict fold).
-      // The EFFECTIVE backend can sit below the ISA cap (empty rows fall through): a
-      // kAvx512 cap resolves to the AVX2 backend until M7. NaN results compare as a class —
-      // payloads follow hardware operand order, which C++ does not pin (gate M4 amendment).
+      // Per-backend policy oracle for sums (dense AVX2/NEON = blocked {w,a}; else strict
+      // fold). The EFFECTIVE backend can sit below the ISA cap (empty rows fall through):
+      // a kAvx512 cap resolves to the AVX2 backend until M7. NaN results compare as a
+      // class — payloads follow hardware operand order, which C++ does not pin (gate M4).
       const bool avx2_backend =
           isa >= quiver::Isa::kAvx2 && quiver::cpu_supports(quiver::Isa::kAvx2);
-      const auto want =
-          (!with_sel && avx2_backend)
-              ? ref::sum_blocked_expected<T>(v.data(), n, vd, sizeof(T) == 4 ? 8 : 4, 4)
-              : ref::sum_expected(v.data(), n, p);
+      const bool neon_backend =
+          isa >= quiver::Isa::kNeon && quiver::cpu_supports(quiver::Isa::kNeon);
+      auto want = ref::sum_expected(v.data(), n, p);
+      if (!with_sel && avx2_backend) {
+        want = ref::sum_blocked_expected<T>(v.data(), n, vd, sizeof(T) == 4 ? 8 : 4, 4);
+      } else if (!with_sel && neon_backend) {
+        want = ref::sum_blocked_expected<T>(v.data(), n, vd, sizeof(T) == 4 ? 4 : 2, 4);
+      }
       const bool nan_class = (sm != sm) && (want != want);
       quiver_fuzz::check(nan_class || std::memcmp(&sm, &want, sizeof(sm)) == 0,
                          "K6 float sum vs policy");

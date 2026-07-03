@@ -56,11 +56,36 @@ consteval PopcountLut build_popcount() {
   return lut;
 }
 
+// Generic nibble/pair TBL-control builder: for each selection value, byte indices of the
+// selected lanes front-packed, 0xFF elsewhere (TBL zero-fill; REQ-MEM-008 scratch).
+template <class Lut, int kSelBits, int kLaneBytes, int kCtrlBytes>
+consteval Lut build_tbl_ctrl() {
+  Lut lut{};
+  for (int s = 0; s < (1 << kSelBits); ++s) {
+    int cursor = 0;
+    for (int lane = 0; lane < kSelBits; ++lane) {
+      if ((s >> lane) & 1) {
+        for (int byte = 0; byte < kLaneBytes; ++byte) {
+          lut.ctrl[s][cursor++] = static_cast<std::uint8_t>(lane * kLaneBytes + byte);
+        }
+      }
+    }
+    for (; cursor < kCtrlBytes; ++cursor) {
+      lut.ctrl[s][cursor] = 0xFF;
+    }
+  }
+  return lut;
+}
+
 }  // namespace
 
 constinit const CompactLut32 kCompactLut32 = build_lut32();
 constinit const CompactLut64 kCompactLut64 = build_lut64();
 constinit const PopcountLut kPopcountLut = build_popcount();
+constinit const CompactNib8 kCompactNib8 = build_tbl_ctrl<CompactNib8, 4, 1, 8>();
+constinit const CompactNib16 kCompactNib16 = build_tbl_ctrl<CompactNib16, 4, 2, 8>();
+constinit const CompactNib32 kCompactNib32 = build_tbl_ctrl<CompactNib32, 4, 4, 16>();
+constinit const CompactPair64 kCompactPair64 = build_tbl_ctrl<CompactPair64, 2, 8, 16>();
 
 }  // namespace detail
 QUIVER_END_NAMESPACE

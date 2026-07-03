@@ -34,5 +34,33 @@ struct PopcountLut {
 };
 extern const PopcountLut kPopcountLut;  // 256 B
 
+// --- NEON TBL nibble tables (REQ-SIMD-005 "16-entry nibble TBL tables"; simdprune lineage,
+// --- Survey §4.1). Each row is a byte-shuffle control: the byte indices of the selected
+// --- lanes, front-packed; 0xFF fills the remainder (TBL yields 0 for out-of-range indices —
+// --- scratch bytes past the cursor stay inside the REQ-MEM-008 capacity region). The
+// --- control width follows the lane width (8 bytes for the 8-byte groups of 8/16-bit lanes,
+// --- 16 bytes for the 128-bit groups of 32/64-bit lanes — a documented interpretation of
+// --- the REQ's "8-byte" wording, recorded in gate M5).
+
+struct CompactNib8 {  // nibble selects 4 one-byte lanes (control padded to 8)
+  alignas(64) std::uint8_t ctrl[16][8];
+};
+extern const CompactNib8 kCompactNib8;  // 128 B
+
+struct CompactNib16 {  // nibble selects 4 two-byte lanes
+  alignas(64) std::uint8_t ctrl[16][8];
+};
+extern const CompactNib16 kCompactNib16;  // 128 B
+
+struct CompactNib32 {  // nibble selects 4 four-byte lanes (full 128-bit control)
+  alignas(64) std::uint8_t ctrl[16][16];
+};
+extern const CompactNib32 kCompactNib32;  // 256 B
+
+struct CompactPair64 {  // 2-bit value selects 2 eight-byte lanes (full 128-bit control)
+  alignas(64) std::uint8_t ctrl[4][16];
+};
+extern const CompactPair64 kCompactPair64;  // 64 B
+
 }  // namespace detail
 QUIVER_END_NAMESPACE

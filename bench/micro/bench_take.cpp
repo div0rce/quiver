@@ -80,10 +80,7 @@ void bm_dict_decode(benchmark::State& state) {
 }
 
 void register_benchmarks() {
-  const char* variant = quiver::active_isa() == quiver::Isa::kScalar ? "scalar"
-                        : quiver::active_isa() == quiver::Isa::kNeon ? "neon"
-                        : quiver::active_isa() == quiver::Isa::kAvx2 ? "avx2"
-                                                                     : "avx512";
+  const char* variant = quiver::bench::variant_name(quiver::active_isa());
   // Dict-size sweep across cache levels (QLM-1 dict_size axis; mandatory per PRD 08 §4).
   for (const std::int64_t dict_bytes : {4 << 10, 32 << 10, 256 << 10, 8 << 20, 64 << 20}) {
     benchmark::RegisterBenchmark(

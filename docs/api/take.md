@@ -24,7 +24,8 @@ The family's semantics are defined by `src/kernels/take/take_scalar_impl.h` (Cha
 
 - **scalar** (v0.1): 4×-unrolled independent loads expose MLP (Survey §3.9). The gather-vs-scalar decision is evidence-gated per ISA at M4/M7 (REQ-K5-004; Survey §4.2).
 - **AVX2** (v0.2): the gather-vs-scalar question is evidence-gated (REQ-K5-004). Both paths are compiled in `take_avx2.cpp`; the shipped default is the **scalar 4×-unrolled MLP path**, held by the Survey §4.2 prior (gather does not beat scalar independent loads on Haswell–Zen 3 for cache-resident batches). No registered x86 hardware was available at v0.2 to measure, so the decision is provisional-by-prior — protocol and reopening criteria in [investigations/k5-gather-avx2.md](../investigations/k5-gather-avx2.md); the M4 gate records the deferral. The gather path additionally requires `idx < 2^31` (`vpgatherd*` sign-extends 32-bit indices — debug-asserted). `dict_decode` delegates to the scalar core (bounds-check structure must stay identical, REQ-K5-002/-003).
-- **NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **NEON** (v0.3): the REQ-KERNEL-007 evidence gate is **N/A on this ISA** — NEON has no gather instruction (Survey §4.1), so the only technique is unrolled independent scalar loads, which is exactly the scalar reference's MLP shape; every entry point delegates and is bit-identical by construction (REQ-K5-004 rationale recorded here).
+- **AVX-512 (M7):** lands with its milestone; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
 
 ## Ledger
 
