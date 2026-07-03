@@ -4,7 +4,22 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-07-03
+
 ### Added
+
+- M3 — Tier A scalar kernels: the six Tier A families (K1 compare, K2 filter, K3
+  sel_convert, K4 mask_algebra, K5 take/dict_decode, K6 reduce/SMA) as readable scalar
+  reference implementations (the semantic specifications, Charter T3) behind 176
+  dispatched concrete symbols with typed constinit backend rows; six public facade
+  headers with O(1) debug-assert contracts; MOD-KCOMMON (bitmap word helpers,
+  consteval compaction LUTs, target-region macros); the dual-oracle test stack
+  (unit + property + differential-vs-naive + invariant + guard-page suites — 71
+  tests incl. no-allocation and tail-zeroing invariants and the strict-fold float
+  oracle); six family benchmarks + dispatch-overhead benchmarks, all
+  validate-before-timing; the nightly workflow (full-axis sweep, MSan with
+  instrumented libc++, LSan, coverage and vectorization-remark artifacts); six
+  family API reference pages and the getting-started guide.
 
 - M2 — Test kit and benchmark harness: seeded portable input generators implementing the
   QLM-1 axes (SplitMix64 core, no libm; golden-hash cross-platform determinism tests),

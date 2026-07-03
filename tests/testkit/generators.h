@@ -144,4 +144,38 @@ private:
 // (identical values are asserted on x86-64, ARM64, and macOS CI: M2 acceptance).
 std::uint64_t fnv1a64(const void* data, std::size_t bytes);
 
+// --- Guard-page buffers (REQ-TEST-006): data flush against an inaccessible page --------------
+// Output buffers are sized to the CAPACITY REGION with the guard at the capacity boundary
+// (REQ-MEM-008); both ends are covered by the two placements. POSIX mmap/mprotect; the
+// Windows tier-2 leg uses VirtualAlloc (compiled there only).
+
+enum class Guard { kEnd, kStart };
+
+class GuardedAlloc {
+public:
+  // bytes of usable payload; placement selects which edge touches the protected page.
+  GuardedAlloc(std::size_t bytes, Guard placement);
+  ~GuardedAlloc();
+  GuardedAlloc(const GuardedAlloc&) = delete;
+  GuardedAlloc& operator=(const GuardedAlloc&) = delete;
+  void* data() const { return payload_; }
+
+private:
+  void* base_ = nullptr;
+  std::size_t map_len_ = 0;
+  void* payload_ = nullptr;
+};
+
+template <class T>
+class GuardedBuffer {
+public:
+  GuardedBuffer(std::int64_t count, Guard placement)
+      : alloc_(static_cast<std::size_t>(count) * sizeof(T), placement) {}
+  T* data() { return static_cast<T*>(alloc_.data()); }
+  const T* data() const { return static_cast<const T*>(alloc_.data()); }
+
+private:
+  GuardedAlloc alloc_;
+};
+
 }  // namespace quiver_test

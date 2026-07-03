@@ -1,0 +1,39 @@
+# API reference — `quiver/reduce.h` (K6)
+
+**Purpose.** K6 — single-pass reductions and SMA with optional validity and selection. Roofline class: **Mixed (int) / compute-bound (float)** (PRD [08 §4](../prd/08-kernel-design.md)). Introduced: v0.1 (scalar backend). Stability: 0.x-fluid until the v1.0 freeze.
+
+All functions inherit the common contract: `noexcept`, allocation-free, borrowed views only, thread-compatible pure functions; contract violations assert in debug builds and are UB in release; in-contract inputs are memory-safe and sanitizer-clean (PRD [04 §2](../prd/04-public-api.md), [16](../prd/16-error-handling.md)).
+
+## Contract
+
+| API | Semantics |
+|---|---|
+| `reduce_min/max(in, validity[, sel])` | participation = selected ∧ valid; identities on empty (min→max(), max→lowest()); float NaN → canonical qNaN |
+| `reduce_sum_wrap(in, validity[, sel])` | integers: wrapping into `SumType<T>`; floats: **strict left fold** (the scalar backend is the charter's strict-order recourse, ADR-013) |
+| `reduce_sum_checked(in, validity[, sel], &sum)` | integers only; → true iff mathematically unrepresentable (exact, 128-bit accumulation); `sum` holds the wrapped value |
+| `compute_sma(in, validity[, sel])` | one pass: min + max + null_count (selected-but-invalid) |
+| `reduce_count_valid(validity, n[, sel])` | delegates to K4 popcount (the documented cross-family exception) |
+
+Narrow integer types provably cannot overflow their 64-bit accumulators (2³¹ × 2³² < 2⁶³) — checked sums for them always return false. -0.0/+0.0 ties keep the first-encountered value (deterministic).
+
+Capacity contracts: PRD [06 §6](../prd/06-memory-model.md). Aliasing rules: [ADR-023](../adr/ADR-023-aliasing-contract.md).
+
+## Scalar reference (the specification)
+
+The family's semantics are defined by `src/kernels/reduce/reduce_scalar_impl.h` (Charter T3) — readable, intrinsic-free, and the oracle every backend must match bit-for-bit.
+
+## Per-ISA notes
+
+- **scalar** (v0.1): SIMD variants (M4+) use the ADR-013 blocked policy (A=4 vectors) and will quantify the reassociation win against this strict scalar baseline honestly.
+- **AVX2 (M4) / NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+
+## Ledger
+
+*Pending v0.3* — the first ledger publication (three microarchitectures) lands at M5 with the explicit-vs-autovec verdict block (wins **and** losses, REQ-LEDGER-011). No performance numbers are published without it (Charter T2).
+
+## Validation
+
+`tests/unit/test_reduce.cpp` · `tests/property/prop_reduce.cpp` · `tests/differential/diff_isa_reduce.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_reduce.cpp` (hypothesis in-source).
+
+---
+*Traceability: REQ-K6-*, REQ-KERNEL-*; ADR-006/-016/-023/-025 (+ ADR-013 for K6); PRD 04 §5, 08 §5.*

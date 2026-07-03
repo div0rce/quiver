@@ -16,7 +16,13 @@ add_executable(quiver_tests_unit
   unit/test_main.cpp
   unit/test_core.cpp
   unit/test_dispatch.cpp
-  unit/test_testkit.cpp)
+  unit/test_testkit.cpp
+  unit/test_compare.cpp
+  unit/test_filter.cpp
+  unit/test_select.cpp
+  unit/test_mask.cpp
+  unit/test_take.cpp
+  unit/test_reduce.cpp)
 
 target_link_libraries(quiver_tests_unit PRIVATE quiver::quiver quiver_testkit GTest::gtest)
 # Tests may include internal headers ("src/..." form, REQ-STD-006); consumers may not.
@@ -45,8 +51,45 @@ endif()
 
 quiver_apply_sanitizers(quiver_tests_unit)
 
+# Suite executables per PRD 03 §4 (property/differential/invariant; regression activates
+# with its first defect fix, REQ-TEST-011).
+function(quiver_add_test_suite name)
+  add_executable(${name} ${ARGN})
+  target_link_libraries(${name} PRIVATE quiver::quiver quiver_testkit GTest::gtest GTest::gtest_main)
+  target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR})
+  if(_quiver_gtest_incs)
+    target_include_directories(${name} SYSTEM PRIVATE ${_quiver_gtest_incs})
+  endif()
+  if(QUIVER_ENABLE_ASSERTS)
+    target_compile_definitions(${name} PRIVATE QUIVER_ENABLE_ASSERTS=1)
+  endif()
+  if(NOT MSVC)
+    target_compile_options(${name} PRIVATE -Wall -Wextra)
+    if(QUIVER_ENABLE_WERROR)
+      target_compile_options(${name} PRIVATE -Werror)
+    endif()
+  else()
+    target_compile_options(${name} PRIVATE /W4)
+  endif()
+  quiver_apply_sanitizers(${name})
+endfunction()
+
+quiver_add_test_suite(quiver_tests_property
+  property/prop_compare.cpp property/prop_filter.cpp property/prop_select.cpp
+  property/prop_mask.cpp property/prop_take.cpp property/prop_reduce.cpp)
+quiver_add_test_suite(quiver_tests_differential
+  differential/diff_isa_compare.cpp differential/diff_isa_filter.cpp
+  differential/diff_isa_select.cpp differential/diff_isa_mask.cpp
+  differential/diff_isa_take.cpp differential/diff_isa_reduce.cpp)
+quiver_add_test_suite(quiver_tests_invariant
+  invariant/inv_bitmap_tail.cpp invariant/inv_determinism.cpp
+  invariant/inv_selvec_sorted.cpp invariant/inv_noalloc.cpp invariant/inv_guard_pages.cpp)
+
 include(GoogleTest)
 gtest_discover_tests(quiver_tests_unit DISCOVERY_TIMEOUT 60)
+gtest_discover_tests(quiver_tests_property DISCOVERY_TIMEOUT 60)
+gtest_discover_tests(quiver_tests_differential DISCOVERY_TIMEOUT 60 PROPERTIES TIMEOUT 600)
+gtest_discover_tests(quiver_tests_invariant DISCOVERY_TIMEOUT 60)
 
 # Drift-alarm conformance runner (REQ-BENCH-015): compiles the bench-local distributions
 # source directly — free of BOTH GoogleTest and Google Benchmark (REQ-TEST-018).

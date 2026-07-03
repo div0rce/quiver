@@ -32,11 +32,11 @@ void backend_neon() {}
 void backend_avx2() {}
 void backend_avx512() {}
 
-BackendRow full_row() {
-  return BackendRow{{&backend_scalar, &backend_neon, &backend_avx2, &backend_avx512}};
+BackendRow<KernelFn> full_row() {
+  return BackendRow<KernelFn>{{&backend_scalar, &backend_neon, &backend_avx2, &backend_avx512}};
 }
 
-KernelFn expected_for(Isa cap, const BackendRow& row) {
+KernelFn expected_for(Isa cap, const BackendRow<KernelFn>& row) {
   for (int i = static_cast<int>(cap); i >= 0; --i) {
     if (row.backends[i] != nullptr) {
       return row.backends[i];
@@ -111,7 +111,7 @@ TEST(Dispatch, OverrideRejectsUnsupportedTierWithoutStateChange) {
 // --- Synthetic-entry resolution (REQ-DISP-001/-002/-008; PRD 07 §11 framework tests) ---------
 TEST(Dispatch, ResolutionSelectsHighestBackendUnderPolicy) {
   DispatchEntry entry;
-  const BackendRow row = full_row();
+  const BackendRow<KernelFn> row = full_row();
   const KernelFn fn = quiver::detail::dispatch_get(entry, row);
   EXPECT_EQ(fn, expected_for(quiver::active_isa(), row));
   // Second call takes the hot path and returns the identical pointer (Resolved state).
@@ -120,13 +120,14 @@ TEST(Dispatch, ResolutionSelectsHighestBackendUnderPolicy) {
 
 TEST(Dispatch, ResolutionSkipsNullRowsDownToScalar) {
   DispatchEntry entry;
-  BackendRow row{{&backend_scalar, nullptr, nullptr, nullptr}};          // scalar-only build shape
+  BackendRow<KernelFn> row{
+      {&backend_scalar, nullptr, nullptr, nullptr}};                     // scalar-only build shape
   EXPECT_EQ(quiver::detail::dispatch_get(entry, row), &backend_scalar);  // REQ 07 §7 null-skip
 }
 
 TEST(Dispatch, EpochBumpRetractsResolvedEntries) {
   DispatchEntry entry;
-  const BackendRow row = full_row();
+  const BackendRow<KernelFn> row = full_row();
   const KernelFn before = quiver::detail::dispatch_get(entry, row);
   ASSERT_TRUE(quiver::set_isa_override(Isa::kScalar));
   EXPECT_EQ(quiver::detail::dispatch_get(entry, row), &backend_scalar);  // re-resolved
@@ -145,7 +146,7 @@ TEST(Dispatch, ConcurrentResolutionIsRaceBenign) {
   constexpr int kThreads = 8;
   constexpr int kIters = 2000;
   DispatchEntry entry;
-  const BackendRow row = full_row();
+  const BackendRow<KernelFn> row = full_row();
   std::atomic<bool> failed{false};
 
   std::vector<std::thread> workers;

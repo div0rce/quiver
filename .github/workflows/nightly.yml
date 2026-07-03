@@ -1,0 +1,119 @@
+# Quiver nightly validation (MOD-CI) — created at M3 per docs/prd/18-milestones.md.
+# REQ-CI-006: full differential cross product, MSan, LSan, coverage artifact,
+# -Rpass-missed vectorization report (REQ-SIMD-009, informational).
+# Action pins per REQ-CI-001/REQ-SEC-006.
+
+name: nightly
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-differential:
+    name: full differential sweep (QUIVER_NIGHTLY)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configure + build (release)
+        run: cmake --preset release && cmake --build --preset release -j 4
+      - name: Full-axis test sweep
+        env: { QUIVER_NIGHTLY: "1" }
+        run: ctest --preset release --output-on-failure
+
+  msan:
+    name: MemorySanitizer (clang, instrumented libc++)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Cache MSan-instrumented libc++
+        id: libcxx-cache
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        with:
+          path: /opt/msan-libcxx
+          key: msan-libcxx-19-${{ runner.os }}-v1
+      - name: Build MSan-instrumented libc++ (cache miss only)
+        if: steps.libcxx-cache.outputs.cache-hit != 'true'
+        run: |
+          set -eu
+          sudo apt-get update -q && sudo apt-get install -y -q clang-19 ninja-build
+          LLVM_VER=$(clang-19 --version | grep -oP '\d+\.\d+\.\d+' | head -1)
+          wget -q "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VER}/llvm-project-${LLVM_VER}.src.tar.xz" -O /tmp/llvm.tar.xz
+          tar -xf /tmp/llvm.tar.xz -C /tmp
+          cmake -G Ninja -S /tmp/llvm-project-${LLVM_VER}.src/runtimes -B /tmp/libcxx-build \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19 \
+            -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" -DLLVM_USE_SANITIZER=MemoryWithOrigins \
+            -DCMAKE_INSTALL_PREFIX=/opt/msan-libcxx
+          ninja -C /tmp/libcxx-build install-cxx install-cxxabi install-unwind
+      - name: Configure + build + test under MSan
+        env:
+          CC: clang-19
+          CXX: clang++-19
+          CXXFLAGS: "-stdlib=libc++ -I/opt/msan-libcxx/include/c++/v1"
+          LDFLAGS: "-stdlib=libc++ -L/opt/msan-libcxx/lib -Wl,-rpath,/opt/msan-libcxx/lib -lc++abi"
+        run: |
+          set -eu
+          sudo apt-get update -q && sudo apt-get install -y -q clang-19 || true
+          cmake --preset msan
+          cmake --build --preset msan -j 4
+          ctest --preset msan --output-on-failure
+
+  leak-check:
+    name: LeakSanitizer (test binaries)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: ASan(+LSan) full sweep
+        env: { CC: clang-18, CXX: clang++-18, ASAN_OPTIONS: "detect_leaks=1" }
+        run: |
+          cmake --preset asan-ubsan && cmake --build --preset asan-ubsan -j 4
+          QUIVER_NIGHTLY=1 ctest --preset asan-ubsan --output-on-failure
+
+  coverage:
+    name: coverage artifact (informational, REQ-TEST-013)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Build with coverage and run tests
+        env:
+          CC: clang-18
+          CXX: clang++-18
+          CXXFLAGS: "-fprofile-instr-generate -fcoverage-mapping"
+          LDFLAGS: "-fprofile-instr-generate"
+        run: |
+          set -eu
+          cmake --preset dev && cmake --build --preset dev -j 4
+          LLVM_PROFILE_FILE="/tmp/quiver-%p.profraw" ctest --preset dev
+          llvm-profdata-18 merge -sparse /tmp/quiver-*.profraw -o /tmp/quiver.profdata
+          llvm-cov-18 report build/dev/libquiver.a -instr-profile=/tmp/quiver.profdata > coverage.txt || true
+          llvm-cov-18 report build/dev/tests/quiver_tests_unit -instr-profile=/tmp/quiver.profdata >> coverage.txt || true
+          cat coverage.txt
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with: { name: coverage-report, path: coverage.txt }
+
+  vectorization-report:
+    name: -Rpass-missed report (REQ-SIMD-009, informational)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Compile scalar TUs with vectorization remarks
+        env:
+          CC: clang-18
+          CXX: clang++-18
+          CXXFLAGS: "-Rpass-missed=loop-vectorize -Rpass=loop-vectorize"
+        run: |
+          set -eu
+          cmake --preset release 2>&1 | tail -2
+          cmake --build --preset release -j 4 2> vec-report.txt || true
+          grep -E "remark:" vec-report.txt > vec-remarks.txt || echo "no remarks captured" > vec-remarks.txt
+          wc -l vec-remarks.txt
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with: { name: vectorization-report, path: vec-remarks.txt }
