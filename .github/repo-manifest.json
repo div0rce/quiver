@@ -1,6 +1,6 @@
 {
-  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M4.",
-  "milestone": "M4",
+  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M5.",
+  "milestone": "M5",
   "allowed_toplevel": [
     ".clang-format",
     ".clang-tidy",
@@ -21,6 +21,7 @@
     "cmake",
     "docs",
     "include",
+    "ledger",
     "site",
     "src",
     "tests"
@@ -185,10 +186,34 @@
     "docs/testing/fuzzing.md",
     "docs/investigations/k5-gather-avx2.md",
     "docs/releases/gates/M4.md",
-    "docs/releases/v0.2.0.md"
+    "docs/releases/v0.2.0.md",
+    "src/kernels/compare/compare_neon.cpp",
+    "src/kernels/filter/filter_neon.cpp",
+    "src/kernels/select/select_neon.cpp",
+    "src/kernels/mask/mask_neon.cpp",
+    "src/kernels/take/take_neon.cpp",
+    "src/kernels/reduce/reduce_neon.cpp",
+    "bench/baselines/baseline_neon.cpp",
+    "ledger/README.md",
+    "ledger/schema/ledger-entry.schema.json",
+    "ledger/schema/manifest.schema.json",
+    "ledger/runner/quiver_ledger.py",
+    "ledger/runner/qledger/__init__.py",
+    "ledger/runner/qledger/stats.py",
+    "ledger/runner/qledger/schema_check.py",
+    "ledger/runner/qledger/environment.py",
+    "ledger/runner/qledger/gbench.py",
+    "ledger/runner/tests/test_stats.py",
+    "ledger/runner/tests/test_schema.py",
+    "ledger/runner/tests/fixtures/entry-valid.json",
+    "ledger/runner/tests/fixtures/manifest-valid.json",
+    "ledger/machines/apple-m2-mba.json",
+    "docs/guides/disputes.md",
+    "docs/releases/gates/M5.md",
+    "docs/releases/v0.3.0.md",
+    "tests/unit/test_luts.cpp"
   ],
   "forbidden_at_milestone": [
-    "ledger",
     "tools",
     "examples"
   ],

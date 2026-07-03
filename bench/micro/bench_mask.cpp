@@ -75,10 +75,7 @@ void bm_mask_and(benchmark::State& state) {
 }
 
 void register_benchmarks() {
-  const char* variant = quiver::active_isa() == quiver::Isa::kScalar ? "scalar"
-                        : quiver::active_isa() == quiver::Isa::kNeon ? "neon"
-                        : quiver::active_isa() == quiver::Isa::kAvx2 ? "avx2"
-                                                                     : "avx512";
+  const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536, 1 << 20}) {
     benchmark::RegisterBenchmark(
         quiver::bench::bench_name("mask", "and", variant, "bitmap", "n=" + std::to_string(n)),

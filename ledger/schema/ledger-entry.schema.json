@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/div0rce/quiver/ledger/schema/ledger-entry.schema.json",
+  "title": "Quiver ledger entry (QLS-1)",
+  "description": "One published measurement aggregate (REQ-LEDGER-001/-002). Surface D: versioned independently of the library; breaking changes increment QLS-n and never rewrite published data.",
+  "type": "object",
+  "required": [
+    "entry_id", "schema", "methodology", "benchmark", "family", "api", "variant",
+    "element_type", "axes", "machine_id", "manifest_ref", "library_version", "git_commit",
+    "git_dirty", "timestamp_utc", "repetitions", "results", "metrics", "pmu", "flags", "notes"
+  ],
+  "properties": {
+    "entry_id": { "type": "string", "minLength": 8 },
+    "schema": { "const": "QLS-1" },
+    "methodology": { "const": "QLM-1" },
+    "benchmark": { "type": "string", "pattern": "^BM_" },
+    "family": { "type": "string" },
+    "api": { "type": "string" },
+    "variant": {
+      "enum": ["scalar", "autovec", "autovec-avx2", "autovec-avx512", "neon", "avx2", "avx512"]
+    },
+    "element_type": { "type": "string" },
+    "axes": { "type": "object", "additionalProperties": { "type": ["string", "number"] } },
+    "machine_id": { "type": "string" },
+    "manifest_ref": { "type": "string" },
+    "library_version": { "type": "string" },
+    "git_commit": { "type": "string" },
+    "git_dirty": { "enum": ["clean", "dirty"] },
+    "timestamp_utc": { "type": "string" },
+    "repetitions": { "type": "integer", "minimum": 10 },
+    "bootstrap_seed": { "type": "integer" },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(ns_per_batch|values_per_s|bytes_per_s|cycles_per_value)$": {
+          "type": "object",
+          "required": ["median", "min", "ci95_lo", "ci95_hi", "cv"],
+          "properties": {
+            "median": { "type": "number" },
+            "min": { "type": "number" },
+            "ci95_lo": { "type": "number" },
+            "ci95_hi": { "type": "number" },
+            "cv": { "type": "number" }
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": { "enum": ["ns_per_batch", "values_per_s", "bytes_per_s", "cycles_per_value"] }
+    },
+    "pmu": { "type": ["object", "null"] },
+    "flags": {
+      "type": "array",
+      "items": { "enum": ["noisy", "no_pmu", "secondary_platform"] }
+    },
+    "notes": { "type": "string" }
+  }
+}

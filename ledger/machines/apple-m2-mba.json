@@ -1,0 +1,16 @@
+{
+  "machine_id": "apple-m2-mba",
+  "uarch": "Apple M2 (Avalanche/Blizzard)",
+  "uarch_dir": "apple-m2",
+  "cpu_model": "Apple M2",
+  "cores": "8 (4 performance Avalanche + 4 efficiency Blizzard)",
+  "memory": "8 GiB unified LPDDR5",
+  "os_baseline": "macOS 26.x",
+  "isa_tiers": ["scalar", "neon"],
+  "core_policy": "OS-scheduled; macOS exposes no user core pinning — recorded per run",
+  "pinning": "none (macOS)",
+  "turbo_boost": "OS-managed DVFS (no user control on Apple Silicon)",
+  "flags": ["secondary_platform", "no_pmu"],
+  "owner": "maintainer (div0rce)",
+  "notes": "Apple Silicon is a SECONDARY platform per Charter §6.4/REQ-LEDGER-008: entries carry secondary_platform + no_pmu flags and omit cycles_per_value (PMU counters require entitlements not available to user processes). Registered at M5 as the project's only physically available machine — the REQ-LEDGER-012 three-uarch coverage gate is an open deferral recorded in gates/M5.md."
+}

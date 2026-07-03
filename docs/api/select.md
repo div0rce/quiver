@@ -23,12 +23,19 @@ The family's semantics are defined by `src/kernels/select/select_scalar_impl.h` 
 
 - **scalar** (v0.1): The primary instrument of the M9 bitmap-vs-selvec representation study (Charter §6.2; Survey §11.3 #3).
 - **AVX2** (v0.2): `bitmap_to_selvec` uses the emulated-compress core directly — each selection byte's `kCompactLut32` row *is* its compacted lane-index list; add a broadcast base, store 8 lanes, advance the cursor by popcount (full-vector stores stay inside the n-element capacity region, REQ-MEM-008). `selvec_to_bitmap` stays on the scalar core (sorted scatter is scalar-dominant by design, PRD 08 K3).
-- **NEON (M5) / AVX-512 (M7):** land with their milestones; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **NEON** (v0.3): same emulated-compress core as AVX2 — per selection byte the `kCompactLut32` row is the compacted index list; add broadcast base, two 128-bit stores, advance by popcount. `selvec_to_bitmap` stays scalar (sorted scatter).
+- **AVX-512 (M7):** lands with its milestone; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
 
 ## Ledger
 
-*Pending v0.3* — the first ledger publication (three microarchitectures) lands at M5 with the explicit-vs-autovec verdict block (wins **and** losses, REQ-LEDGER-011). No performance numbers are published without it (Charter T2).
+**Verdict (Apple M2, v0.3, `neon` vs `autovec`):** **explicit NEON wins** (geomean 7.59× over 2 published pairs).
 
+| configuration | neon vs autovec | entries |
+|---|---|---|
+| `u32` n=4096/density=1 | 7.67× | `qle:apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-neon-u32-n-4096-density-1-4096-1` `qle:apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-4096-density-1-4096-1` |
+| `u32` n=4096/density=90 | 7.50× | `qle:apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-neon-u32-n-4096-density-90-4096-90` `qle:apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-4096-density-90-4096-90` |
+
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); this is the only registered machine at v0.3 (the three-µarch coverage gate is an open deferral, [gate M5](../releases/gates/M5.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
 ## Validation
 
 `tests/unit/test_select.cpp` · `tests/property/prop_select.cpp` · `tests/differential/diff_isa_select.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_select.cpp` (hypothesis in-source).

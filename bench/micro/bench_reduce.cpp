@@ -75,34 +75,30 @@ void bm_sum_i64(benchmark::State& state) {
 
 // Same-order recompute of the dense float-sum policy the measured path is DOCUMENTED to use
 // (ADR-013): the strict fold for the scalar spec and the autovec baseline; the blocked
-// {w=4, a=4} shape when the dispatched path resolves to AVX2. Bench-local on purpose —
-// bench code never links test oracles (REQ-TEST-018).
-inline double expected_dense_sum_f64(const double* v, std::int64_t n, bool blocked_avx2) {
-  if (!blocked_avx2) {
+// {w, a=4} shape when the dispatched path resolves to AVX2 (w=4 for f64) or NEON (w=2).
+// Bench-local on purpose — bench code never links test oracles (REQ-TEST-018).
+inline double expected_dense_sum_f64(const double* v, std::int64_t n, int w) {
+  if (w == 0) {  // strict fold
     double s = 0.0;
     for (std::int64_t i = 0; i < n; ++i) {
       s += v[i];
     }
     return s;
   }
-  constexpr int kW = 4;
   constexpr int kA = 4;
-  double acc[kW * kA] = {};
+  double acc[8 * kA] = {};
+  const std::int64_t block = static_cast<std::int64_t>(w) * kA;
   std::int64_t i = 0;
-  for (; i + kW * kA <= n; i += kW * kA) {
+  for (; i + block <= n; i += block) {
     for (int k = 0; k < kA; ++k) {
-      for (int lane = 0; lane < kW; ++lane) {
-        acc[k * kW + lane] += v[i + k * kW + lane];
+      for (int lane = 0; lane < w; ++lane) {
+        acc[k * w + lane] += v[i + k * w + lane];
       }
     }
   }
-  double vsum[kW];
-  for (int lane = 0; lane < kW; ++lane) {  // ADR-013 frozen combine: (0+2),(1+3), then +
-    vsum[lane] = (acc[lane] + acc[2 * kW + lane]) + (acc[kW + lane] + acc[3 * kW + lane]);
-  }
   double s = 0.0;
-  for (int lane = 0; lane < kW; ++lane) {
-    s += vsum[lane];
+  for (int lane = 0; lane < w; ++lane) {  // ADR-013 frozen combine: (0+2),(1+3), then +
+    s += (acc[lane] + acc[2 * w + lane]) + (acc[w + lane] + acc[3 * w + lane]);
   }
   for (; i < n; ++i) {
     s += v[i];
@@ -127,9 +123,16 @@ void bm_sum_f64(benchmark::State& state) {
   };
   // Effective backend, not the cap: empty dispatch rows fall through, so an avx512-capable
   // host still executes the AVX2 backend until the AVX-512 rows land (M7).
-  const bool blocked = !kAutovec && quiver::active_isa() >= quiver::Isa::kAvx2 &&
-                       quiver::cpu_supports(quiver::Isa::kAvx2);
-  const double want = expected_dense_sum_f64(v.data(), n, blocked);
+  int policy_w = 0;  // strict fold (scalar spec; also the autovec baseline)
+  if (!kAutovec) {
+    if (quiver::active_isa() >= quiver::Isa::kAvx2 && quiver::cpu_supports(quiver::Isa::kAvx2)) {
+      policy_w = 4;  // AVX2 f64
+    } else if (quiver::active_isa() >= quiver::Isa::kNeon &&
+               quiver::cpu_supports(quiver::Isa::kNeon)) {
+      policy_w = 2;  // NEON f64
+    }
+  }
+  const double want = expected_dense_sum_f64(v.data(), n, policy_w);
   const double got = run();
   quiver::bench::validate_or_abort("BM_reduce_f64", got == want,
                                    "policy sum vs same-order recompute");
@@ -141,10 +144,7 @@ void bm_sum_f64(benchmark::State& state) {
 }
 
 void register_benchmarks() {
-  const char* variant = quiver::active_isa() == quiver::Isa::kScalar ? "scalar"
-                        : quiver::active_isa() == quiver::Isa::kNeon ? "neon"
-                        : quiver::active_isa() == quiver::Isa::kAvx2 ? "avx2"
-                                                                     : "avx512";
+  const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536}) {
     for (const int null_pct : {0, 10, 50}) {
       benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", variant, "i64",

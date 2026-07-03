@@ -1,0 +1,2441 @@
+[
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-1024-sel-10-1024-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/neon/i64/n=1024/sel=10/1024/10",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 1024,
+      "sel": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 322.97118731997386,
+        "min": 318.72365442028587,
+        "ci95_lo": 321.0811017657176,
+        "ci95_hi": 331.2201560148582,
+        "cv": 0.027692545975628494
+      },
+      "values_per_s": {
+        "median": 3173700615.252739,
+        "min": 2988949135.953417,
+        "ci95_lo": 3110147252.9365983,
+        "ci95_hi": 3191260593.1554604,
+        "cv": 0.021460920078812413
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-4096-sel-50-4096-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/neon/i64/n=4096/sel=50/4096/50",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 50
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1317.6525711648396,
+        "min": 1258.9675905610025,
+        "ci95_lo": 1271.5882362666875,
+        "ci95_hi": 1349.6228941382933,
+        "cv": 0.033412001429046524
+      },
+      "values_per_s": {
+        "median": 3133278742.489523,
+        "min": 3014835424.547788,
+        "ci95_lo": 3077379570.7244425,
+        "ci95_hi": 3223368855.3052344,
+        "cv": 0.02650866978579
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0334 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-4096-sel-90-4096-90",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/neon/i64/n=4096/sel=90/4096/90",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 90
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1289.8137752912544,
+        "min": 1252.5306795029169,
+        "ci95_lo": 1265.2196366598534,
+        "ci95_hi": 1326.5142230087333,
+        "cv": 0.03321298708766497
+      },
+      "values_per_s": {
+        "median": 3181061430.064991,
+        "min": 3040337046.3116446,
+        "ci95_lo": 3122227685.825781,
+        "ci95_hi": 3238116709.1488547,
+        "cv": 0.02323055943324891
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0332 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-4096-sel-99-4096-99",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/neon/i64/n=4096/sel=99/4096/99",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 99
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1272.7375496544864,
+        "min": 1253.5170481178159,
+        "ci95_lo": 1258.6997884426162,
+        "ci95_hi": 1286.3268562254116,
+        "cv": 0.027740728819898232
+      },
+      "values_per_s": {
+        "median": 3222645154.9626226,
+        "min": 3046088700.3429646,
+        "ci95_lo": 3199544883.134999,
+        "ci95_hi": 3255282307.5460644,
+        "cv": 0.019969540865943502
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-65536-sel-1-65536-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/neon/i64/n=65536/sel=1/65536/1",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 1
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 20569.167320778288,
+        "min": 20113.825788962673,
+        "ci95_lo": 20294.181678302153,
+        "ci95_hi": 21041.19729550487,
+        "cv": 0.04513720821502833
+      },
+      "values_per_s": {
+        "median": 3200802914.334892,
+        "min": 2989381172.617697,
+        "ci95_lo": 3125780862.1453495,
+        "ci95_hi": 3239181490.380286,
+        "cv": 0.02611159023139141
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0451 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-65536-sel-50-65536-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/neon/i64/n=65536/sel=50/65536/50",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 50
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 20277.83883025994,
+        "min": 19930.425972577013,
+        "ci95_lo": 20021.70508982932,
+        "ci95_hi": 21192.12105848125,
+        "cv": 0.028981416664037522
+      },
+      "values_per_s": {
+        "median": 3238740331.1757135,
+        "min": 3111154789.6228886,
+        "ci95_lo": 3139865139.471613,
+        "ci95_hi": 3273928340.8725424,
+        "cv": 0.021123779290594134
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-1024-sel-1-1024-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/autovec/i64/n=1024/sel=1/1024/1",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 1024,
+      "sel": 1
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 223.41651627283122,
+        "min": 221.73361131819505,
+        "ci95_lo": 222.48964162017305,
+        "ci95_hi": 239.08427891496757,
+        "cv": 0.04954357591798786
+      },
+      "values_per_s": {
+        "median": 4587642250.600914,
+        "min": 4187114817.6600776,
+        "ci95_lo": 4365721427.062822,
+        "ci95_hi": 4604848275.3073845,
+        "cv": 0.03537738282032061
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0495 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-1024-sel-10-1024-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/autovec/i64/n=1024/sel=10/1024/10",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 1024,
+      "sel": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 225.3639432051401,
+        "min": 223.2588787973079,
+        "ci95_lo": 223.73686998864392,
+        "ci95_hi": 228.06458027181975,
+        "cv": 0.022682432257964864
+      },
+      "values_per_s": {
+        "median": 4559003162.517916,
+        "min": 4360604779.978577,
+        "ci95_lo": 4499761525.51399,
+        "ci95_hi": 4578983232.238922,
+        "cv": 0.015510669701339672
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-1024-sel-50-1024-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/autovec/i64/n=1024/sel=50/1024/50",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 1024,
+      "sel": 50
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 226.53026115378435,
+        "min": 221.58833980713527,
+        "ci95_lo": 223.44311326712437,
+        "ci95_hi": 236.65415924846528,
+        "cv": 0.030291043344804827
+      },
+      "values_per_s": {
+        "median": 4550858510.351395,
+        "min": 4328391957.385335,
+        "ci95_lo": 4402710702.090399,
+        "ci95_hi": 4587502522.157776,
+        "cv": 0.02366655374850761
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0303 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-4096-sel-10-4096-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/autovec/i64/n=4096/sel=10/4096/10",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 884.1086131374725,
+        "min": 863.8123932960816,
+        "ci95_lo": 868.137708559889,
+        "ci95_hi": 906.0564252652251,
+        "cv": 0.029057193217266557
+      },
+      "values_per_s": {
+        "median": 4644994899.565281,
+        "min": 4526452881.691969,
+        "ci95_lo": 4591363164.0909815,
+        "ci95_hi": 4720823190.923876,
+        "cv": 0.016137675979185737
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-4096-sel-90-4096-90",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/autovec/i64/n=4096/sel=90/4096/90",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 90
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 889.9797302679624,
+        "min": 864.9155717347907,
+        "ci95_lo": 873.3156975225165,
+        "ci95_hi": 935.3164534868727,
+        "cv": 0.042075681138309715
+      },
+      "values_per_s": {
+        "median": 4616349269.515854,
+        "min": 4381393695.292893,
+        "ci95_lo": 4471681434.603395,
+        "ci95_hi": 4694713932.693458,
+        "cv": 0.02763719717173212
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0421 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-4096-sel-99-4096-99",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/autovec/i64/n=4096/sel=99/4096/99",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 99
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 885.9181328922089,
+        "min": 872.3104393268355,
+        "ci95_lo": 875.4984286189499,
+        "ci95_hi": 900.5010890154795,
+        "cv": 0.016637120934916448
+      },
+      "values_per_s": {
+        "median": 4632598790.343278,
+        "min": 4508133013.366112,
+        "ci95_lo": 4584524770.252058,
+        "ci95_hi": 4680905561.495202,
+        "cv": 0.013473712876016142
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-65536-sel-90-65536-90",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_compare/bitmap_gt/autovec/i64/n=65536/sel=90/65536/90",
+    "family": "compare",
+    "api": "bitmap_gt",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 90
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 14181.277433906853,
+        "min": 13784.709881018998,
+        "ci95_lo": 13963.976811886092,
+        "ci95_hi": 14471.627364978196,
+        "cv": 0.022224717625083813
+      },
+      "values_per_s": {
+        "median": 4641261109.461379,
+        "min": 4524085437.21315,
+        "ci95_lo": 4569810826.36442,
+        "ci95_hi": 4703566469.75186,
+        "cv": 0.016455860468845573
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-4096-sel-10-pat-clustered-4096-10-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=4096/sel=10/pat=clustered/4096/10/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 10,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1470.0611822184726,
+        "min": 1447.2364772193996,
+        "ci95_lo": 1456.8823562318266,
+        "ci95_hi": 1491.9675337177753,
+        "cv": 0.013286747009978136
+      },
+      "values_per_s": {
+        "median": 2796538435.802312,
+        "min": 2738175403.093774,
+        "ci95_lo": 2756469491.134826,
+        "ci95_hi": 2813322099.604906,
+        "cv": 0.011671680441878643
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-4096-sel-50-pat-clustered-4096-50-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=4096/sel=50/pat=clustered/4096/50/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 50,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1519.646695056841,
+        "min": 1452.9614539091428,
+        "ci95_lo": 1466.1017959955284,
+        "ci95_hi": 1576.132297309804,
+        "cv": 0.04391565776891052
+      },
+      "values_per_s": {
+        "median": 2717798458.3927565,
+        "min": 2586761185.621949,
+        "ci95_lo": 2660039500.8392944,
+        "ci95_hi": 2800095681.971028,
+        "cv": 0.029970143333000746
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0439 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-4096-sel-90-pat-uniform-4096-90-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=4096/sel=90/pat=uniform/4096/90/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 90,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1400.7387026442188,
+        "min": 1372.8168304104104,
+        "ci95_lo": 1376.0675188744365,
+        "ci95_hi": 1429.493017437128,
+        "cv": 0.04782638015737369
+      },
+      "values_per_s": {
+        "median": 2933054824.690934,
+        "min": 2676372037.922998,
+        "ci95_lo": 2890057163.246612,
+        "ci95_hi": 2980753962.4162354,
+        "cv": 0.03145834868460263
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0478 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-4096-sel-99-pat-uniform-4096-99-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=4096/sel=99/pat=uniform/4096/99/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 99,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1462.5245634499013,
+        "min": 1411.6182077793594,
+        "ci95_lo": 1432.3378308537094,
+        "ci95_hi": 1491.4972875104881,
+        "cv": 0.03257946968030529
+      },
+      "values_per_s": {
+        "median": 2815785558.095955,
+        "min": 2681482578.4726815,
+        "ci95_lo": 2791006313.2766085,
+        "ci95_hi": 2862439918.4028845,
+        "cv": 0.021590788107650496
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0326 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-1-pat-uniform-65536-1-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=65536/sel=1/pat=uniform/65536/1/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 1,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 24345.56437676884,
+        "min": 23772.486828919955,
+        "ci95_lo": 24007.712071034846,
+        "ci95_hi": 24773.27533744412,
+        "cv": 0.017840365189358824
+      },
+      "values_per_s": {
+        "median": 2705302992.6189137,
+        "min": 2630599122.964111,
+        "ci95_lo": 2661894731.1081977,
+        "ci95_hi": 2733596963.4735117,
+        "cv": 0.015606208469511709
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-10-pat-clustered-65536-10-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=65536/sel=10/pat=clustered/65536/10/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 10,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 24361.834364776994,
+        "min": 23719.90698039784,
+        "ci95_lo": 23961.543843050305,
+        "ci95_hi": 25101.036864282025,
+        "cv": 0.03176858493243235
+      },
+      "values_per_s": {
+        "median": 2706565842.6524973,
+        "min": 2596851064.99832,
+        "ci95_lo": 2637594129.040221,
+        "ci95_hi": 2739933792.5222254,
+        "cv": 0.02183878392543869
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0318 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-90-pat-uniform-65536-90-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=65536/sel=90/pat=uniform/65536/90/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 90,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 23247.3375177202,
+        "min": 22734.60451083522,
+        "ci95_lo": 22973.93956161978,
+        "ci95_hi": 23945.19498079315,
+        "cv": 0.02328313179513038
+      },
+      "values_per_s": {
+        "median": 2822002771.7952733,
+        "min": 2729168004.401899,
+        "ci95_lo": 2754981321.7720346,
+        "ci95_hi": 2854303558.388263,
+        "cv": 0.019126383660707215
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-99-pat-clustered-65536-99-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=65536/sel=99/pat=clustered/65536/99/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 99,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 23201.11947762341,
+        "min": 22250.31310469523,
+        "ci95_lo": 22818.10323030516,
+        "ci95_hi": 24272.73683712151,
+        "cv": 0.041953187330293615
+      },
+      "values_per_s": {
+        "median": 2847424931.3501024,
+        "min": 2688281758.045258,
+        "ci95_lo": 2750441087.0270734,
+        "ci95_hi": 2891783645.4379954,
+        "cv": 0.02960571495976508
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0420 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-4096-sel-1-pat-uniform-4096-1-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=4096/sel=1/pat=uniform/4096/1/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 1,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2607.994565387451,
+        "min": 2495.5125678076347,
+        "ci95_lo": 2513.278596859609,
+        "ci95_hi": 2668.9275597265682,
+        "cv": 0.030424022865409996
+      },
+      "values_per_s": {
+        "median": 1574281000.3539817,
+        "min": 1544658877.7763731,
+        "ci95_lo": 1564119690.6470814,
+        "ci95_hi": 1630642979.9688623,
+        "cv": 0.022180703108560473
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0304 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-4096-sel-50-pat-uniform-4096-50-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=4096/sel=50/pat=uniform/4096/50/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 50,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2551.3219072322368,
+        "min": 2513.156904377486,
+        "ci95_lo": 2525.376108048169,
+        "ci95_hi": 2622.6519340359864,
+        "cv": 0.022483669131652735
+      },
+      "values_per_s": {
+        "median": 1607934584.863069,
+        "min": 1549108035.7765229,
+        "ci95_lo": 1583974007.71216,
+        "ci95_hi": 1623031048.6425889,
+        "cv": 0.01630025546403516
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-4096-sel-50-pat-clustered-4096-50-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=4096/sel=50/pat=clustered/4096/50/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 50,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2569.7778798218123,
+        "min": 2504.1631610403715,
+        "ci95_lo": 2539.6631222963647,
+        "ci95_hi": 2712.8290883544732,
+        "cv": 0.037322995043834475
+      },
+      "values_per_s": {
+        "median": 1598547554.4949284,
+        "min": 1517635566.4454737,
+        "ci95_lo": 1547532076.0129938,
+        "ci95_hi": 1619840648.1766844,
+        "cv": 0.026496023277006467
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0373 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-4096-sel-90-pat-uniform-4096-90-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=4096/sel=90/pat=uniform/4096/90/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 90,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2560.999665128089,
+        "min": 2509.8519113953316,
+        "ci95_lo": 2512.4660917364963,
+        "ci95_hi": 2706.012039444099,
+        "cv": 0.04750336680995886
+      },
+      "values_per_s": {
+        "median": 1601262984.6145518,
+        "min": 1536263060.4510796,
+        "ci95_lo": 1543417880.4824996,
+        "ci95_hi": 1630808994.1058183,
+        "cv": 0.02568821465693724
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0475 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-1-pat-uniform-65536-1-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=65536/sel=1/pat=uniform/65536/1/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 1,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 40803.70801054075,
+        "min": 39923.72814727597,
+        "ci95_lo": 40300.28914306163,
+        "ci95_hi": 41220.5433928422,
+        "cv": 0.01978377228367086
+      },
+      "values_per_s": {
+        "median": 1613822691.6038249,
+        "min": 1547715097.5110996,
+        "ci95_lo": 1593981741.5608807,
+        "ci95_hi": 1626756215.8085833,
+        "cv": 0.01658831077109608
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-10-pat-clustered-65536-10-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=65536/sel=10/pat=clustered/65536/10/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 10,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 40291.233508696234,
+        "min": 39871.06838847565,
+        "ci95_lo": 40135.76859031062,
+        "ci95_hi": 41714.7580108791,
+        "cv": 0.030790341764885393
+      },
+      "values_per_s": {
+        "median": 1628026228.396133,
+        "min": 1552860147.66118,
+        "ci95_lo": 1580747881.9282146,
+        "ci95_hi": 1633609412.5814517,
+        "cv": 0.019490937449776036
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0308 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-50-pat-clustered-65536-50-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=65536/sel=50/pat=clustered/65536/50/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 50,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 40340.32729839145,
+        "min": 39921.98543873969,
+        "ci95_lo": 40030.4349784981,
+        "ci95_hi": 41240.19479487259,
+        "cv": 0.03306455421678221
+      },
+      "values_per_s": {
+        "median": 1628085617.6194918,
+        "min": 1536523470.8081095,
+        "ci95_lo": 1593948655.8957076,
+        "ci95_hi": 1637414237.0879917,
+        "cv": 0.022141833899847585
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0331 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-90-pat-uniform-65536-90-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=65536/sel=90/pat=uniform/65536/90/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 90,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 40369.33502870599,
+        "min": 39590.98040277568,
+        "ci95_lo": 39747.637259578885,
+        "ci95_hi": 40707.22968948161,
+        "cv": 0.01775545221756652
+      },
+      "values_per_s": {
+        "median": 1632302278.8080757,
+        "min": 1598591209.4111497,
+        "ci95_lo": 1616837207.1158724,
+        "ci95_hi": 1649790195.2053192,
+        "cv": 0.011707857755041615
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-99-pat-clustered-65536-99-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=65536/sel=99/pat=clustered/65536/99/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 99,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 40887.765037930025,
+        "min": 40142.518981022244,
+        "ci95_lo": 40369.62116951044,
+        "ci95_hi": 41633.370568688595,
+        "cv": 0.03441038386458423
+      },
+      "values_per_s": {
+        "median": 1604698115.7877855,
+        "min": 1481540475.616399,
+        "ci95_lo": 1578575535.838677,
+        "ci95_hi": 1623601887.653522,
+        "cv": 0.028690390565035653
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0344 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-mask-and-neon-bitmap-n-4096-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_mask/and/neon/bitmap/n=4096/4096",
+    "family": "mask",
+    "api": "and",
+    "variant": "neon",
+    "element_type": "bitmap",
+    "axes": {
+      "n": 4096
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 9.799513762357702,
+        "min": 9.567541820741484,
+        "ci95_lo": 9.58823045965155,
+        "ci95_hi": 10.033047531919205,
+        "cv": 0.026609718776177578
+      },
+      "values_per_s": {
+        "median": 419655811472.60364,
+        "min": 402705392648.0826,
+        "ci95_lo": 414812039121.4133,
+        "ci95_hi": 427425442288.20496,
+        "cv": 0.01913840370599513
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-mask-and-neon-bitmap-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_mask/and/neon/bitmap/n=65536/65536",
+    "family": "mask",
+    "api": "and",
+    "variant": "neon",
+    "element_type": "bitmap",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 129.5376270503175,
+        "min": 123.10224950684761,
+        "ci95_lo": 125.27913770518441,
+        "ci95_hi": 132.78772782695108,
+        "cv": 0.032301651746827115
+      },
+      "values_per_s": {
+        "median": 514112558400.3884,
+        "min": 490183974106.2952,
+        "ci95_lo": 500223741972.5654,
+        "ci95_hi": 523836175083.9143,
+        "cv": 0.026939819351563223
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0323 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-neon-i64-n-4096-nulls-10-4096-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/neon/i64/n=4096/nulls=10/4096/10",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "nulls": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 799.2420504378726,
+        "min": 778.8075413520278,
+        "ci95_lo": 784.6873912598164,
+        "ci95_hi": 810.4604906135115,
+        "cv": 0.029770501248900124
+      },
+      "values_per_s": {
+        "median": 5155370631.628511,
+        "min": 4852291901.457049,
+        "ci95_lo": 5090706532.892992,
+        "ci95_hi": 5227241371.455708,
+        "cv": 0.023035580009093084
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-neon-f64-n-65536-nulls-0-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/neon/f64/n=65536/nulls=0/65536",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "neon",
+    "element_type": "f64",
+    "axes": {
+      "n": 65536,
+      "nulls": 0
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 7417.559834261967,
+        "min": 7285.078027985069,
+        "ci95_lo": 7336.17312250436,
+        "ci95_hi": 7706.670051669348,
+        "cv": 0.027254254575961173
+      },
+      "values_per_s": {
+        "median": 8862778943.664139,
+        "min": 8501473228.996481,
+        "ci95_lo": 8664640172.343643,
+        "ci95_hi": 8939880379.218332,
+        "cv": 0.019679054935575726
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-autovec-i64-n-4096-nulls-10-4096-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/autovec/i64/n=4096/nulls=10/4096/10",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "nulls": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1108.5016499150452,
+        "min": 1076.3057352683406,
+        "ci95_lo": 1092.1078704562283,
+        "ci95_hi": 1118.8948224155472,
+        "cv": 0.0182711021826528
+      },
+      "values_per_s": {
+        "median": 3713183574.2868304,
+        "min": 3597216170.07967,
+        "ci95_lo": 3687327459.4168825,
+        "ci95_hi": 3757897123.909693,
+        "cv": 0.0156563115411585
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-autovec-f64-n-4096-nulls-0-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/autovec/f64/n=4096/nulls=0/4096",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "autovec",
+    "element_type": "f64",
+    "axes": {
+      "n": 4096,
+      "nulls": 0
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 3536.230787039738,
+        "min": 3501.119524873258,
+        "ci95_lo": 3516.1472391131183,
+        "ci95_hi": 3604.7535581974603,
+        "cv": 0.043215670524500205
+      },
+      "values_per_s": {
+        "median": 1159568485.8322186,
+        "min": 1064416962.0659859,
+        "ci95_lo": 1138543148.0435245,
+        "ci95_hi": 1165350477.4612033,
+        "cv": 0.027419310835861514
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0432 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-autovec-i64-n-65536-nulls-10-65536-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/autovec/i64/n=65536/nulls=10/65536/10",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "nulls": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 18475.098880295252,
+        "min": 17627.08083286579,
+        "ci95_lo": 18006.346788189097,
+        "ci95_hi": 19135.67884689378,
+        "cv": 0.03565755491407359
+      },
+      "values_per_s": {
+        "median": 3606613540.048724,
+        "min": 3351564020.274297,
+        "ci95_lo": 3478323898.618191,
+        "ci95_hi": 3647119447.531947,
+        "cv": 0.03197419871292887
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0357 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-neon-u32-n-4096-density-1-4096-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/neon/u32/n=4096/density=1/4096/1",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "neon",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 1
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 342.26417497169894,
+        "min": 340.42044872365483,
+        "ci95_lo": 340.6481567601695,
+        "ci95_hi": 348.8820433574899,
+        "cv": 0.019084090978152033
+      },
+      "values_per_s": {
+        "median": 11979903573.462446,
+        "min": 11450581069.50869,
+        "ci95_lo": 11764801704.5743,
+        "ci95_hi": 12032291747.412931,
+        "cv": 0.016855766587168038
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-neon-u32-n-4096-density-90-4096-90",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/neon/u32/n=4096/density=90/4096/90",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "neon",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 90
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 339.9465203780579,
+        "min": 335.7770061178855,
+        "ci95_lo": 337.70129914095156,
+        "ci95_hi": 349.64231447614026,
+        "cv": 0.022720561829884346
+      },
+      "values_per_s": {
+        "median": 12069806748.356297,
+        "min": 11463337337.992659,
+        "ci95_lo": 11806786134.521042,
+        "ci95_hi": 12155076989.53272,
+        "cv": 0.02014088347438142
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-4096-density-1-4096-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/autovec/u32/n=4096/density=1/4096/1",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "autovec",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 1
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2625.4863582665266,
+        "min": 2532.014034631483,
+        "ci95_lo": 2598.0748912659733,
+        "ci95_hi": 2715.273659388157,
+        "cv": 0.03177188882125183
+      },
+      "values_per_s": {
+        "median": 1569551947.5096893,
+        "min": 1505131125.0203793,
+        "ci95_lo": 1546075313.6241536,
+        "ci95_hi": 1594527508.5026538,
+        "cv": 0.021804907236313592
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0318 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-4096-density-10-4096-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/autovec/u32/n=4096/density=10/4096/10",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "autovec",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2545.959754685564,
+        "min": 2501.4562874579233,
+        "ci95_lo": 2503.486583708411,
+        "ci95_hi": 2597.4972687577006,
+        "cv": 0.026404275775694607
+      },
+      "values_per_s": {
+        "median": 1618107394.7678523,
+        "min": 1571311436.1491857,
+        "ci95_lo": 1579968412.8395004,
+        "ci95_hi": 1636235538.1959734,
+        "cv": 0.016909437270314152
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-4096-density-90-4096-90",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/autovec/u32/n=4096/density=90/4096/90",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "autovec",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 90
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2550.4628105121674,
+        "min": 2497.0636304193995,
+        "ci95_lo": 2524.6070017028096,
+        "ci95_hi": 2591.0209638015226,
+        "cv": 0.017974025759755975
+      },
+      "values_per_s": {
+        "median": 1612391406.6952178,
+        "min": 1563977465.8624942,
+        "ci95_lo": 1585438392.5412307,
+        "ci95_hi": 1625772904.8684828,
+        "cv": 0.014856455576794008
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-4096-density-99-4096-99",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/autovec/u32/n=4096/density=99/4096/99",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "autovec",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 99
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2519.832598050705,
+        "min": 2504.108459452636,
+        "ci95_lo": 2516.1204353760163,
+        "ci95_hi": 2602.6049573542973,
+        "cv": 0.02376206700466538
+      },
+      "values_per_s": {
+        "median": 1626904259.202814,
+        "min": 1546237319.2194905,
+        "ci95_lo": 1583173272.1421354,
+        "ci95_hi": 1628652875.8126245,
+        "cv": 0.02042422197724226
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-65536-density-1-65536-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/autovec/u32/n=65536/density=1/65536/1",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "autovec",
+    "element_type": "u32",
+    "axes": {
+      "n": 65536,
+      "density": 1
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 41154.970185313345,
+        "min": 39924.6354428252,
+        "ci95_lo": 40897.49244350919,
+        "ci95_hi": 41903.34502227269,
+        "cv": 0.027063379127758514
+      },
+      "values_per_s": {
+        "median": 1596639981.875387,
+        "min": 1531135525.0638306,
+        "ci95_lo": 1573343769.7457237,
+        "ci95_hi": 1609193929.4497828,
+        "cv": 0.01925193066240778
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-65536-density-10-65536-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/autovec/u32/n=65536/density=10/65536/10",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "autovec",
+    "element_type": "u32",
+    "axes": {
+      "n": 65536,
+      "density": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 40842.11083394756,
+        "min": 39877.24936495995,
+        "ci95_lo": 40040.04714094245,
+        "ci95_hi": 41882.37349149538,
+        "cv": 0.024914657275357414
+      },
+      "values_per_s": {
+        "median": 1609403758.4542542,
+        "min": 1566319818.1648889,
+        "ci95_lo": 1578322790.721014,
+        "ci95_hi": 1637170388.621138,
+        "cv": 0.018962382715384907
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-65536-density-50-65536-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/autovec/u32/n=65536/density=50/65536/50",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "autovec",
+    "element_type": "u32",
+    "axes": {
+      "n": 65536,
+      "density": 50
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 40531.572116259624,
+        "min": 39974.5279580115,
+        "ci95_lo": 40349.72807146963,
+        "ci95_hi": 42370.76157030561,
+        "cv": 0.031586915612197466
+      },
+      "values_per_s": {
+        "median": 1617926760.0049205,
+        "min": 1560965356.6475575,
+        "ci95_lo": 1572731524.2956002,
+        "ci95_hi": 1626752944.6352909,
+        "cv": 0.017781307170246282
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0316 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-65536-density-90-65536-90",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/autovec/u32/n=65536/density=90/65536/90",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "autovec",
+    "element_type": "u32",
+    "axes": {
+      "n": 65536,
+      "density": 90
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 40712.90185397361,
+        "min": 39901.426594714045,
+        "ci95_lo": 40125.582619268294,
+        "ci95_hi": 41042.66337389791,
+        "cv": 0.020378964980159894
+      },
+      "values_per_s": {
+        "median": 1614386641.0777469,
+        "min": 1570540032.1776161,
+        "ci95_lo": 1610046234.826831,
+        "ci95_hi": 1633438545.31545,
+        "cv": 0.012587077596048912
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-take-dict-decode-neon-i64-u32-n-65536-dict-4kib-65536-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_take/dict_decode/neon/i64_u32/n=65536/dict=4KiB/65536/4096",
+    "family": "take",
+    "api": "dict_decode",
+    "variant": "neon",
+    "element_type": "i64_u32",
+    "axes": {
+      "n": 65536,
+      "dict": "4KiB"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 13185.992998188705,
+        "min": 12784.844900665368,
+        "ci95_lo": 12902.692856463018,
+        "ci95_hi": 13569.14967706572,
+        "cv": 0.035450799604395615
+      },
+      "values_per_s": {
+        "median": 4991254108.493462,
+        "min": 4781298994.412464,
+        "ci95_lo": 4876325890.324546,
+        "ci95_hi": 5083487701.185412,
+        "cv": 0.023892294102372324
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0355 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-take-dict-decode-neon-i64-u32-n-65536-dict-8192kib-65536-8388608",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_take/dict_decode/neon/i64_u32/n=65536/dict=8192KiB/65536/8388608",
+    "family": "take",
+    "api": "dict_decode",
+    "variant": "neon",
+    "element_type": "i64_u32",
+    "axes": {
+      "n": 65536,
+      "dict": "8192KiB"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 44968.19678036067,
+        "min": 43474.4607470883,
+        "ci95_lo": 44381.04436465127,
+        "ci95_hi": 45630.78633991544,
+        "cv": 0.02069429996033192
+      },
+      "values_per_s": {
+        "median": 1462162732.851734,
+        "min": 1405291307.5864453,
+        "ci95_lo": 1438016935.9000416,
+        "ci95_hi": 1481246742.5803418,
+        "cv": 0.02109743778794457
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260703-4ec273e2904d-bm-take-dict-decode-autovec-i64-u32-n-65536-dict-32kib-65536-32768",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_take/dict_decode/autovec/i64_u32/n=65536/dict=32KiB/65536/32768",
+    "family": "take",
+    "api": "dict_decode",
+    "variant": "autovec",
+    "element_type": "i64_u32",
+    "axes": {
+      "n": 65536,
+      "dict": "32KiB"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "4ec273e2904d",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-03T21:26:35+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 13597.508196435854,
+        "min": 13050.133240165336,
+        "ci95_lo": 13344.969063624376,
+        "ci95_hi": 14266.553969706212,
+        "cv": 0.042483988518155054
+      },
+      "values_per_s": {
+        "median": 4841139640.828813,
+        "min": 4545126423.467981,
+        "ci95_lo": 4656589397.982881,
+        "ci95_hi": 4930596687.274123,
+        "cv": 0.033404246419928035
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0425 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  }
+]

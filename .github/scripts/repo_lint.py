@@ -151,6 +151,23 @@ def main() -> int:
                 err(f"REQ-MEM-002: '_padded' variant in {f.relative_to(ROOT)} "
                     f"(reserved naming; requires ledger evidence + PRD amendment)")
 
+    # --- Ledger entry_id references in docs (REQ-LEDGER-015): every `qle:<entry_id>` inline
+    # --- reference must exist in a committed entries.json — no hand-copied numbers without
+    # --- provenance (Charter T2).
+    committed_ids: set[str] = set()
+    for entries_file in ROOT.glob("ledger/results/*/*/entries.json"):
+        try:
+            for entry in json.loads(entries_file.read_text()):
+                committed_ids.add(entry.get("entry_id", ""))
+        except (json.JSONDecodeError, TypeError):
+            err(f"REQ-LEDGER-001: {entries_file.relative_to(ROOT)} is not a valid entry array")
+    qle_re = re.compile(r"`qle:([A-Za-z0-9._-]+)`")
+    for doc in ROOT.glob("docs/**/*.md"):
+        for m in qle_re.finditer(doc.read_text(errors="replace")):
+            if m.group(1) not in committed_ids:
+                err(f"REQ-LEDGER-015: {doc.relative_to(ROOT)} references entry_id "
+                    f"'{m.group(1)}' which exists in no committed entries.json")
+
     if errors:
         print("repo-lint: FAIL", file=sys.stderr)
         for e in errors:

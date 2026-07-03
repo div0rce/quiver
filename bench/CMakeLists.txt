@@ -52,8 +52,9 @@ set_target_properties(quiver_bench_smoke PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Equal-ISA autovec baselines (ADR-011, REQ-BENCH-010): the reference recompiled under the
-# AVX2 target region; compiles empty off x86 (arch-guarded TU, ADR-003).
-add_library(quiver_bench_baselines STATIC baselines/baseline_avx2.cpp)
+# AVX2 target region (compiles empty off x86, ADR-003); the NEON baseline is an identity —
+# baseline_neon.cpp documents why and exports nothing.
+add_library(quiver_bench_baselines STATIC baselines/baseline_avx2.cpp baselines/baseline_neon.cpp)
 target_link_libraries(quiver_bench_baselines PUBLIC quiver::quiver)
 target_include_directories(quiver_bench_baselines PUBLIC ${CMAKE_SOURCE_DIR})
 if(NOT MSVC)

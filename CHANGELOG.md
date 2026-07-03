@@ -4,6 +4,38 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-03
+
+### Added
+
+- M5 — Tier A NEON backends (Charter T5 launch condition: scalar+AVX2+NEON co-equal):
+  K1 weight-AND/`vaddv` packed compares with native unsigned orderings; K2 nibble `TBL`
+  compaction over new consteval control tables; K3 LUT index-store conversion; K4
+  4×-unrolled 128-bit mask algebra; K5 scalar-MLP delegation (gather N/A on NEON,
+  evidence gate recorded); K6 vector min/max with exactness rescues, pairwise-widening
+  wrap-exact integer sums, and ADR-013 blocked float sums at NEON widths.
+- The performance ledger as a product (PRD 11; ADR-020/021): QLS-1 entry/manifest JSON
+  schemas; the stdlib-only runner (`ledger/runner/quiver_ledger.py`) with environment
+  checklist, shuffled fresh-process repetitions (recorded seeds), seeded
+  percentile-bootstrap statistics (B=10,000) with golden tests, CV noise policy,
+  append-only results and structural validation wired into ctest; the machine registry
+  (one registered machine: Apple M2, secondary platform — the three-µarch coverage gate
+  is an open, recorded deferral); the first committed ledger run and
+  explicit-vs-autovec verdict blocks on all six family pages (losses included,
+  REQ-LEDGER-011); `docs/guides/disputes.md`; a lint check that docs reference ledger
+  numbers only by committed `entry_id` (REQ-LEDGER-015).
+- Runtime re-derivation tests for all compaction LUTs (closing an untested
+  REQ-SIMD-005 clause).
+
+### Changed
+
+- On ARM64 the dispatcher now selects NEON by default; bit-identical to scalar except
+  dense float sums (documented ADR-013 blocked policy, f32 {w=4,a=4} / f64 {w=2,a=4}).
+- Bench variant naming is platform-dependent per REQ-BENCH-010: on ARM the scalar build
+  registers as `autovec` (no `scalar` variant exists there).
+- C++20 module scanning disabled in the build (no modules; `clang-scan-deps` is absent
+  from minimal environments).
+
 ## [0.2.0] — 2026-07-03
 
 ### Added

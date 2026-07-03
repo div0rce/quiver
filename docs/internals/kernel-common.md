@@ -33,6 +33,8 @@ runtime-re-derived by the unit suite (generator and table must agree):
 | `kCompactLut32` | 256 × 8 × `uint32_t`, `alignas(64)` (8 KiB) | per selection byte: front-packed indices of the set bits — the `vpermd` control for 32-bit emulated compress (K2), and, added to a broadcast base, directly the selvec output (K1/K3) |
 | `kCompactLut64` | 16 × 4 × `uint64_t` (512 B) | per nibble: set-bit lane list for 64-bit lanes (expanded to `epi32` pair indices at use) |
 | `kPopcountLut` | 256 × `int8_t` | cursor advance per selection byte/nibble |
+| `kCompactNib8/16/32` | 16 rows of TBL control bytes (8/8/16 B rows) | NEON nibble compaction: selected lanes' byte indices front-packed, `0xFF` fill (TBL zero-fills) |
+| `kCompactPair64` | 4 × 16 B | NEON 64-bit-lane pair compaction |
 
 Row semantics worth remembering: unset-lane positions trail the packed prefix, so a full-vector
 store writes `popcount` defined elements plus scratch — legal precisely because compaction

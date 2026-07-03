@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/div0rce/quiver/ledger/schema/manifest.schema.json",
+  "title": "Quiver ledger run manifest (QLS-1)",
+  "description": "Per-run environment record (REQ-LEDGER-003). `deviations` shall be empty for publishable runs (REQ-LEDGER-013).",
+  "type": "object",
+  "required": [
+    "cpu_model", "machine_id", "uarch", "core_used", "pinning", "frequency_governor",
+    "turbo_boost", "smt", "aslr", "os", "kernel", "compiler", "compiler_flags", "lto",
+    "google_benchmark_version", "library_commit", "timestamp_utc", "deviations"
+  ],
+  "properties": {
+    "cpu_model": { "type": "string" },
+    "machine_id": { "type": "string" },
+    "uarch": { "type": "string" },
+    "core_used": { "type": "string" },
+    "pinning": { "type": "string" },
+    "frequency_governor": { "type": "string" },
+    "turbo_boost": { "type": "string" },
+    "smt": { "type": "string" },
+    "aslr": { "type": "string" },
+    "os": { "type": "string" },
+    "kernel": { "type": "string" },
+    "compiler": { "type": "string" },
+    "compiler_flags": { "type": "string" },
+    "lto": { "type": "string" },
+    "google_benchmark_version": { "type": "string" },
+    "library_commit": { "type": "string" },
+    "timestamp_utc": { "type": "string" },
+    "repetition_seed": { "type": "integer" },
+    "deviations": { "type": "array", "items": { "type": "string" } }
+  }
+}

@@ -22,7 +22,8 @@ add_executable(quiver_tests_unit
   unit/test_select.cpp
   unit/test_mask.cpp
   unit/test_take.cpp
-  unit/test_reduce.cpp)
+  unit/test_reduce.cpp
+  unit/test_luts.cpp)
 
 target_link_libraries(quiver_tests_unit PRIVATE quiver::quiver quiver_testkit GTest::gtest)
 # Tests may include internal headers ("src/..." form, REQ-STD-006); consumers may not.
@@ -129,3 +130,16 @@ add_executable(quiver_drift_check
   ${CMAKE_SOURCE_DIR}/bench/harness/distributions.cpp)
 target_link_libraries(quiver_drift_check PRIVATE quiver_testkit)
 add_test(NAME Testkit.BenchDistributionDriftAlarm COMMAND quiver_drift_check)
+
+# MOD-LEDGER runner unit tests (REQ-INT-004: Python >= 3.11 stdlib only): ADR-020 golden
+# statistics + QLS-1 schema accept/reject fixtures (PRD 11 §10).
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_FOUND AND NOT Python3_VERSION VERSION_LESS 3.11)
+  add_test(NAME Ledger.StatsGolden
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ledger/runner/tests/test_stats.py)
+  add_test(NAME Ledger.SchemaFixtures
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ledger/runner/tests/test_schema.py)
+  add_test(NAME Ledger.ResultsValidate
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ledger/runner/quiver_ledger.py
+                   validate)
+endif()
