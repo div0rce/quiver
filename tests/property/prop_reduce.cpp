@@ -8,17 +8,16 @@
 
 #include <gtest/gtest.h>
 
-#include "tests/testkit/generators.h"
-#include "tests/testkit/reference.h"
 #include "quiver/filter.h"
 #include "quiver/reduce.h"
 #include "quiver/select.h"
+#include "tests/testkit/generators.h"
+#include "tests/testkit/reference.h"
 
 namespace {
 
 using quiver_test::Rng;
 namespace ref = quiver_test::ref;
-
 
 TEST(PropReduce, CompositionIdentities) {
   Rng rng(0x9E0906);
@@ -57,6 +56,8 @@ TEST(PropReduce, CompositionIdentities) {
     }
 
     // Checked-sum flag matches an independent 128-bit reference.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
     std::int64_t wrapped = 0;
     const bool flag = quiver::reduce_sum_checked(in, quiver::BitmapView{nullptr}, &wrapped);
     __int128 big = 0;
@@ -67,6 +68,7 @@ TEST(PropReduce, CompositionIdentities) {
                            big < std::numeric_limits<std::int64_t>::min();
     EXPECT_EQ(flag, want_flag);
     EXPECT_EQ(wrapped, static_cast<std::int64_t>(big));
+#pragma GCC diagnostic pop
   }
 }
 

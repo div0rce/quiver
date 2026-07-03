@@ -55,8 +55,8 @@ QUIVER_FORCE_INLINE void for_each_participant(std::int64_t n, const std::uint8_t
 }
 
 template <class T>
-T reduce_min(const T* in, std::int64_t n, const std::uint8_t* validity,
-             const std::uint32_t* sel, std::int64_t sel_len) noexcept {
+T reduce_min(const T* in, std::int64_t n, const std::uint8_t* validity, const std::uint32_t* sel,
+             std::int64_t sel_len) noexcept {
   T best = std::numeric_limits<T>::max();  // identity (PRD 08 §3.5)
   bool saw_nan = false;
   for_each_participant(n, validity, sel, sel_len, [&](std::int64_t i, bool valid) {
@@ -77,8 +77,8 @@ T reduce_min(const T* in, std::int64_t n, const std::uint8_t* validity,
 }
 
 template <class T>
-T reduce_max(const T* in, std::int64_t n, const std::uint8_t* validity,
-             const std::uint32_t* sel, std::int64_t sel_len) noexcept {
+T reduce_max(const T* in, std::int64_t n, const std::uint8_t* validity, const std::uint32_t* sel,
+             std::int64_t sel_len) noexcept {
   T best = std::numeric_limits<T>::lowest();
   bool saw_nan = false;
   for_each_participant(n, validity, sel, sel_len, [&](std::int64_t i, bool valid) {
@@ -133,6 +133,10 @@ bool reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validit
   using S = SumType<T>;
   static_assert(std::is_integral_v<T>, "checked sums are integer-only (PRD 04 K6)");
 #if defined(__SIZEOF_INT128__)
+  // __int128 is a GNU extension; its use here is deliberate (exact 128-bit accumulation,
+  // PRD 08 K6) and guarded by __SIZEOF_INT128__ — suppress -Wpedantic for this block only.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
   if constexpr (std::is_signed_v<T>) {
     __int128 acc = 0;
     for_each_participant(n, validity, sel, sel_len, [&](std::int64_t i, bool valid) {
@@ -154,6 +158,7 @@ bool reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validit
     *out_sum = static_cast<S>(acc);
     return acc > static_cast<unsigned __int128>(std::numeric_limits<S>::max());
   }
+#pragma GCC diagnostic pop
 #else
   // No 128-bit type (MSVC x64 tier-2): carry-tracked 64-bit accumulation.
   if constexpr (std::is_signed_v<T>) {
