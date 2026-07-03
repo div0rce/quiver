@@ -3,6 +3,8 @@
 // Module: MOD-CPU | REQs: REQ-INT-001, REQ-DISP-004 | ADRs: ADR-005
 #include "src/cpu/cpu_features.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
 
 #if defined(__x86_64__) || defined(_M_X64)
