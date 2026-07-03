@@ -30,8 +30,15 @@ The family's semantics are defined by `src/kernels/compare/compare_scalar_impl.h
 
 ## Ledger
 
-*Pending v0.3* — the first ledger publication (three microarchitectures) lands at M5 with the explicit-vs-autovec verdict block (wins **and** losses, REQ-LEDGER-011). No performance numbers are published without it (Charter T2).
+**Verdict (Apple M2, v0.3, `neon` vs `autovec`):** **the autovec baseline wins — a published loss** (geomean 0.69× over 3 published pairs).
 
+| configuration | neon vs autovec | entries |
+|---|---|---|
+| `i64` n=1024/sel=10 | 0.70× | `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-1024-sel-10-1024-10` `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-1024-sel-10-1024-10` |
+| `i64` n=4096/sel=90 | 0.69× | `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-4096-sel-90-4096-90` `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-4096-sel-90-4096-90` |
+| `i64` n=4096/sel=99 | 0.70× | `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-4096-sel-99-4096-99` `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-4096-sel-99-4096-99` |
+
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); this is the only registered machine at v0.3 (the three-µarch coverage gate is an open deferral, [gate M5](../releases/gates/M5.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
 ## Validation
 
 `tests/unit/test_compare.cpp` · `tests/property/prop_compare.cpp` · `tests/differential/diff_isa_compare.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_compare.cpp` (hypothesis in-source).

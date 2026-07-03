@@ -1,0 +1,57 @@
+{
+  "context": {
+    "date": "2026-07-03T16:52:25-04:00",
+    "host_name": "mous-2.local",
+    "executable": "/Users/nasr/repos/quiver/build/bench/bin/quiver_bench_filter",
+    "num_cpus": 8,
+    "mhz_per_cpu": 24,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 0
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 131072,
+        "num_sharing": 0
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 4194304,
+        "num_sharing": 1
+      }
+    ],
+    "load_avg": [4.10791,3.73633,4.12012],
+    "library_version": "v0.2.0-dirty",
+    "library_build_type": "release",
+    "json_schema_version": 1,
+    "compiler": "Apple LLVM 21.0.0 (clang-2100.1.1.101)",
+    "cxx_flags": " [Release]",
+    "git_dirty": "dirty",
+    "git_sha": "551ae0eba1a3",
+    "pmu": "unavailable",
+    "quiver_version": "0.1.0"
+  },
+  "benchmarks": [
+    {
+      "name": "BM_filter/bitmap/autovec/i64/n=65536/sel=50/pat=clustered/65536/50/1",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_filter/bitmap/autovec/i64/n=65536/sel=50/pat=clustered/65536/50/1",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 34834,
+      "real_time": 4.0347072313196237e+04,
+      "cpu_time": 4.0321812022736405e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.6253237816555955e+09
+    }
+  ]
+}

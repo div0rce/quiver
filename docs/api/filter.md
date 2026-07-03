@@ -28,8 +28,18 @@ The family's semantics are defined by `src/kernels/filter/filter_scalar_impl.h` 
 
 ## Ledger
 
-*Pending v0.3* — the first ledger publication (three microarchitectures) lands at M5 with the explicit-vs-autovec verdict block (wins **and** losses, REQ-LEDGER-011). No performance numbers are published without it (Charter T2).
+**Verdict (Apple M2, v0.3, `neon` vs `autovec`):** **explicit NEON wins** (geomean 1.72× over 6 published pairs).
 
+| configuration | neon vs autovec | entries |
+|---|---|---|
+| `i64` n=4096/sel=50/pat=clustered | 1.69× | `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-4096-sel-50-pat-clustered-4096-50-1` `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-4096-sel-50-pat-clustered-4096-50-1` |
+| `i64` n=4096/sel=90/pat=uniform | 1.83× | `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-4096-sel-90-pat-uniform-4096-90-0` `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-4096-sel-90-pat-uniform-4096-90-0` |
+| `i64` n=65536/sel=10/pat=clustered | 1.65× | `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-10-pat-clustered-65536-10-1` `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-10-pat-clustered-65536-10-1` |
+| `i64` n=65536/sel=99/pat=clustered | 1.76× | `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-99-pat-clustered-65536-99-1` `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-99-pat-clustered-65536-99-1` |
+| `i64` n=65536/sel=1/pat=uniform | 1.68× | `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-1-pat-uniform-65536-1-0` `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-1-pat-uniform-65536-1-0` |
+| `i64` n=65536/sel=90/pat=uniform | 1.74× | `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-90-pat-uniform-65536-90-0` `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-90-pat-uniform-65536-90-0` |
+
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); this is the only registered machine at v0.3 (the three-µarch coverage gate is an open deferral, [gate M5](../releases/gates/M5.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
 ## Validation
 
 `tests/unit/test_filter.cpp` · `tests/property/prop_filter.cpp` · `tests/differential/diff_isa_filter.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_filter.cpp` (hypothesis in-source).

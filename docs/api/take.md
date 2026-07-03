@@ -29,8 +29,17 @@ The family's semantics are defined by `src/kernels/take/take_scalar_impl.h` (Cha
 
 ## Ledger
 
-*Pending v0.3* — the first ledger publication (three microarchitectures) lands at M5 with the explicit-vs-autovec verdict block (wins **and** losses, REQ-LEDGER-011). No performance numbers are published without it (Charter T2).
+**Verdict (Apple M2, v0.3, `neon` vs `autovec`):** **parity** (geomean 1.00× over 5 published pairs).
 
+| configuration | neon vs autovec | entries |
+|---|---|---|
+| `i64_u32` n=65536/dict=256KiB | 1.03× | `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-neon-i64-u32-n-65536-dict-256kib-65536-262144` `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-autovec-i64-u32-n-65536-dict-256kib-65536-262144` |
+| `i64_u32` n=65536/dict=32KiB | 1.03× | `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-neon-i64-u32-n-65536-dict-32kib-65536-32768` `qle:apple-m2-20260703-4ec273e2904d-bm-take-dict-decode-autovec-i64-u32-n-65536-dict-32kib-65536-32768` |
+| `i64_u32` n=65536/dict=4KiB | 0.98× | `qle:apple-m2-20260703-4ec273e2904d-bm-take-dict-decode-neon-i64-u32-n-65536-dict-4kib-65536-4096` `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-autovec-i64-u32-n-65536-dict-4kib-65536-4096` |
+| `i64_u32` n=65536/dict=65536KiB | 1.00× | `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-neon-i64-u32-n-65536-dict-65536kib-65536-67108864` `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-autovec-i64-u32-n-65536-dict-65536kib-65536-67108864` |
+| `i64_u32` n=65536/dict=8192KiB | 0.97× | `qle:apple-m2-20260703-4ec273e2904d-bm-take-dict-decode-neon-i64-u32-n-65536-dict-8192kib-65536-8388608` `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-autovec-i64-u32-n-65536-dict-8192kib-65536-8388608` |
+
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); this is the only registered machine at v0.3 (the three-µarch coverage gate is an open deferral, [gate M5](../releases/gates/M5.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
 ## Validation
 
 `tests/unit/test_take.cpp` · `tests/property/prop_take.cpp` · `tests/differential/diff_isa_take.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_take.cpp` (hypothesis in-source).

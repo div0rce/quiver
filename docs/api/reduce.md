@@ -31,8 +31,15 @@ The family's semantics are defined by `src/kernels/reduce/reduce_scalar_impl.h` 
 
 ## Ledger
 
-*Pending v0.3* — the first ledger publication (three microarchitectures) lands at M5 with the explicit-vs-autovec verdict block (wins **and** losses, REQ-LEDGER-011). No performance numbers are published without it (Charter T2).
+**Verdict (Apple M2, v0.3, `neon` vs `autovec`):** **explicit NEON wins** (geomean 4.43× over 3 published pairs). **Float-sum caveat (ADR-013, stated per its mandate):** the ~8× f64 wins compare a *reassociated* blocked accumulation (A=4) against a *strict-order* baseline — the compiler cannot reassociate FP without fast-math, which the charter prohibits, so this gap measures the documented reassociation policy, not codegen quality alone.
 
+| configuration | neon vs autovec | entries |
+|---|---|---|
+| `f64` n=4096/nulls=0 | 8.00× | `qle:apple-m2-20260703-4ec273e2904d-b-bm-reduce-sum-wrap-neon-f64-n-4096-nulls-0-4096` `qle:apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-autovec-f64-n-4096-nulls-0-4096` |
+| `f64` n=65536/nulls=0 | 7.84× | `qle:apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-neon-f64-n-65536-nulls-0-65536` `qle:apple-m2-20260703-4ec273e2904d-b-bm-reduce-sum-wrap-autovec-f64-n-65536-nulls-0-65536` |
+| `i64` n=4096/nulls=10 | 1.39× | `qle:apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-neon-i64-n-4096-nulls-10-4096-10` `qle:apple-m2-20260703-4ec273e2904d-bm-reduce-sum-wrap-autovec-i64-n-4096-nulls-10-4096-10` |
+
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); this is the only registered machine at v0.3 (the three-µarch coverage gate is an open deferral, [gate M5](../releases/gates/M5.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
 ## Validation
 
 `tests/unit/test_reduce.cpp` · `tests/property/prop_reduce.cpp` · `tests/differential/diff_isa_reduce.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_reduce.cpp` (hypothesis in-source).
