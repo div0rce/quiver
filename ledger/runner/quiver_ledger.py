@@ -158,7 +158,9 @@ def cmd_run(args: argparse.Namespace) -> int:
             notes = (f"cv={cv:.4f} in the 3-5% band: published with noisy flag per "
                      f"REQ-LEDGER-005")
         entry = {
-            "entry_id": f"{machine['uarch_dir']}-{date}-{sha}-{entry_slug(name)}",
+            # Keyed by the run DIRECTORY name so supplementary runs at the same commit
+            # (e.g. <date>-<sha>-b) can never collide with the main run's ids.
+            "entry_id": f"{machine['uarch_dir']}-{out_dir.name}-{entry_slug(name)}",
             "schema": schema_check.SCHEMA_VERSION,
             "methodology": schema_check.METHODOLOGY_VERSION,
             "benchmark": name,
