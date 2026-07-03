@@ -30,6 +30,10 @@ markdown_extensions:
       permalink: true
   - pymdownx.superfences
   - pymdownx.highlight
+  # REQ-DOC-006: C++ snippets in docs are extracted from tests/ or examples/, never free-typed.
+  - pymdownx.snippets:
+      base_path: ["..", "."]
+      check_paths: true
 
 exclude_docs: |
   mkdocs.yml
@@ -45,9 +49,18 @@ nav:
   - Home: README.md
   - Guides:
       - Building: guides/building.md
+  - API reference:
+      - Core types: api/core.md
+      - Dispatch: api/dispatch.md
   - Architecture:
       - Module map: architecture/module-map.md
+      - Core (MOD-CORE): architecture/core.md
+      - Dispatch (MOD-DISPATCH): architecture/dispatch.md
       - Overview: architecture/README.md
+  - Internals:
+      - CPU detection: internals/cpu-detection.md
+      - Dispatch state machine: internals/dispatch-state-machine.md
+      - Coding standards: internals/coding-standards.md
   - ADRs: adr/README.md
   - Specifications:
       - Design Charter: design/DESIGN_CHARTER.md
@@ -55,3 +68,4 @@ nav:
   - Releases:
       - Overview: releases/README.md
       - Gate M0: releases/gates/M0.md
+      - Gate M1: releases/gates/M1.md

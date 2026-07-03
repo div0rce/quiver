@@ -1,10 +1,21 @@
-# Quiver root build — M0 configure-only skeleton.
+# Quiver root build.
 # Owning module: build system (docs/prd/03-build-system.md).
-# REQ-BUILD-001..006, -008 (declared), -012; targets arrive at M1 (docs/prd/18-milestones.md).
+# REQ-BUILD-001..008, -012; library target per REQ-BUILD-002 (ADR-002).
 cmake_minimum_required(VERSION 3.28)
 
+# Version single-source-of-truth: parsed from the header so the M1 acceptance criterion
+# "version introspection matches the CMake project version" holds structurally.
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/include/quiver/detail/config.h" _quiver_ver_lines
+     REGEX "#define QUIVER_VERSION_(MAJOR|MINOR|PATCH) ")
+string(REGEX MATCH "MAJOR ([0-9]+)" _ "${_quiver_ver_lines}")
+set(_quiver_ver_major "${CMAKE_MATCH_1}")
+string(REGEX MATCH "MINOR ([0-9]+)" _ "${_quiver_ver_lines}")
+set(_quiver_ver_minor "${CMAKE_MATCH_1}")
+string(REGEX MATCH "PATCH ([0-9]+)" _ "${_quiver_ver_lines}")
+set(_quiver_ver_patch "${CMAKE_MATCH_1}")
+
 project(Quiver
-        VERSION 0.1.0
+        VERSION ${_quiver_ver_major}.${_quiver_ver_minor}.${_quiver_ver_patch}
         DESCRIPTION "Dependency-free C++23 vectorized analytical kernels + cross-ISA performance ledger"
         HOMEPAGE_URL "https://github.com/div0rce/quiver"
         LANGUAGES CXX)
@@ -69,15 +80,32 @@ if(QUIVER_SANITIZE AND NOT QUIVER_ENABLE_ASSERTS)
   set(QUIVER_ENABLE_ASSERTS ON)
 endif()
 
-# --- M0 state: configure-only skeleton -------------------------------------------------------
-# The library target (`quiver::quiver`, REQ-BUILD-002), tests, benchmarks, and examples are
-# introduced by milestones M1+ per docs/prd/18-milestones.md. This skeleton exists so that the
-# option surface, presets (REQ-BUILD-011), and toolchain checks are live and CI-verified from M0.
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src")
-  message(STATUS
-    "Quiver: M0 configure-only skeleton — no build targets yet "
-    "(first targets arrive at milestone M1; see docs/prd/18-milestones.md).")
+# --- The library (REQ-BUILD-002: single static target; ADR-002) -------------------------------
+add_library(quiver STATIC
+  src/cpu/cpu_features.cpp
+  src/dispatch/dispatch_tables.cpp
+  src/dispatch/version.cpp)
+add_library(quiver::quiver ALIAS quiver)
+
+target_include_directories(quiver
+  PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(quiver PUBLIC cxx_std_23)
+
+quiver_apply_warnings(quiver)
+quiver_apply_library_constraints(quiver)  # -fno-exceptions -fno-rtti (REQ-BUILD-004)
+quiver_apply_sanitizers(quiver)
+
+if(QUIVER_ENABLE_ASSERTS)
+  target_compile_definitions(quiver PRIVATE QUIVER_ENABLE_ASSERTS=1)
 endif()
+
+# --- Dev trees (never installed, never part of the export set: REQ-REPO-007) ------------------
+if(QUIVER_ENABLE_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
+  enable_testing()
+  add_subdirectory(tests)
+endif()
+# bench/, examples/ arrive at their milestones (docs/prd/18-milestones.md).
 
 message(STATUS "Quiver ${PROJECT_VERSION} | tests=${QUIVER_ENABLE_TESTS} bench=${QUIVER_ENABLE_BENCH} "
                "examples=${QUIVER_ENABLE_EXAMPLES} asserts=${QUIVER_ENABLE_ASSERTS} "

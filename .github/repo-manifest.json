@@ -1,6 +1,6 @@
 {
-  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M0.",
-  "milestone": "M0",
+  "comment": "Repository tree manifest \u2014 REQ-REPO-001 (docs/prd/02-repository-architecture.md \u00a711). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 \u00a73. State: M1.",
+  "milestone": "M1",
   "allowed_toplevel": [
     ".clang-format",
     ".clang-tidy",
@@ -19,7 +19,10 @@
     "build",
     "cmake",
     "docs",
-    "site"
+    "include",
+    "site",
+    "src",
+    "tests"
   ],
   "required": [
     "LICENSE",
@@ -49,12 +52,31 @@
     "docs/guides/building.md",
     "docs/releases/gates/M0.md",
     "docs/design/DESIGN_CHARTER.md",
-    "docs/prd/README.md"
+    "docs/prd/README.md",
+    "include/quiver/quiver.h",
+    "include/quiver/core.h",
+    "include/quiver/dispatch.h",
+    "include/quiver/detail/config.h",
+    "include/quiver/detail/extern_decls.h",
+    "src/cpu/cpu_features.h",
+    "src/cpu/cpu_features.cpp",
+    "src/dispatch/dispatch_internal.h",
+    "src/dispatch/dispatch_tables.cpp",
+    "src/dispatch/version.cpp",
+    "tests/CMakeLists.txt",
+    "tests/unit/test_main.cpp",
+    "tests/unit/test_core.cpp",
+    "tests/unit/test_dispatch.cpp",
+    "docs/releases/gates/M1.md",
+    "docs/architecture/core.md",
+    "docs/architecture/dispatch.md",
+    "docs/internals/cpu-detection.md",
+    "docs/internals/dispatch-state-machine.md",
+    "docs/internals/coding-standards.md",
+    "docs/api/core.md",
+    "docs/api/dispatch.md"
   ],
   "forbidden_at_milestone": [
-    "include",
-    "src",
-    "tests",
     "bench",
     "ledger",
     "tools",

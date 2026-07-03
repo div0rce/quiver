@@ -2,9 +2,9 @@
 
 The file → module ownership record required by REQ-REPO-008: every file belongs to exactly one module. The authoritative module inventory, layering, and dependency rules live in PRD [02 §5–§6](../prd/02-repository-architecture.md); this page tracks the concrete mapping as the repository grows and is updated in every PR that adds files.
 
-**State at M0:** no production code exists. Rows below marked *predetermined* describe ownership fixed by the PRD for files that do not exist yet; they become *live* at the listed milestone.
+**State at M1:** MOD-CORE, MOD-CPU, and MOD-DISPATCH are live; kernels arrive at M3. Rows below marked *predetermined* describe ownership fixed by the PRD for files that do not exist yet; they become *live* at the listed milestone.
 
-## Live at M0
+## Live
 
 | Path | Module | Notes |
 |---|---|---|
@@ -13,14 +13,15 @@ The file → module ownership record required by REQ-REPO-008: every file belong
 | `CMakeLists.txt`, `CMakePresets.json`, `cmake/**` | build system | PRD [03](../prd/03-build-system.md) |
 | `.github/**` | MOD-CI | workflows, templates, repo-lint assets |
 | `docs/**` | per [docs/README.md](../README.md) directory map | REQ-DOC-001 |
+| `include/quiver/{quiver,core}.h`, `include/quiver/detail/{config,extern_decls}.h` | MOD-CORE | live since M1 |
+| `include/quiver/dispatch.h`, `src/dispatch/{dispatch_internal.h,dispatch_tables.cpp,version.cpp}` | MOD-DISPATCH | live since M1 |
+| `src/cpu/{cpu_features.h,cpu_features.cpp}` | MOD-CPU | live since M1 |
+| `tests/CMakeLists.txt`, `tests/unit/{test_main,test_core,test_dispatch}.cpp` | test suites (MOD-CORE/MOD-DISPATCH validation) | live since M1 |
 
 ## Predetermined (from PRD 02 §3/§8; 73 production files total)
 
 | Path pattern | Module | Arrives |
 |---|---|---|
-| `include/quiver/{quiver,core}.h`, `include/quiver/detail/*` | MOD-CORE | M1 |
-| `include/quiver/dispatch.h`, `src/dispatch/**` | MOD-DISPATCH | M1 |
-| `src/cpu/**` | MOD-CPU | M1 |
 | `src/kernels/common/**` | MOD-KCOMMON | M3 |
 | `include/quiver/<family>.h`, `src/kernels/<family>/**` (5-file pattern) | MOD-K1…MOD-K10 | M3 (Tier A) / M6 (Tier B) |
 | `tests/testkit/**` | MOD-TESTKIT | M2 |
