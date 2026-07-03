@@ -3,12 +3,22 @@
 
 quiver_fetch_dev_dependencies()
 
+# MOD-TESTKIT: seeded generators + oracles (PRD 05 §7). GoogleTest-free core so the drift
+# check (REQ-BENCH-015) can link it without violating REQ-TEST-018.
+add_library(quiver_testkit STATIC testkit/generators.cpp)
+target_link_libraries(quiver_testkit PUBLIC quiver::quiver)
+target_include_directories(quiver_testkit PUBLIC ${CMAKE_SOURCE_DIR})
+if(NOT MSVC)
+  target_compile_options(quiver_testkit PRIVATE -Wall -Wextra)
+endif()
+
 add_executable(quiver_tests_unit
   unit/test_main.cpp
   unit/test_core.cpp
-  unit/test_dispatch.cpp)
+  unit/test_dispatch.cpp
+  unit/test_testkit.cpp)
 
-target_link_libraries(quiver_tests_unit PRIVATE quiver::quiver GTest::gtest)
+target_link_libraries(quiver_tests_unit PRIVATE quiver::quiver quiver_testkit GTest::gtest)
 # Tests may include internal headers ("src/..." form, REQ-STD-006); consumers may not.
 target_include_directories(quiver_tests_unit PRIVATE ${CMAKE_SOURCE_DIR})
 # Third-party headers are exempt from the warning policy (REQ-BUILD-008): force SYSTEM
@@ -37,3 +47,11 @@ quiver_apply_sanitizers(quiver_tests_unit)
 
 include(GoogleTest)
 gtest_discover_tests(quiver_tests_unit DISCOVERY_TIMEOUT 60)
+
+# Drift-alarm conformance runner (REQ-BENCH-015): compiles the bench-local distributions
+# source directly — free of BOTH GoogleTest and Google Benchmark (REQ-TEST-018).
+add_executable(quiver_drift_check
+  testkit/drift_check.cpp
+  ${CMAKE_SOURCE_DIR}/bench/harness/distributions.cpp)
+target_link_libraries(quiver_drift_check PRIVATE quiver_testkit)
+add_test(NAME Testkit.BenchDistributionDriftAlarm COMMAND quiver_drift_check)

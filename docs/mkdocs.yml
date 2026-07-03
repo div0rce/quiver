@@ -57,6 +57,13 @@ nav:
       - Core (MOD-CORE): architecture/core.md
       - Dispatch (MOD-DISPATCH): architecture/dispatch.md
       - Overview: architecture/README.md
+  - Benchmarks:
+      - Methodology (QLM-1): benchmarks/methodology.md
+      - Running benchmarks: benchmarks/running.md
+      - Overview: benchmarks/README.md
+  - Testing:
+      - Testkit: testing/testkit.md
+      - Overview: testing/README.md
   - Internals:
       - CPU detection: internals/cpu-detection.md
       - Dispatch state machine: internals/dispatch-state-machine.md
@@ -69,3 +76,4 @@ nav:
       - Overview: releases/README.md
       - Gate M0: releases/gates/M0.md
       - Gate M1: releases/gates/M1.md
+      - Gate M2: releases/gates/M2.md

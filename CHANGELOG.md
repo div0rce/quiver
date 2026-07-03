@@ -6,6 +6,14 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- M2 — Test kit and benchmark harness: seeded portable input generators implementing the
+  QLM-1 axes (SplitMix64 core, no libm; golden-hash cross-platform determinism tests),
+  naive-oracle and first-divergence-diagnostic testkit headers, the deliberately duplicated
+  bench-local distributions with a drift-alarm conformance runner, the Google Benchmark
+  harness (validation-before-timing with hard abort, REQ-BENCH-002 naming, forced-variant
+  helper), the first-party perf_event_open PMU group wrapper with graceful degrade, run-context
+  metadata, the flamegraph collection script, and CI bench-smoke (positive + negative
+  validation demo) and fuzz-smoke scaffolding jobs.
 - M1 — Core, CPU detection, dispatch framework: Surface B vocabulary types
   (`quiver/core.h`: `Element` concepts, enums, `BatchView`/`BitmapView`/`SelVec`/`Sma`,
   `SumType`), Surface C dispatch/introspection (`quiver/dispatch.h`: `active_isa`,

@@ -105,7 +105,10 @@ if(QUIVER_ENABLE_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.
   enable_testing()
   add_subdirectory(tests)
 endif()
-# bench/, examples/ arrive at their milestones (docs/prd/18-milestones.md).
+if(QUIVER_ENABLE_BENCH AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bench/CMakeLists.txt")
+  add_subdirectory(bench)
+endif()
+# examples/ arrives at M8 (docs/prd/18-milestones.md).
 
 message(STATUS "Quiver ${PROJECT_VERSION} | tests=${QUIVER_ENABLE_TESTS} bench=${QUIVER_ENABLE_BENCH} "
                "examples=${QUIVER_ENABLE_EXAMPLES} asserts=${QUIVER_ENABLE_ASSERTS} "

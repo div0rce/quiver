@@ -1,6 +1,6 @@
 {
-  "comment": "Repository tree manifest \u2014 REQ-REPO-001 (docs/prd/02-repository-architecture.md \u00a711). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 \u00a73. State: M1.",
-  "milestone": "M1",
+  "comment": "Repository tree manifest \u2014 REQ-REPO-001 (docs/prd/02-repository-architecture.md \u00a711). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 \u00a73. State: M2.",
+  "milestone": "M2",
   "allowed_toplevel": [
     ".clang-format",
     ".clang-tidy",
@@ -16,6 +16,7 @@
     "LICENSE",
     "README.md",
     "SECURITY.md",
+    "bench",
     "build",
     "cmake",
     "docs",
@@ -74,10 +75,29 @@
     "docs/internals/dispatch-state-machine.md",
     "docs/internals/coding-standards.md",
     "docs/api/core.md",
-    "docs/api/dispatch.md"
+    "docs/api/dispatch.md",
+    "tests/testkit/generators.h",
+    "tests/testkit/generators.cpp",
+    "tests/testkit/reference.h",
+    "tests/testkit/assertions.h",
+    "tests/testkit/drift_check.cpp",
+    "tests/unit/test_testkit.cpp",
+    "bench/CMakeLists.txt",
+    "bench/harness/bench_common.h",
+    "bench/harness/distributions.h",
+    "bench/harness/distributions.cpp",
+    "bench/harness/pmu.h",
+    "bench/harness/pmu.cpp",
+    "bench/harness/meta.h",
+    "bench/harness/meta.cpp",
+    "bench/harness/bench_smoke.cpp",
+    "bench/harness/flamegraph.sh",
+    "docs/testing/testkit.md",
+    "docs/benchmarks/methodology.md",
+    "docs/benchmarks/running.md",
+    "docs/releases/gates/M2.md"
   ],
   "forbidden_at_milestone": [
-    "bench",
     "ledger",
     "tools",
     "examples"
