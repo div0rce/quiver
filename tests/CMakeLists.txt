@@ -23,7 +23,10 @@ add_executable(quiver_tests_unit
   unit/test_mask.cpp
   unit/test_take.cpp
   unit/test_reduce.cpp
-  unit/test_luts.cpp)
+  unit/test_luts.cpp
+  unit/test_hash.cpp
+  unit/test_unpack.cpp
+  unit/test_arith.cpp)
 
 target_link_libraries(quiver_tests_unit PRIVATE quiver::quiver quiver_testkit GTest::gtest)
 # Tests may include internal headers ("src/..." form, REQ-STD-006); consumers may not.
@@ -38,6 +41,9 @@ endif()
 if(QUIVER_ENABLE_ASSERTS)
   target_compile_definitions(quiver_tests_unit PRIVATE QUIVER_ENABLE_ASSERTS=1)
 endif()
+# Committed golden vectors resolve from the source tree (REQ-TEST-015).
+target_compile_definitions(quiver_tests_unit PRIVATE
+  QUIVER_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden")
 
 # Test code gets the core warning set; the full library baseline (REQ-BUILD-008) applies to
 # shipped TUs, where -Wconversion strictness pays for itself.
@@ -77,11 +83,14 @@ endfunction()
 
 quiver_add_test_suite(quiver_tests_property
   property/prop_compare.cpp property/prop_filter.cpp property/prop_select.cpp
-  property/prop_mask.cpp property/prop_take.cpp property/prop_reduce.cpp)
+  property/prop_mask.cpp property/prop_take.cpp property/prop_reduce.cpp
+  property/prop_hash.cpp property/prop_unpack.cpp property/prop_arith.cpp)
 quiver_add_test_suite(quiver_tests_differential
   differential/diff_isa_compare.cpp differential/diff_isa_filter.cpp
   differential/diff_isa_select.cpp differential/diff_isa_mask.cpp
-  differential/diff_isa_take.cpp differential/diff_isa_reduce.cpp)
+  differential/diff_isa_take.cpp differential/diff_isa_reduce.cpp
+  differential/diff_isa_hash.cpp differential/diff_isa_unpack.cpp
+  differential/diff_isa_arith.cpp)
 quiver_add_test_suite(quiver_tests_invariant
   invariant/inv_bitmap_tail.cpp invariant/inv_determinism.cpp
   invariant/inv_selvec_sorted.cpp invariant/inv_noalloc.cpp invariant/inv_guard_pages.cpp)
