@@ -113,7 +113,8 @@ set(QUIVER_NEON_SOURCES
 # grows family by family behind the dispatch slot-[3] markers (src/dispatch/dispatch_tables.cpp).
 set(QUIVER_AVX512_SOURCES
   src/kernels/mask/mask_avx512.cpp
-  src/kernels/compare/compare_avx512.cpp)
+  src/kernels/compare/compare_avx512.cpp
+  src/kernels/hash/hash_avx512.cpp)
 add_library(quiver STATIC
   src/cpu/cpu_features.cpp
   src/dispatch/dispatch_tables.cpp
