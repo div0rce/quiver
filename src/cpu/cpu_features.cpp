@@ -80,6 +80,9 @@ void read_brand_x86(char (&brand)[64]) noexcept {
   }
   std::memcpy(brand, raw, 48);
   brand[48] = '\0';
+  if (brand[0] == '\0') {  // some emulators (e.g. SDE -skx) expose the leaves but return no
+    std::memcpy(brand, "x86_64", 7);  // string — keep the brand non-empty like the older path
+  }
 }
 
 CpuFeatures detect_x86() noexcept {
