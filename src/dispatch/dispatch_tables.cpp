@@ -255,6 +255,15 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 #define QUIVER_AVX512_IMPL_k9_ariths_f32 ~, &avx512::k9_arith_scalar_rhs
 #define QUIVER_AVX512_IMPL_k9_arith_f64 ~, &avx512::k9_arith
 #define QUIVER_AVX512_IMPL_k9_ariths_f64 ~, &avx512::k9_arith_scalar_rhs
+// K2 filter bitmap compaction (compress-to-register; 32/64-bit only, VBMI2 8/16-bit deferred):
+#define QUIVER_AVX512_IMPL_k2_bm_i32 ~, &avx512::k2_filter_bitmap
+#define QUIVER_AVX512_IMPL_k2_bm_i64 ~, &avx512::k2_filter_bitmap
+#define QUIVER_AVX512_IMPL_k2_bm_u32 ~, &avx512::k2_filter_bitmap
+#define QUIVER_AVX512_IMPL_k2_bm_u64 ~, &avx512::k2_filter_bitmap
+#define QUIVER_AVX512_IMPL_k2_bm_f32 ~, &avx512::k2_filter_bitmap
+#define QUIVER_AVX512_IMPL_k2_bm_f64 ~, &avx512::k2_filter_bitmap
+// K3 bitmap_to_selvec (compress-on-iota):
+#define QUIVER_AVX512_IMPL_k3_b2s ~, &avx512::k3_bitmap_to_selvec
 #endif
 // slot [3] = &avx512::<name> if QUIVER_AVX512_IMPL_<uid> is defined, else nullptr (the marker
 // supplies a leading dummy arg so the pointer lands in the second position; undefined markers

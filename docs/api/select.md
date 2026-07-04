@@ -24,7 +24,7 @@ The family's semantics are defined by `src/kernels/select/select_scalar_impl.h` 
 - **scalar** (v0.1): The primary instrument of the M9 bitmap-vs-selvec representation study (Charter §6.2; Survey §11.3 #3).
 - **AVX2** (v0.2): `bitmap_to_selvec` uses the emulated-compress core directly — each selection byte's `kCompactLut32` row *is* its compacted lane-index list; add a broadcast base, store 8 lanes, advance the cursor by popcount (full-vector stores stay inside the n-element capacity region, REQ-MEM-008). `selvec_to_bitmap` stays on the scalar core (sorted scatter is scalar-dominant by design, PRD 08 K3).
 - **NEON** (v0.3): same emulated-compress core as AVX2 — per selection byte the `kCompactLut32` row is the compacted index list; add broadcast base, two 128-bit stores, advance by popcount. `selvec_to_bitmap` stays scalar (sorted scatter).
-- **AVX-512 (M7):** lands with its milestone; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **AVX-512** (v0.5): `bitmap_to_selvec` compresses an index iota — opmask from the selection bits, **compress to a register** (`_mm512_maskz_compress_epi32` on `base + [0..15]`), then store advancing by popcount (Zen 4-safe; store within the `[0,n)` capacity region). Base set F+BW+DQ+VL (correct on SDE `-skx`); bit-identical to scalar under Intel SDE. `selvec_to_bitmap` is a scatter with no clean AVX-512 win and falls through to the AVX2 backend.
 
 ## Ledger
 
