@@ -119,7 +119,7 @@ if(QUIVER_ENABLE_FUZZERS)
     message(FATAL_ERROR "QUIVER_ENABLE_FUZZERS requires QUIVER_SANITIZE=address,undefined "
                         "(fuzzing runs under ASan+UBSan, REQ-TEST-007).")
   endif()
-  foreach(fam compare filter select mask take reduce)
+  foreach(fam compare filter select mask take reduce hash unpack arith)
     add_executable(quiver_fuzz_${fam} fuzz/fuzz_${fam}.cpp)
     target_link_libraries(quiver_fuzz_${fam} PRIVATE quiver::quiver)
     target_include_directories(quiver_fuzz_${fam} PRIVATE ${CMAKE_SOURCE_DIR})

@@ -19,9 +19,16 @@ namespace detail::neon {
 
 namespace {
 
-// Evidence-gated technique switch (REQ-KERNEL-007): value decided by the M6 ledger
-// measurement recorded in docs/api/hash.md; flip only with new ledger data.
-constexpr bool kUseVectorHash = false;
+// Evidence-gated technique switch (REQ-KERNEL-007): the shipped default is decided by the M6
+// ledger measurement recorded in docs/api/hash.md. Both variants stay compiled; the losing
+// one is re-evaluated (and kept UBSan/fuzz/differential test-covered) by building with
+// -DQUIVER_K7_HASH_VECTOR=1, which flips the default — the documented coverage mechanism for
+// the non-shipped variant (see docs/investigations/k7-neon-hash.md). Flip the shipped default
+// only with new ledger data.
+#ifndef QUIVER_K7_HASH_VECTOR
+#define QUIVER_K7_HASH_VECTOR 0
+#endif
+constexpr bool kUseVectorHash = (QUIVER_K7_HASH_VECTOR != 0);
 
 // Wrapping 64x64 -> low-64 multiply via umull/umlal 32x32 partials.
 QUIVER_FORCE_INLINE uint64x2_t mul64_lo(uint64x2_t a, uint64x2_t b) noexcept {

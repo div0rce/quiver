@@ -67,6 +67,9 @@ public:
     return v;
   }
 
+  // Undecoded bytes left — lets raw-byte harnesses treat the remainder as payload.
+  std::size_t remaining() const { return left_; }
+
 private:
   void fill_bytes(void* dst, std::size_t want) {
     const std::size_t got = want < left_ ? want : left_;

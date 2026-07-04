@@ -316,9 +316,12 @@ T arith_wrap_expected(quiver::ArithOp op, T a, T b) {
       return a * b;
     }
   } else {
+    // Promote sub-int unsigned operands past int: u16*u16 would otherwise multiply as
+    // SIGNED int (integer promotion) and overflow is UB.
     using U = std::make_unsigned_t<T>;
-    const U x = static_cast<U>(a);
-    const U y = static_cast<U>(b);
+    using P = std::conditional_t<(sizeof(U) < sizeof(unsigned int)), unsigned int, U>;
+    const P x = static_cast<U>(a);
+    const P y = static_cast<U>(b);
     switch (op) {
     case quiver::ArithOp::kAdd:
       return static_cast<T>(static_cast<U>(x + y));

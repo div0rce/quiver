@@ -67,7 +67,10 @@ QUIVER_FORCE_INLINE bool checked_one(ArithOp op, T a, T b, T* r) noexcept {
         if (a == 0 || b == 0) {
           return false;
         }
-        return (res / b != a) || (a == std::numeric_limits<T>::min() && b == T{-1});
+        // INT_MIN * -1 must be tested BEFORE res/b: when a==INT_MIN && b==-1 the wrapped
+        // res is INT_MIN, and res/b would evaluate INT_MIN/-1 (itself UB) — so short-circuit
+        // that case first (|| evaluates left-to-right).
+        return (a == std::numeric_limits<T>::min() && b == T{-1}) || (res / b != a);
 #endif
       }
     }

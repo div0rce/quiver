@@ -66,7 +66,7 @@ if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
 endif()
 
 # Family microbenchmarks (bench/pipeline/ arrives at M8).
-foreach(fam compare filter select mask take reduce dispatch)
+foreach(fam compare filter select mask take reduce dispatch hash unpack arith arith_guarded)
   add_executable(quiver_bench_${fam} micro/bench_${fam}.cpp)
   target_link_libraries(quiver_bench_${fam} PRIVATE quiver_bench_harness quiver_bench_baselines)
   set_target_properties(quiver_bench_${fam} PROPERTIES

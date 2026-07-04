@@ -38,12 +38,15 @@ using namespace ::quiver::detail;  // NOLINT(google-build-using-namespace): see 
 
 QUIVER_TARGET_AVX2_BEGIN
 
+#include "src/kernels/arith/arith_scalar_impl.h"
 #include "src/kernels/compare/compare_scalar_impl.h"
 #include "src/kernels/filter/filter_scalar_impl.h"
+#include "src/kernels/hash/hash_scalar_impl.h"
 #include "src/kernels/mask/mask_scalar_impl.h"
 #include "src/kernels/reduce/reduce_scalar_impl.h"
 #include "src/kernels/select/select_scalar_impl.h"
 #include "src/kernels/take/take_scalar_impl.h"
+#include "src/kernels/unpack/unpack_scalar_impl.h"
 
 namespace quiver::bench::autovec_avx2 {
 
@@ -85,6 +88,21 @@ double sum_wrap_f64(const double* in, std::int64_t n, const std::uint8_t* validi
   // those semantics — if the compiler cannot vectorize it without reassociation, that IS the
   // published comparison (Charter T7; ADR-013).
   return impl::reduce_sum_wrap<double>(in, n, validity, nullptr, 0);
+}
+
+void hash64_i64(const std::int64_t* in, std::int64_t n, std::uint64_t seed,
+                std::uint64_t* out) noexcept {
+  impl::hash64<std::int64_t>(in, n, seed, out);
+}
+
+void unpack_for_u32(const std::uint8_t* packed, std::int64_t n, int bit_width, std::uint32_t base,
+                    std::uint32_t* out) noexcept {
+  impl::unpack<std::uint32_t>(packed, n, bit_width, base, out);
+}
+
+void arith_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n,
+               std::int64_t* out) noexcept {
+  impl::arith<std::int64_t>(op, a, b, n, out);
 }
 
 }  // namespace quiver::bench::autovec_avx2

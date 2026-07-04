@@ -31,9 +31,13 @@ QUIVER_FORCE_INLINE T arith_one(ArithOp op, T a, T b) noexcept {
     }
     return a;  // unreachable for in-contract op values
   } else {
+    // Compute in an unsigned type at least as wide as int: sub-int unsigned operands would
+    // otherwise promote to SIGNED int, whose overflow (u16*u16) is UB — the exact UB class
+    // this function exists to avoid (REQ-K9-001).
     using U = std::make_unsigned_t<T>;
-    const U ua = static_cast<U>(a);
-    const U ub = static_cast<U>(b);
+    using P = std::conditional_t<(sizeof(U) < sizeof(unsigned int)), unsigned int, U>;
+    const P ua = static_cast<U>(a);
+    const P ub = static_cast<U>(b);
     switch (op) {
     case ArithOp::kAdd:
       return static_cast<T>(static_cast<U>(ua + ub));

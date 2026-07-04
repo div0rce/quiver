@@ -3,6 +3,7 @@
 // Covers: REQ-TEST-002/-003, REQ-K9-001, REQ-K10-001..002
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -114,6 +115,39 @@ TEST(DiffArith, AllBackendsMatchOracle) {
     run_arith_diff<std::uint64_t>(0xD1FF0908ull);
     run_arith_diff<float>(0xD1FF0909ull);
     run_arith_diff<double>(0xD1FF090Aull);
+  });
+}
+
+// Float specials: NaN results compare as a CLASS across backends and vs the oracle (IEEE
+// add/sub/mul propagate an implementation-defined NaN payload; C++ pins neither operand order
+// nor payload — gate M4 decision, same policy as K6 reduce sums). Finite results stay
+// bit-exact. `fill_uniform` never emits NaN/Inf, so this coverage is explicit.
+template <class T>
+void run_arith_nan_diff() {
+  const T qnan = std::numeric_limits<T>::quiet_NaN();
+  const T inf = std::numeric_limits<T>::infinity();
+  const std::vector<T> a = {qnan, T{1.5}, inf, -inf, T{0}, qnan, inf, T{-3.25}};
+  const std::vector<T> b = {qnan, qnan, -inf, inf, inf, T{2.0}, T{0}, T{4.0}};
+  const auto n = static_cast<std::int64_t>(a.size());
+  for (const ArithOp op : {ArithOp::kAdd, ArithOp::kSub, ArithOp::kMul}) {
+    std::vector<T> got(a.size());
+    quiver::arith(op, quiver::BatchView<T>{a.data(), n}, quiver::BatchView<T>{b.data(), n},
+                  got.data());
+    for (std::int64_t i = 0; i < n; ++i) {
+      const T want = ref::arith_wrap_expected(op, a[static_cast<std::size_t>(i)],
+                                              b[static_cast<std::size_t>(i)]);
+      const T g = got[static_cast<std::size_t>(i)];
+      const bool nan_class = (g != g) && (want != want);  // both NaN
+      ASSERT_TRUE(nan_class || std::memcmp(&g, &want, sizeof(T)) == 0)
+          << "op=" << static_cast<int>(op) << " i=" << i;
+    }
+  }
+}
+
+TEST(DiffArith, NaNResultsCompareAsClass) {
+  for_each_backend([&] {
+    run_arith_nan_diff<float>();
+    run_arith_nan_diff<double>();
   });
 }
 
