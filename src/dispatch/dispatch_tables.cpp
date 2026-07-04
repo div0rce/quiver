@@ -234,6 +234,27 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 #define QUIVER_AVX512_IMPL_k8_unpack_u16 ~, &avx512::k8_unpack
 #define QUIVER_AVX512_IMPL_k8_unpack_u32 ~, &avx512::k8_unpack
 #define QUIVER_AVX512_IMPL_k8_unpack_u64 ~, &avx512::k8_unpack
+// K9 arith (vertical ops; native vpmullq for 64-bit):
+#define QUIVER_AVX512_IMPL_k9_arith_i8 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_i8 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_i16 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_i16 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_i32 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_i32 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_i64 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_i64 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_u8 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_u8 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_u16 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_u16 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_u32 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_u32 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_u64 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_u64 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_f32 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_f32 ~, &avx512::k9_arith_scalar_rhs
+#define QUIVER_AVX512_IMPL_k9_arith_f64 ~, &avx512::k9_arith
+#define QUIVER_AVX512_IMPL_k9_ariths_f64 ~, &avx512::k9_arith_scalar_rhs
 #endif
 // slot [3] = &avx512::<name> if QUIVER_AVX512_IMPL_<uid> is defined, else nullptr (the marker
 // supplies a leading dummy arg so the pointer lands in the second position; undefined markers
