@@ -60,6 +60,9 @@ nav:
       - K4 mask_algebra: api/mask.md
       - K5 take / dict_decode: api/take.md
       - K6 reduce / SMA: api/reduce.md
+      - K7 hash: api/hash.md
+      - K8 unpack: api/unpack.md
+      - K9 / K10 arith: api/arith.md
   - Architecture:
       - Module map: architecture/module-map.md
       - Core (MOD-CORE): architecture/core.md
@@ -80,6 +83,7 @@ nav:
       - Coding standards: internals/coding-standards.md
   - Investigations:
       - K5 gather vs scalar (AVX2): investigations/k5-gather-avx2.md
+      - K7 NEON hash vs GPR chain: investigations/k7-neon-hash.md
   - ADRs: adr/README.md
   - Specifications:
       - Design Charter: design/DESIGN_CHARTER.md

@@ -30,6 +30,12 @@ template <class T>
 concept CodeType = std::same_as<T, std::uint8_t> || std::same_as<T, std::uint16_t> ||
                    std::same_as<T, std::uint32_t>;
 
+// Unpack output types — exactly the four unsigned widths (API-K8-001; concept-diagnosed
+// per REQ-API-004's instantiation rule).
+template <class T>
+concept UnpackOut = std::same_as<T, std::uint8_t> || std::same_as<T, std::uint16_t> ||
+                    std::same_as<T, std::uint32_t> || std::same_as<T, std::uint64_t>;
+
 // Enum values are frozen numbers: dispatch tables index by Isa (REQ-DISP-002 preference order).
 enum class CompareOp : std::uint8_t { kEq, kNe, kLt, kLe, kGt, kGe };
 enum class MaskOp : std::uint8_t { kAnd, kOr, kAndNot, kXor };

@@ -88,6 +88,10 @@ endif()
 # Per-ISA TUs are always listed: each guards itself to its architecture with the preprocessor
 # and compiles empty elsewhere (ADR-003; no global ISA flags, REQ-BUILD-005).
 set(QUIVER_AVX2_SOURCES
+  src/kernels/hash/hash_avx2.cpp
+  src/kernels/unpack/unpack_avx2.cpp
+  src/kernels/arith/arith_avx2.cpp
+  src/kernels/arith_guarded/arith_guarded_avx2.cpp
   src/kernels/compare/compare_avx2.cpp
   src/kernels/filter/filter_avx2.cpp
   src/kernels/select/select_avx2.cpp
@@ -95,6 +99,10 @@ set(QUIVER_AVX2_SOURCES
   src/kernels/take/take_avx2.cpp
   src/kernels/reduce/reduce_avx2.cpp)
 set(QUIVER_NEON_SOURCES
+  src/kernels/hash/hash_neon.cpp
+  src/kernels/unpack/unpack_neon.cpp
+  src/kernels/arith/arith_neon.cpp
+  src/kernels/arith_guarded/arith_guarded_neon.cpp
   src/kernels/compare/compare_neon.cpp
   src/kernels/filter/filter_neon.cpp
   src/kernels/select/select_neon.cpp
@@ -112,6 +120,10 @@ add_library(quiver STATIC
   src/kernels/mask/mask_scalar.cpp
   src/kernels/take/take_scalar.cpp
   src/kernels/reduce/reduce_scalar.cpp
+  src/kernels/hash/hash_scalar.cpp
+  src/kernels/unpack/unpack_scalar.cpp
+  src/kernels/arith/arith_scalar.cpp
+  src/kernels/arith_guarded/arith_guarded_scalar.cpp
   ${QUIVER_AVX2_SOURCES}
   ${QUIVER_NEON_SOURCES})
 add_library(quiver::quiver ALIAS quiver)

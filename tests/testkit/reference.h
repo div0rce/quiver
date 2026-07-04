@@ -7,6 +7,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <type_traits>
 #include <vector>
@@ -236,6 +237,180 @@ T sum_blocked_expected(const T* in, std::int64_t n, const std::uint8_t* validity
     }
   }
   return s;
+}
+
+// --- K7: independent qhash64 transcription (ADR-012's formula, written from the ADR text,
+// --- not from the library source — the dual-oracle discipline) -------------------------------
+
+inline std::uint64_t qhash64_fmix(std::uint64_t x) {
+  x ^= x >> 33;
+  x *= 0xFF51AFD7ED558CCDull;
+  x ^= x >> 33;
+  x *= 0xC4CEB9FE1A85EC53ull;
+  x ^= x >> 33;
+  return x;
+}
+
+template <class T>
+std::uint64_t qhash64_expected(T v, std::uint64_t seed) {
+  std::uint64_t key;
+  if constexpr (std::is_same_v<T, float>) {
+    float c = v;
+    if (c == 0.0f) {
+      c = 0.0f;
+    }
+    std::uint32_t bits;
+    std::memcpy(&bits, &c, 4);
+    key = bits;
+  } else if constexpr (std::is_same_v<T, double>) {
+    double c = v;
+    if (c == 0.0) {
+      c = 0.0;
+    }
+    std::memcpy(&key, &c, 8);
+  } else {
+    key = static_cast<std::uint64_t>(static_cast<std::make_unsigned_t<T>>(v));
+  }
+  return qhash64_fmix(key ^ (seed + 0x9E3779B97F4A7C15ull));
+}
+
+inline std::uint64_t qhash64_combine_expected(std::uint64_t a, std::uint64_t b) {
+  return qhash64_fmix(a ^ (b + 0x9E3779B97F4A7C15ull + (a << 6) + (a >> 2)));
+}
+
+// --- K8: independent unpack oracle straight from the ADR-026 sentence: value i occupies
+// --- bits [i*w, (i+1)*w); bit j lives at byte j/8, bit j%8 -----------------------------------
+
+template <class Out>
+Out unpack_value_expected(const std::uint8_t* packed, std::int64_t i, int w) {
+  std::uint64_t v = 0;
+  for (int k = 0; k < w; ++k) {
+    const std::int64_t j = i * w + k;
+    const std::uint64_t bit = (packed[j / 8] >> (j % 8)) & 1u;
+    v |= bit << k;
+  }
+  return static_cast<Out>(v);
+}
+
+// Bit-setter for building packed streams in tests (the inverse of the oracle).
+inline void pack_value(std::uint8_t* packed, std::int64_t i, int w, std::uint64_t v) {
+  for (int k = 0; k < w; ++k) {
+    const std::int64_t j = i * w + k;
+    if ((v >> k) & 1u) {
+      packed[j / 8] = static_cast<std::uint8_t>(packed[j / 8] | (1u << (j % 8)));
+    }
+  }
+}
+
+// --- K9/K10: wide-integer arithmetic oracles --------------------------------------------------
+
+template <class T>
+T arith_wrap_expected(quiver::ArithOp op, T a, T b) {
+  if constexpr (std::is_floating_point_v<T>) {
+    switch (op) {
+    case quiver::ArithOp::kAdd:
+      return a + b;
+    case quiver::ArithOp::kSub:
+      return a - b;
+    default:
+      return a * b;
+    }
+  } else {
+    // Promote sub-int unsigned operands past int: u16*u16 would otherwise multiply as
+    // SIGNED int (integer promotion) and overflow is UB.
+    using U = std::make_unsigned_t<T>;
+    using P = std::conditional_t<(sizeof(U) < sizeof(unsigned int)), unsigned int, U>;
+    const P x = static_cast<U>(a);
+    const P y = static_cast<U>(b);
+    switch (op) {
+    case quiver::ArithOp::kAdd:
+      return static_cast<T>(static_cast<U>(x + y));
+    case quiver::ArithOp::kSub:
+      return static_cast<T>(static_cast<U>(x - y));
+    default:
+      return static_cast<T>(static_cast<U>(x * y));
+    }
+  }
+}
+
+// Overflow oracle via long double / __int128-free wide math: use the (2x-width or 128-bit)
+// exact value where available; for 64-bit rely on the division-based check.
+template <class T>
+bool arith_overflows_expected(quiver::ArithOp op, T a, T b) {
+  static_assert(std::is_integral_v<T>);
+  if constexpr (sizeof(T) < 8) {
+    using W = std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>;
+    const W wide = static_cast<W>(a) + W{0};
+    W exact;
+    switch (op) {
+    case quiver::ArithOp::kAdd:
+      exact = wide + static_cast<W>(b);
+      break;
+    case quiver::ArithOp::kSub:
+      exact = wide - static_cast<W>(b);
+      break;
+    default:
+      exact = wide * static_cast<W>(b);
+      break;
+    }
+    return exact < static_cast<W>(std::numeric_limits<T>::min()) ||
+           exact > static_cast<W>(std::numeric_limits<T>::max());
+  } else {
+    // 64-bit: check per op with division/boundary logic (independent of the kernel's tricks).
+    if constexpr (std::is_signed_v<T>) {
+      switch (op) {
+      case quiver::ArithOp::kAdd:
+        return (b > 0 && a > std::numeric_limits<T>::max() - b) ||
+               (b < 0 && a < std::numeric_limits<T>::min() - b);
+      case quiver::ArithOp::kSub:
+        return (b < 0 && a > std::numeric_limits<T>::max() + b) ||
+               (b > 0 && a < std::numeric_limits<T>::min() + b);
+      default:
+        if (a == 0 || b == 0) {
+          return false;
+        }
+        if (a == T{-1}) {
+          return b == std::numeric_limits<T>::min();
+        }
+        if (b == T{-1}) {
+          return a == std::numeric_limits<T>::min();
+        }
+        return a > 0 ? (b > 0 ? a > std::numeric_limits<T>::max() / b
+                              : b < std::numeric_limits<T>::min() / a)
+                     : (b > 0 ? a < std::numeric_limits<T>::min() / b
+                              : a < std::numeric_limits<T>::max() / b);
+      }
+    } else {
+      switch (op) {
+      case quiver::ArithOp::kAdd:
+        return a > std::numeric_limits<T>::max() - b;
+      case quiver::ArithOp::kSub:
+        return b > a;
+      default:
+        return b != 0 && a > std::numeric_limits<T>::max() / b;
+      }
+    }
+  }
+}
+
+template <class T>
+T arith_saturate_expected(quiver::ArithOp op, T a, T b) {
+  if (!arith_overflows_expected(op, a, b)) {
+    return arith_wrap_expected(op, a, b);
+  }
+  if constexpr (std::is_signed_v<T>) {
+    switch (op) {
+    case quiver::ArithOp::kAdd:
+      return a < 0 ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
+    case quiver::ArithOp::kSub:
+      return a < b ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
+    default:
+      return (a < 0) != (b < 0) ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
+    }
+  } else {
+    return op == quiver::ArithOp::kSub ? std::numeric_limits<T>::min()
+                                       : std::numeric_limits<T>::max();
+  }
 }
 
 }  // namespace quiver_test::ref

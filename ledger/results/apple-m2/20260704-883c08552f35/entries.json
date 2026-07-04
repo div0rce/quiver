@@ -1,0 +1,238 @@
+[
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-bm-arith-mul-neon-f64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith/mul/neon/f64/n=65536/65536",
+    "family": "arith",
+    "api": "mul",
+    "variant": "neon",
+    "element_type": "f64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:28:07+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 13809.52896960031,
+        "min": 13041.818264667487,
+        "ci95_lo": 13517.686177672429,
+        "ci95_hi": 14160.37108806726,
+        "cv": 0.03857255362384261
+      },
+      "values_per_s": {
+        "median": 4747217966.182798,
+        "min": 4405444773.738417,
+        "ci95_lo": 4632095559.933816,
+        "ci95_hi": 4862428287.831072,
+        "cv": 0.038117952870491426
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0386 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-bm-hash-hash64-neon-i64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_hash/hash64/neon/i64/n=65536/65536",
+    "family": "hash",
+    "api": "hash64",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:28:07+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 37778.78297469177,
+        "min": 37483.25762497559,
+        "ci95_lo": 37624.16149149644,
+        "ci95_hi": 38147.83729076241,
+        "cv": 0.007525322873933124
+      },
+      "values_per_s": {
+        "median": 1735113082.0210264,
+        "min": 1712026390.0906472,
+        "ci95_lo": 1720452061.4524164,
+        "ci95_hi": 1741864473.7095976,
+        "cv": 0.007062588624512574
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-bm-hash-combine-neon-u64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_hash/combine/neon/u64/n=65536/65536",
+    "family": "hash",
+    "api": "combine",
+    "variant": "neon",
+    "element_type": "u64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:28:07+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 59414.38338309438,
+        "min": 59070.523448541135,
+        "ci95_lo": 59267.85898320392,
+        "ci95_hi": 59602.386752164064,
+        "cv": 0.003569529963450129
+      },
+      "values_per_s": {
+        "median": 1103330133.962459,
+        "min": 1097694887.6970208,
+        "ci95_lo": 1101488362.2077217,
+        "ci95_hi": 1105997563.6677113,
+        "cv": 0.003049382303265151
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-bm-hash-hash64-autovec-i64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_hash/hash64/autovec/i64/n=65536/65536",
+    "family": "hash",
+    "api": "hash64",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:28:07+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 37761.24916868245,
+        "min": 37677.30685425049,
+        "ci95_lo": 37697.237449435765,
+        "ci95_hi": 37993.18244295146,
+        "cv": 0.0058575293173059075
+      },
+      "values_per_s": {
+        "median": 1735679997.3029788,
+        "min": 1715828922.1335285,
+        "ci95_lo": 1725650765.4141328,
+        "ci95_hi": 1738507353.5023687,
+        "cv": 0.005112167744327942
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-bm-hash-combine-autovec-u64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_hash/combine/autovec/u64/n=65536/65536",
+    "family": "hash",
+    "api": "combine",
+    "variant": "autovec",
+    "element_type": "u64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:28:07+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 59362.02512770504,
+        "min": 59116.398054470905,
+        "ci95_lo": 59188.00822478543,
+        "ci95_hi": 59891.74617368666,
+        "cv": 0.00698286549361326
+      },
+      "values_per_s": {
+        "median": 1104711535.5925713,
+        "min": 1088969761.0732362,
+        "ci95_lo": 1096544855.6653736,
+        "ci95_hi": 1107360564.915579,
+        "cv": 0.0060530123524018395
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  }
+]

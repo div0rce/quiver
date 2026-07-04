@@ -29,6 +29,12 @@ void dict_decode_i64_u32(const std::int64_t* dict, std::int64_t dict_len,
 std::int64_t sum_wrap_i64(const std::int64_t* in, std::int64_t n,
                           const std::uint8_t* validity) noexcept;
 double sum_wrap_f64(const double* in, std::int64_t n, const std::uint8_t* validity) noexcept;
+void hash64_i64(const std::int64_t* in, std::int64_t n, std::uint64_t seed,
+                std::uint64_t* out) noexcept;
+void unpack_for_u32(const std::uint8_t* packed, std::int64_t n, int bit_width, std::uint32_t base,
+                    std::uint32_t* out) noexcept;
+void arith_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n,
+               std::int64_t* out) noexcept;
 
 }  // namespace quiver::bench::autovec_avx2
 

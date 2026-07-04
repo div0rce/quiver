@@ -1,0 +1,98 @@
+[
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-f-bm-arith-add-autovec-i64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith/add/autovec/i64/n=65536/65536",
+    "family": "arith",
+    "api": "add",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:58:09+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 12123.60719436059,
+        "min": 11821.344900532917,
+        "ci95_lo": 11912.344541018756,
+        "ci95_hi": 12404.27321082391,
+        "cv": 0.04328200426152079
+      },
+      "values_per_s": {
+        "median": 5408797531.799687,
+        "min": 4811178955.726466,
+        "ci95_lo": 5288435313.987249,
+        "ci95_hi": 5503496751.7240305,
+        "cv": 0.040993730868502457
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0433 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  },
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-f-bm-arith-mul-autovec-f64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith/mul/autovec/f64/n=65536/65536",
+    "family": "arith",
+    "api": "mul",
+    "variant": "autovec",
+    "element_type": "f64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:58:09+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 12306.218702834034,
+        "min": 11618.51895424681,
+        "ci95_lo": 12003.137910896043,
+        "ci95_hi": 12712.9702267117,
+        "cv": 0.03401287045819276
+      },
+      "values_per_s": {
+        "median": 5330692140.308878,
+        "min": 5073463112.032386,
+        "ci95_lo": 5159885043.990524,
+        "ci95_hi": 5472568614.692066,
+        "cv": 0.03436663672692005
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0340 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  }
+]

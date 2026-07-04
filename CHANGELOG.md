@@ -4,6 +4,51 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-03
+
+### Added
+
+- M6 — Tier B kernel families (K7–K10) with scalar + AVX2 + NEON backends, completing the
+  catalog on the first three tiers:
+  - **K7 `hash`** — batch `qhash64` with cross-ISA/cross-platform bit-identical output.
+    The algorithm and constants are **frozen** (ADR-012) with 256 committed golden vectors
+    (+ 5 `combine` vectors) in `tests/golden/qhash64_vectors.txt`; any change is a v2 event. AVX2 decomposes the
+    64-bit multiply into three `vpmuludq`; the NEON GPR-vs-vector choice is the
+    evidence-gated REQ-KERNEL-007 decision — **measured on Apple M2 (2026-07-03): the GPR
+    chain wins 1.32× over the vector decomposition**, so it ships (`kUseVectorHash=false`);
+    the losing variant stays compiled and test-covered via `-DQUIVER_K7_HASH_VECTOR=1`
+    (`docs/investigations/k7-neon-hash.md`). First-party avalanche/bias gate wired nightly.
+  - **K8 `unpack` / `unpack_for`** — bit-unpacking with frame-of-reference fusion; the
+    ADR-026 LSB-first layout; reads exactly `⌈n·w/8⌉` bytes from the untrusted `packed`
+    input (REQ-SEC-004, guard-page and raw-byte-fuzz tested); byte-aligned widths use SIMD
+    widening loads, others delegate to the scalar core.
+  - **K9 `arith`** — elementwise wrapping (integer) / IEEE (float) add/sub/mul with the
+    validity-composition overload; **no signed-overflow UB path** (narrow operands compute
+    in a promotion-safe unsigned type — REQ-K9-001).
+  - **K10 `arith_guarded`** — `arith_checked` (wrapped results + exact overflow count +
+    optional position bitmap, ADR-014) and `arith_saturating` (exact clamps); 64-bit
+    checked/saturating multiply is the documented scalar concession (REQ-K10-003).
+- Four Tier B family doc pages (`docs/api/{hash,unpack,arith}.md`) and the K7 investigation
+  page; the qhash64 algorithm section with constants, golden-vector count, and the
+  SMHasher-subset avalanche note.
+- Tier B test suites: unit (boundary/edge matrices, golden reproduction), property
+  (avalanche, wrap/checked/saturate laws, K9-002 composition), width-exhaustive and
+  NaN-class differential, and raw-byte differential fuzz targets with committed corpora.
+- Tier B microbenchmarks with the `bit_width` and `overflow_density` axes and pre-timing
+  validation against independent recomputes.
+- The first committed Tier B ledger results (Apple M2, secondary platform) with entry-id
+  verdict blocks on all three family pages (REQ-LEDGER-011): hash parity; unpack 12.8×–42.4×
+  for byte-aligned widths; a published arith loss (~0.90×); and checked-arith wins that are
+  flat across overflow density. Wins and losses alike; no numbers invented (one µarch — the
+  ≥2-machine coverage gate remains an open deferral).
+
+### Changed
+
+- The umbrella header `quiver/quiver.h` now exposes the Tier B surface
+  (`hash.h`, `unpack.h`, `arith.h`).
+- Nightly CI now fuzzes nine family targets (≥4 h total) and runs the K7 avalanche gate at
+  ≥100k samples/type inside the `QUIVER_NIGHTLY` differential sweep.
+
 ## [0.3.0] — 2026-07-03
 
 ### Added

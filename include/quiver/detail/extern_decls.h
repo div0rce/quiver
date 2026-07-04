@@ -4,7 +4,7 @@
 // REQ-KERNEL-005). Concrete symbols are overload sets on element/code types; the public
 // template facades resolve to them by ordinary overload resolution (ADR-006).
 // GENERATED-BY-HAND-STABLE (PRD 02 §3): regenerate only with a documented inventory change.
-// Tier A families (K1–K6) populated at M3; Tier B (K7–K10) lands at M6.
+// Tier A families (K1–K6) populated at M3; Tier B (K7–K10) populated at M6.
 // Module: MOD-CORE (declarations) / MOD-DISPATCH (table emission) | ADR-006
 #pragma once
 
@@ -676,7 +676,230 @@
   X(k6_sumc_u64, bool, k6_reduce_sum_checked,                                                      \
     (const std::uint64_t* in, std::int64_t n, const std::uint8_t* validity,                        \
      const std::uint32_t* sel, std::int64_t sel_len, std::uint64_t* out_sum),                      \
-    (in, n, validity, sel, sel_len, out_sum))
+    (in, n, validity, sel, sel_len, out_sum))                                                      \
+  X(k7_hash_i8, void, k7_hash64,                                                                   \
+    (const std::int8_t* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),               \
+    (in, n, seed, out))                                                                            \
+  X(k7_hash_i16, void, k7_hash64,                                                                  \
+    (const std::int16_t* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),              \
+    (in, n, seed, out))                                                                            \
+  X(k7_hash_i32, void, k7_hash64,                                                                  \
+    (const std::int32_t* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),              \
+    (in, n, seed, out))                                                                            \
+  X(k7_hash_i64, void, k7_hash64,                                                                  \
+    (const std::int64_t* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),              \
+    (in, n, seed, out))                                                                            \
+  X(k7_hash_u8, void, k7_hash64,                                                                   \
+    (const std::uint8_t* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),              \
+    (in, n, seed, out))                                                                            \
+  X(k7_hash_u16, void, k7_hash64,                                                                  \
+    (const std::uint16_t* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),             \
+    (in, n, seed, out))                                                                            \
+  X(k7_hash_u32, void, k7_hash64,                                                                  \
+    (const std::uint32_t* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),             \
+    (in, n, seed, out))                                                                            \
+  X(k7_hash_u64, void, k7_hash64,                                                                  \
+    (const std::uint64_t* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),             \
+    (in, n, seed, out))                                                                            \
+  X(k7_hash_f32, void, k7_hash64,                                                                  \
+    (const float* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out), (in, n, seed, out)) \
+  X(k7_hash_f64, void, k7_hash64,                                                                  \
+    (const double* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out),                    \
+    (in, n, seed, out))                                                                            \
+  X(k7_comb, void, k7_hash64_combine,                                                              \
+    (const std::uint64_t* a, const std::uint64_t* b, std::int64_t n, std::uint64_t* out),          \
+    (a, b, n, out))                                                                                \
+  X(k8_unpack_u8, void, k8_unpack,                                                                 \
+    (const std::uint8_t* packed, std::int64_t n, int bit_width, std::uint8_t base,                 \
+     std::uint8_t* out),                                                                           \
+    (packed, n, bit_width, base, out))                                                             \
+  X(k8_unpack_u16, void, k8_unpack,                                                                \
+    (const std::uint8_t* packed, std::int64_t n, int bit_width, std::uint16_t base,                \
+     std::uint16_t* out),                                                                          \
+    (packed, n, bit_width, base, out))                                                             \
+  X(k8_unpack_u32, void, k8_unpack,                                                                \
+    (const std::uint8_t* packed, std::int64_t n, int bit_width, std::uint32_t base,                \
+     std::uint32_t* out),                                                                          \
+    (packed, n, bit_width, base, out))                                                             \
+  X(k8_unpack_u64, void, k8_unpack,                                                                \
+    (const std::uint8_t* packed, std::int64_t n, int bit_width, std::uint64_t base,                \
+     std::uint64_t* out),                                                                          \
+    (packed, n, bit_width, base, out))                                                             \
+  X(k9_arith_i8, void, k9_arith,                                                                   \
+    (ArithOp op, const std::int8_t* a, const std::int8_t* b, std::int64_t n, std::int8_t* out),    \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_i8, void, k9_arith_scalar_rhs,                                                       \
+    (ArithOp op, const std::int8_t* a, std::int8_t b, std::int64_t n, std::int8_t* out),           \
+    (op, a, b, n, out))                                                                            \
+  X(k9_arith_i16, void, k9_arith,                                                                  \
+    (ArithOp op, const std::int16_t* a, const std::int16_t* b, std::int64_t n, std::int16_t* out), \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_i16, void, k9_arith_scalar_rhs,                                                      \
+    (ArithOp op, const std::int16_t* a, std::int16_t b, std::int64_t n, std::int16_t* out),        \
+    (op, a, b, n, out))                                                                            \
+  X(k9_arith_i32, void, k9_arith,                                                                  \
+    (ArithOp op, const std::int32_t* a, const std::int32_t* b, std::int64_t n, std::int32_t* out), \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_i32, void, k9_arith_scalar_rhs,                                                      \
+    (ArithOp op, const std::int32_t* a, std::int32_t b, std::int64_t n, std::int32_t* out),        \
+    (op, a, b, n, out))                                                                            \
+  X(k9_arith_i64, void, k9_arith,                                                                  \
+    (ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n, std::int64_t* out), \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_i64, void, k9_arith_scalar_rhs,                                                      \
+    (ArithOp op, const std::int64_t* a, std::int64_t b, std::int64_t n, std::int64_t* out),        \
+    (op, a, b, n, out))                                                                            \
+  X(k9_arith_u8, void, k9_arith,                                                                   \
+    (ArithOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n, std::uint8_t* out), \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_u8, void, k9_arith_scalar_rhs,                                                       \
+    (ArithOp op, const std::uint8_t* a, std::uint8_t b, std::int64_t n, std::uint8_t* out),        \
+    (op, a, b, n, out))                                                                            \
+  X(k9_arith_u16, void, k9_arith,                                                                  \
+    (ArithOp op, const std::uint16_t* a, const std::uint16_t* b, std::int64_t n,                   \
+     std::uint16_t* out),                                                                          \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_u16, void, k9_arith_scalar_rhs,                                                      \
+    (ArithOp op, const std::uint16_t* a, std::uint16_t b, std::int64_t n, std::uint16_t* out),     \
+    (op, a, b, n, out))                                                                            \
+  X(k9_arith_u32, void, k9_arith,                                                                  \
+    (ArithOp op, const std::uint32_t* a, const std::uint32_t* b, std::int64_t n,                   \
+     std::uint32_t* out),                                                                          \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_u32, void, k9_arith_scalar_rhs,                                                      \
+    (ArithOp op, const std::uint32_t* a, std::uint32_t b, std::int64_t n, std::uint32_t* out),     \
+    (op, a, b, n, out))                                                                            \
+  X(k9_arith_u64, void, k9_arith,                                                                  \
+    (ArithOp op, const std::uint64_t* a, const std::uint64_t* b, std::int64_t n,                   \
+     std::uint64_t* out),                                                                          \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_u64, void, k9_arith_scalar_rhs,                                                      \
+    (ArithOp op, const std::uint64_t* a, std::uint64_t b, std::int64_t n, std::uint64_t* out),     \
+    (op, a, b, n, out))                                                                            \
+  X(k9_arith_f32, void, k9_arith,                                                                  \
+    (ArithOp op, const float* a, const float* b, std::int64_t n, float* out), (op, a, b, n, out))  \
+  X(k9_ariths_f32, void, k9_arith_scalar_rhs,                                                      \
+    (ArithOp op, const float* a, float b, std::int64_t n, float* out), (op, a, b, n, out))         \
+  X(k9_arith_f64, void, k9_arith,                                                                  \
+    (ArithOp op, const double* a, const double* b, std::int64_t n, double* out),                   \
+    (op, a, b, n, out))                                                                            \
+  X(k9_ariths_f64, void, k9_arith_scalar_rhs,                                                      \
+    (ArithOp op, const double* a, double b, std::int64_t n, double* out), (op, a, b, n, out))      \
+  X(k10_chk_i8, std::int64_t, k10_arith_checked,                                                   \
+    (ArithOp op, const std::int8_t* a, const std::int8_t* b, std::int64_t n, std::int8_t* out,     \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_chks_i8, std::int64_t, k10_arith_checked_scalar_rhs,                                       \
+    (ArithOp op, const std::int8_t* a, std::int8_t b, std::int64_t n, std::int8_t* out,            \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_sat_i8, void, k10_arith_saturating,                                                        \
+    (ArithOp op, const std::int8_t* a, const std::int8_t* b, std::int64_t n, std::int8_t* out),    \
+    (op, a, b, n, out))                                                                            \
+  X(k10_sats_i8, void, k10_arith_saturating_scalar_rhs,                                            \
+    (ArithOp op, const std::int8_t* a, std::int8_t b, std::int64_t n, std::int8_t* out),           \
+    (op, a, b, n, out))                                                                            \
+  X(k10_chk_i16, std::int64_t, k10_arith_checked,                                                  \
+    (ArithOp op, const std::int16_t* a, const std::int16_t* b, std::int64_t n, std::int16_t* out,  \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_chks_i16, std::int64_t, k10_arith_checked_scalar_rhs,                                      \
+    (ArithOp op, const std::int16_t* a, std::int16_t b, std::int64_t n, std::int16_t* out,         \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_sat_i16, void, k10_arith_saturating,                                                       \
+    (ArithOp op, const std::int16_t* a, const std::int16_t* b, std::int64_t n, std::int16_t* out), \
+    (op, a, b, n, out))                                                                            \
+  X(k10_sats_i16, void, k10_arith_saturating_scalar_rhs,                                           \
+    (ArithOp op, const std::int16_t* a, std::int16_t b, std::int64_t n, std::int16_t* out),        \
+    (op, a, b, n, out))                                                                            \
+  X(k10_chk_i32, std::int64_t, k10_arith_checked,                                                  \
+    (ArithOp op, const std::int32_t* a, const std::int32_t* b, std::int64_t n, std::int32_t* out,  \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_chks_i32, std::int64_t, k10_arith_checked_scalar_rhs,                                      \
+    (ArithOp op, const std::int32_t* a, std::int32_t b, std::int64_t n, std::int32_t* out,         \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_sat_i32, void, k10_arith_saturating,                                                       \
+    (ArithOp op, const std::int32_t* a, const std::int32_t* b, std::int64_t n, std::int32_t* out), \
+    (op, a, b, n, out))                                                                            \
+  X(k10_sats_i32, void, k10_arith_saturating_scalar_rhs,                                           \
+    (ArithOp op, const std::int32_t* a, std::int32_t b, std::int64_t n, std::int32_t* out),        \
+    (op, a, b, n, out))                                                                            \
+  X(k10_chk_i64, std::int64_t, k10_arith_checked,                                                  \
+    (ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n, std::int64_t* out,  \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_chks_i64, std::int64_t, k10_arith_checked_scalar_rhs,                                      \
+    (ArithOp op, const std::int64_t* a, std::int64_t b, std::int64_t n, std::int64_t* out,         \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_sat_i64, void, k10_arith_saturating,                                                       \
+    (ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n, std::int64_t* out), \
+    (op, a, b, n, out))                                                                            \
+  X(k10_sats_i64, void, k10_arith_saturating_scalar_rhs,                                           \
+    (ArithOp op, const std::int64_t* a, std::int64_t b, std::int64_t n, std::int64_t* out),        \
+    (op, a, b, n, out))                                                                            \
+  X(k10_chk_u8, std::int64_t, k10_arith_checked,                                                   \
+    (ArithOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n, std::uint8_t* out,  \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_chks_u8, std::int64_t, k10_arith_checked_scalar_rhs,                                       \
+    (ArithOp op, const std::uint8_t* a, std::uint8_t b, std::int64_t n, std::uint8_t* out,         \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_sat_u8, void, k10_arith_saturating,                                                        \
+    (ArithOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n, std::uint8_t* out), \
+    (op, a, b, n, out))                                                                            \
+  X(k10_sats_u8, void, k10_arith_saturating_scalar_rhs,                                            \
+    (ArithOp op, const std::uint8_t* a, std::uint8_t b, std::int64_t n, std::uint8_t* out),        \
+    (op, a, b, n, out))                                                                            \
+  X(k10_chk_u16, std::int64_t, k10_arith_checked,                                                  \
+    (ArithOp op, const std::uint16_t* a, const std::uint16_t* b, std::int64_t n,                   \
+     std::uint16_t* out, std::uint8_t* overflow_bits),                                             \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_chks_u16, std::int64_t, k10_arith_checked_scalar_rhs,                                      \
+    (ArithOp op, const std::uint16_t* a, std::uint16_t b, std::int64_t n, std::uint16_t* out,      \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_sat_u16, void, k10_arith_saturating,                                                       \
+    (ArithOp op, const std::uint16_t* a, const std::uint16_t* b, std::int64_t n,                   \
+     std::uint16_t* out),                                                                          \
+    (op, a, b, n, out))                                                                            \
+  X(k10_sats_u16, void, k10_arith_saturating_scalar_rhs,                                           \
+    (ArithOp op, const std::uint16_t* a, std::uint16_t b, std::int64_t n, std::uint16_t* out),     \
+    (op, a, b, n, out))                                                                            \
+  X(k10_chk_u32, std::int64_t, k10_arith_checked,                                                  \
+    (ArithOp op, const std::uint32_t* a, const std::uint32_t* b, std::int64_t n,                   \
+     std::uint32_t* out, std::uint8_t* overflow_bits),                                             \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_chks_u32, std::int64_t, k10_arith_checked_scalar_rhs,                                      \
+    (ArithOp op, const std::uint32_t* a, std::uint32_t b, std::int64_t n, std::uint32_t* out,      \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_sat_u32, void, k10_arith_saturating,                                                       \
+    (ArithOp op, const std::uint32_t* a, const std::uint32_t* b, std::int64_t n,                   \
+     std::uint32_t* out),                                                                          \
+    (op, a, b, n, out))                                                                            \
+  X(k10_sats_u32, void, k10_arith_saturating_scalar_rhs,                                           \
+    (ArithOp op, const std::uint32_t* a, std::uint32_t b, std::int64_t n, std::uint32_t* out),     \
+    (op, a, b, n, out))                                                                            \
+  X(k10_chk_u64, std::int64_t, k10_arith_checked,                                                  \
+    (ArithOp op, const std::uint64_t* a, const std::uint64_t* b, std::int64_t n,                   \
+     std::uint64_t* out, std::uint8_t* overflow_bits),                                             \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_chks_u64, std::int64_t, k10_arith_checked_scalar_rhs,                                      \
+    (ArithOp op, const std::uint64_t* a, std::uint64_t b, std::int64_t n, std::uint64_t* out,      \
+     std::uint8_t* overflow_bits),                                                                 \
+    (op, a, b, n, out, overflow_bits))                                                             \
+  X(k10_sat_u64, void, k10_arith_saturating,                                                       \
+    (ArithOp op, const std::uint64_t* a, const std::uint64_t* b, std::int64_t n,                   \
+     std::uint64_t* out),                                                                          \
+    (op, a, b, n, out))                                                                            \
+  X(k10_sats_u64, void, k10_arith_saturating_scalar_rhs,                                           \
+    (ArithOp op, const std::uint64_t* a, std::uint64_t b, std::int64_t n, std::uint64_t* out),     \
+    (op, a, b, n, out))
 
 QUIVER_BEGIN_NAMESPACE
 namespace detail {
