@@ -4,6 +4,32 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-04
+
+### Added
+
+- M7 — the AVX-512 ISA tier, with Intel SDE correctness coverage (ADR-010; there is no
+  AVX-512 hardware, so this is a correctness release, not a performance one):
+  - Native AVX-512 backends for the seven families where a distinct technique wins over AVX2:
+    K1 compare (native opmask predicates), K2 filter + K3 select (`vpcompress` to register,
+    Zen-4-safe), K4 mask (512-bit), K7 hash (native `vpmullq`), K8 unpack (512-bit widening),
+    K9 arith (vertical ops, native `vpmullq`). All use only the base required set F+BW+DQ+VL
+    and are correct on the SDE `-skx` profile.
+  - AVX-512 dispatch foundation: slot [3] wired incrementally via per-uid markers; the base
+    F+BW+DQ+VL target region plus a VBMI2 region for future resolution-time sub-feature
+    variants (REQ-DISP-011); a `DispatchAvx512` selectability test.
+  - The `sde-avx512` CI job (REQ-CI-004): unit/differential/invariant under `sde64 -spr` and
+    `-skx`, plus a sanitized differential leg under `-spr`.
+  - A compile-gated, release-excluded detection seam (`QUIVER_TEST_FORCE_ISA`) for local
+    dispatch-selection testing where no AVX-512 execution exists.
+
+### Changed
+
+- On AVX-512 hardware (or under SDE) the dispatcher selects the AVX-512 backend for the seven
+  native families; K5 take, K6 reduce, and K10 arith_guarded run the AVX2 backend (no
+  measurable AVX-512 win without hardware — R-06). Results are bit-identical to scalar.
+- Fixed an empty x86 CPU brand string under SDE `-skx` (fall back to a generic brand).
+
 ## [0.4.0] — 2026-07-03
 
 ### Added

@@ -1,6 +1,6 @@
 {
-  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M6.",
-  "milestone": "M6",
+  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M7.",
+  "milestone": "M7",
   "allowed_toplevel": [
     ".clang-format",
     ".clang-tidy",
@@ -256,7 +256,16 @@
     "docs/api/arith.md",
     "docs/investigations/k7-neon-hash.md",
     "docs/releases/gates/M6.md",
-    "docs/releases/v0.4.0.md"
+    "docs/releases/v0.4.0.md",
+    "src/kernels/mask/mask_avx512.cpp",
+    "src/kernels/compare/compare_avx512.cpp",
+    "src/kernels/hash/hash_avx512.cpp",
+    "src/kernels/unpack/unpack_avx512.cpp",
+    "src/kernels/arith/arith_avx512.cpp",
+    "src/kernels/filter/filter_avx512.cpp",
+    "src/kernels/select/select_avx512.cpp",
+    "docs/releases/gates/M7.md",
+    "docs/releases/v0.5.0.md"
   ],
   "forbidden_at_milestone": [
     "tools",
