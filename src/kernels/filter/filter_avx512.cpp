@@ -38,7 +38,7 @@ std::int64_t filter_bitmap_impl(const T* in, std::int64_t n, const std::uint8_t*
   for (; i + kN <= n; i += kN) {
     const __m512i v = _mm512_loadu_si512(reinterpret_cast<const void*>(in + i));
     __m512i c;
-    unsigned pc;
+    unsigned pc = 0;
     if constexpr (sizeof(T) == 4) {
       __mmask16 m = 0;
       std::memcpy(&m, selection + (i >> 3), 2);
