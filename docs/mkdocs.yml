@@ -96,6 +96,9 @@ nav:
       - Gate M3: releases/gates/M3.md
       - Gate M4: releases/gates/M4.md
       - Gate M5: releases/gates/M5.md
+      - Gate M6: releases/gates/M6.md
+      - Gate M7: releases/gates/M7.md
       - v0.1.0: releases/v0.1.0.md
       - v0.2.0: releases/v0.2.0.md
       - v0.3.0: releases/v0.3.0.md
+      - v0.4.0: releases/v0.4.0.md

@@ -109,6 +109,10 @@ set(QUIVER_NEON_SOURCES
   src/kernels/mask/mask_neon.cpp
   src/kernels/take/take_neon.cpp
   src/kernels/reduce/reduce_neon.cpp)
+# AVX-512 backends (x86-64 only; empty TUs elsewhere). Incremental rollout at M7 — the list
+# grows family by family behind the dispatch slot-[3] markers (src/dispatch/dispatch_tables.cpp).
+set(QUIVER_AVX512_SOURCES
+  src/kernels/mask/mask_avx512.cpp)
 add_library(quiver STATIC
   src/cpu/cpu_features.cpp
   src/dispatch/dispatch_tables.cpp
@@ -125,6 +129,7 @@ add_library(quiver STATIC
   src/kernels/arith/arith_scalar.cpp
   src/kernels/arith_guarded/arith_guarded_scalar.cpp
   ${QUIVER_AVX2_SOURCES}
+  ${QUIVER_AVX512_SOURCES}
   ${QUIVER_NEON_SOURCES})
 add_library(quiver::quiver ALIAS quiver)
 
@@ -133,6 +138,7 @@ add_library(quiver::quiver ALIAS quiver)
 # only execute after CPUID gating).
 if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
   set_source_files_properties(${QUIVER_AVX2_SOURCES} PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+  set_source_files_properties(${QUIVER_AVX512_SOURCES} PROPERTIES COMPILE_OPTIONS "/arch:AVX512")
 endif()
 
 target_include_directories(quiver
@@ -146,6 +152,14 @@ quiver_apply_sanitizers(quiver)
 
 if(QUIVER_ENABLE_ASSERTS)
   target_compile_definitions(quiver PRIVATE QUIVER_ENABLE_ASSERTS=1)
+endif()
+
+# Test-only detection seam (QUIVER_TEST_SEAMS): lets test builds force the detected ISA via
+# QUIVER_TEST_FORCE_ISA so hosts whose CPUID lacks AVX-512 but whose emulator (QEMU) executes
+# the instructions can still exercise the AVX-512 dispatch path locally. Compiled out of any
+# build with tests disabled (release/install), so shipped detection stays pure CPUID (PRD 07).
+if(QUIVER_ENABLE_TESTS)
+  target_compile_definitions(quiver PRIVATE QUIVER_TEST_SEAMS=1)
 endif()
 
 # --- Dev trees (never installed, never part of the export set: REQ-REPO-007) ------------------

@@ -138,6 +138,32 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 #define QUIVER_NEON_BACKEND(name) nullptr
 #endif
 
+// --- AVX-512 backend declarations (x86-64 only). INCREMENTAL rollout (M7): the whole list is
+// --- declared, but slot [3] is wired only for symbols with a real avx512 definition, keyed by
+// --- a per-uid marker below; the rest keep slot [3] empty and fall through to AVX2. Becomes
+// --- the uniform pattern once every family is covered. -------------------------------------
+#if defined(__x86_64__) || defined(_M_X64)
+namespace avx512 {
+#define QUIVER_DECLARE_BACKEND(uid, ret, name, params, args) ret name params noexcept;
+QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
+#undef QUIVER_DECLARE_BACKEND
+}  // namespace avx512
+// One marker per symbol that has an avx512 definition; each expands to `~, &avx512::<name>`.
+// K4 mask (M7 validation slice):
+#define QUIVER_AVX512_IMPL_k4_comb ~, &avx512::k4_mask_combine
+#define QUIVER_AVX512_IMPL_k4_not ~, &avx512::k4_mask_not
+#define QUIVER_AVX512_IMPL_k4_pop ~, &avx512::k4_mask_popcount
+#define QUIVER_AVX512_IMPL_k4_all ~, &avx512::k4_mask_all
+#define QUIVER_AVX512_IMPL_k4_any ~, &avx512::k4_mask_any
+#define QUIVER_AVX512_IMPL_k4_none ~, &avx512::k4_mask_none
+#endif
+// slot [3] = &avx512::<name> if QUIVER_AVX512_IMPL_<uid> is defined, else nullptr (the marker
+// supplies a leading dummy arg so the pointer lands in the second position; undefined markers
+// stay a bare token and fall through to the nullptr default).
+#define QUIVER_AVX512_SLOT(uid) QUIVER_AVX512_SLOT_A(QUIVER_AVX512_IMPL_##uid)
+#define QUIVER_AVX512_SLOT_A(...) QUIVER_AVX512_SLOT_B(__VA_ARGS__, nullptr, )
+#define QUIVER_AVX512_SLOT_B(a, b, ...) b
+
 // --- Entries + typed rows, one per concrete symbol (REQ-DISP-007; constinit, REQ-CORE-004).
 // Rows hold typed pointers so no (non-constexpr) function-pointer cast is needed at init;
 // AVX2 populates on x86-64 builds, NEON on ARM64 builds; AVX-512 lands at M7.
@@ -147,7 +173,8 @@ namespace {
 #define QUIVER_DEFINE_ENTRY(uid, ret, name, params, args)                                          \
   constinit DispatchEntry g_entry_##uid;                                                           \
   constinit BackendRow<ret(*) params noexcept> g_row_##uid{                                        \
-      {&scalar::name, QUIVER_NEON_BACKEND(name), QUIVER_AVX2_BACKEND(name), nullptr}};             \
+      {&scalar::name, QUIVER_NEON_BACKEND(name), QUIVER_AVX2_BACKEND(name),                        \
+       QUIVER_AVX512_SLOT(uid)}};                                                                  \
   KernelFn warm_##uid(DispatchEntry& e) noexcept {                                                 \
     return reinterpret_cast<KernelFn>(resolve(e, g_row_##uid));                                    \
   }
