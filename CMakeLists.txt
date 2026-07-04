@@ -116,7 +116,9 @@ set(QUIVER_AVX512_SOURCES
   src/kernels/compare/compare_avx512.cpp
   src/kernels/hash/hash_avx512.cpp
   src/kernels/unpack/unpack_avx512.cpp
-  src/kernels/arith/arith_avx512.cpp)
+  src/kernels/arith/arith_avx512.cpp
+  src/kernels/filter/filter_avx512.cpp
+  src/kernels/select/select_avx512.cpp)
 add_library(quiver STATIC
   src/cpu/cpu_features.cpp
   src/dispatch/dispatch_tables.cpp
