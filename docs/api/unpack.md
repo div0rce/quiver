@@ -32,7 +32,19 @@ The family's semantics are defined by `src/kernels/unpack/unpack_scalar_impl.h` 
 
 ## Ledger
 
-<!-- LEDGER-VERDICT-PENDING:unpack -->
+**Verdict (Apple M2, v0.4, `neon` vs `autovec`):** **two regimes, split on byte alignment.** Byte-aligned widths take the SIMD widening-load fast path and win by **12.8×–42.4×** over the generic scalar gather the autovectorizer produces; non-byte-aligned widths delegate to the scalar core and land at **~1.07–1.10×** (near-parity, as expected for shared code). This is the headline evidence for the `bit_width` axis.
+
+| width | neon vs autovec | path | entries |
+|---|---|---|---|
+| w=1 | 1.09× | delegated (sub-byte) | `qle:apple-m2-20260704-883c08552f35-c-bm-unpack-unpack-for-neon-u32-n-65536-w-1-65536-1` `qle:apple-m2-20260704-883c08552f35-c-bm-unpack-unpack-for-autovec-u32-n-65536-w-1-65536-1` |
+| w=4 | 1.09× | delegated (sub-byte) | `qle:apple-m2-20260704-883c08552f35-c-bm-unpack-unpack-for-neon-u32-n-65536-w-4-65536-4` `qle:apple-m2-20260704-883c08552f35-c-bm-unpack-unpack-for-autovec-u32-n-65536-w-4-65536-4` |
+| w=7 | 1.07× | delegated (sub-byte) | `qle:apple-m2-20260704-883c08552f35-c-bm-unpack-unpack-for-neon-u32-n-65536-w-7-65536-7` `qle:apple-m2-20260704-883c08552f35-c-bm-unpack-unpack-for-autovec-u32-n-65536-w-7-65536-7` |
+| **w=8** | **12.83×** | SIMD widening | `qle:apple-m2-20260704-883c08552f35-c-bm-unpack-unpack-for-neon-u32-n-65536-w-8-65536-8` `qle:apple-m2-20260704-883c08552f35-c-bm-unpack-unpack-for-autovec-u32-n-65536-w-8-65536-8` |
+| **w=16** | **19.87×** | SIMD widening | `qle:apple-m2-20260704-883c08552f35-d-bm-unpack-unpack-for-neon-u32-n-65536-w-16-65536-16` `qle:apple-m2-20260704-883c08552f35-d-bm-unpack-unpack-for-autovec-u32-n-65536-w-16-65536-16` |
+| w=24 | 1.10× | delegated (3-byte) | `qle:apple-m2-20260704-883c08552f35-d-bm-unpack-unpack-for-neon-u32-n-65536-w-24-65536-24` `qle:apple-m2-20260704-883c08552f35-d-bm-unpack-unpack-for-autovec-u32-n-65536-w-24-65536-24` |
+| **w=32** | **42.42×** | SIMD widening | `qle:apple-m2-20260704-883c08552f35-d-bm-unpack-unpack-for-neon-u32-n-65536-w-32-65536-32` `qle:apple-m2-20260704-883c08552f35-d-bm-unpack-unpack-for-autovec-u32-n-65536-w-32-65536-32` |
+
+The delegated widths quantify the recorded follow-up (a general sub-byte SIMD unpacker): they are exactly where the autovectorizer is not beaten because both sides run the same scalar gather. Apple M2 is a **secondary platform** (`no_pmu`, secondary; the only registered machine — ≥2-µarch is an open deferral, [gate M6](../releases/gates/M6.md)). Reproduction: [disputes guide](../guides/disputes.md).
 
 ## Validation
 

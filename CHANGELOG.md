@@ -36,6 +36,11 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
   NaN-class differential, and raw-byte differential fuzz targets with committed corpora.
 - Tier B microbenchmarks with the `bit_width` and `overflow_density` axes and pre-timing
   validation against independent recomputes.
+- The first committed Tier B ledger results (Apple M2, secondary platform) with entry-id
+  verdict blocks on all three family pages (REQ-LEDGER-011): hash parity; unpack 12.8×–42.4×
+  for byte-aligned widths; a published arith loss (~0.90×); and checked-arith wins that are
+  flat across overflow density. Wins and losses alike; no numbers invented (one µarch — the
+  ≥2-machine coverage gate remains an open deferral).
 
 ### Changed
 

@@ -32,7 +32,22 @@ K9's semantics are defined by `src/kernels/arith/arith_scalar_impl.h` (wrapping 
 
 ## Ledger
 
-<!-- LEDGER-VERDICT-PENDING:arith -->
+**Verdict (Apple M2, v0.4, `neon` vs `autovec`):**
+
+- **K9 `arith` — a published loss (~0.90×).** For pure elementwise `add`/`mul` the autovectorizer is the ideal case and slightly beats the explicit NEON loop; the family is bandwidth-bound and this is the honest T7 outcome (the bench hypothesis predicted parity/loss territory).
+- **K10 `arith_checked` — neon wins 1.42×, and is FLAT across overflow density.** The three `checked_add` rows at 0 / 0.1% / 50% overflow are within 0.4% of each other — the direct measurement of ADR-014's branch-free-accumulation claim (cost does not scale with overflow count).
+- **K10 `arith_saturating` — neon wins 1.65×** via native `vqadd` versus the autovectorized compare-and-clamp.
+
+| api | configuration | neon vs autovec | entries |
+|---|---|---|---|
+| `arith` add | i64 n=65536 | 0.90× (loss) | `qle:apple-m2-20260704-883c08552f35-e-bm-arith-add-neon-i64-n-65536-65536` `qle:apple-m2-20260704-883c08552f35-f-bm-arith-add-autovec-i64-n-65536-65536` |
+| `arith` mul | f64 n=65536 | 0.90× (loss) | `qle:apple-m2-20260704-883c08552f35-e-bm-arith-mul-neon-f64-n-65536-65536` `qle:apple-m2-20260704-883c08552f35-f-bm-arith-mul-autovec-f64-n-65536-65536` |
+| `arith_checked` add | i64 n=65536 / ovf=0 | 1.42× | `qle:apple-m2-20260704-883c08552f35-b-bm-arith-guarded-checked-add-neon-i64-n-65536-ovf-0-65536-0` `qle:apple-m2-20260704-883c08552f35-b-bm-arith-guarded-checked-add-autovec-i64-n-65536-ovf-0-65536-0` |
+| `arith_checked` add | i64 n=65536 / ovf=0.1% | 1.42× | `qle:apple-m2-20260704-883c08552f35-b-bm-arith-guarded-checked-add-neon-i64-n-65536-ovf-1-65536-1` `qle:apple-m2-20260704-883c08552f35-b-bm-arith-guarded-checked-add-autovec-i64-n-65536-ovf-1-65536-1` |
+| `arith_checked` add | i64 n=65536 / ovf=50% | 1.42× | `qle:apple-m2-20260704-883c08552f35-b-bm-arith-guarded-checked-add-neon-i64-n-65536-ovf-500-65536-500` `qle:apple-m2-20260704-883c08552f35-b-bm-arith-guarded-checked-add-autovec-i64-n-65536-ovf-500-65536-500` |
+| `arith_saturating` add | i64 n=65536 | 1.65× | `qle:apple-m2-20260704-883c08552f35-g-bm-arith-guarded-saturating-add-neon-i64-n-65536-65536` `qle:apple-m2-20260704-883c08552f35-g-bm-arith-guarded-saturating-add-autovec-i64-n-65536-65536` |
+
+The `arith` (K9) `neon` medians come from a 4 s window and the `autovec` medians from an 8 s window — both CV-screened; `ns_per_batch` medians are window-length independent, and the longer autovec window was needed to bring this fanless secondary platform's streaming baseline under the 5% CV policy (REQ-LEDGER-005; several 2 s attempts were excluded). Apple M2 is a **secondary platform** (`no_pmu`, secondary; the only registered machine — ≥2-µarch is an open deferral, [gate M6](../releases/gates/M6.md)). Reproduction: [disputes guide](../guides/disputes.md).
 
 ## Validation
 

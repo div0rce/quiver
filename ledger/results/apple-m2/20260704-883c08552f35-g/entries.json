@@ -1,0 +1,96 @@
+[
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-g-bm-arith-guarded-saturating-add-neon-i64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/saturating_add/neon/i64/n=65536/65536",
+    "family": "arith_guarded",
+    "api": "saturating_add",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T02:02:28+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 13417.563256899964,
+        "min": 13012.044682993486,
+        "ci95_lo": 13295.747214580657,
+        "ci95_hi": 13658.066474990552,
+        "cv": 0.02061771469729117
+      },
+      "values_per_s": {
+        "median": 4887931926.756418,
+        "min": 4688594672.812656,
+        "ci95_lo": 4802499851.852007,
+        "ci95_hi": 4931967488.73513,
+        "cv": 0.02028121878471767
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-g-bm-arith-guarded-saturating-add-autovec-i64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/saturating_add/autovec/i64/n=65536/65536",
+    "family": "arith_guarded",
+    "api": "saturating_add",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T02:02:28+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 22090.84091363112,
+        "min": 22004.356657873464,
+        "ci95_lo": 22052.566938040232,
+        "ci95_hi": 22219.916404567615,
+        "cv": 0.005734530988394617
+      },
+      "values_per_s": {
+        "median": 2969059500.805702,
+        "min": 2937789000.276291,
+        "ci95_lo": 2955744039.9028015,
+        "ci95_hi": 2973257921.350532,
+        "cv": 0.004559819137304241
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  }
+]

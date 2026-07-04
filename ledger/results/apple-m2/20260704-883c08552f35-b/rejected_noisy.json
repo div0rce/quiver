@@ -1,0 +1,50 @@
+[
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-b-bm-arith-guarded-saturating-add-neon-i64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/saturating_add/neon/i64/n=65536/65536",
+    "family": "arith_guarded",
+    "api": "saturating_add",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:35:09+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 14780.006592782494,
+        "min": 13195.095215526102,
+        "ci95_lo": 13359.019315181144,
+        "ci95_hi": 15303.175939408622,
+        "cv": 0.06772043503901913
+      },
+      "values_per_s": {
+        "median": 4439270002.859855,
+        "min": 4270361250.8592443,
+        "ci95_lo": 4282557519.958283,
+        "ci95_hi": 4940446032.69874,
+        "cv": 0.06958220579793235
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  }
+]

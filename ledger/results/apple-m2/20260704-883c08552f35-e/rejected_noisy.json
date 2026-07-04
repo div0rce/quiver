@@ -1,0 +1,98 @@
+[
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-e-bm-arith-add-autovec-i64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith/add/autovec/i64/n=65536/65536",
+    "family": "arith",
+    "api": "add",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:52:55+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 12222.558037321807,
+        "min": 11717.205737205373,
+        "ci95_lo": 12023.686646358432,
+        "ci95_hi": 12854.985865467259,
+        "cv": 0.053640579503980663
+      },
+      "values_per_s": {
+        "median": 5369391304.003956,
+        "min": 4687021081.020579,
+        "ci95_lo": 5105341868.638234,
+        "ci95_hi": 5457245459.261499,
+        "cv": 0.05093724889305767
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260704-883c08552f35-e-bm-arith-mul-autovec-f64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith/mul/autovec/f64/n=65536/65536",
+    "family": "arith",
+    "api": "mul",
+    "variant": "autovec",
+    "element_type": "f64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "883c08552f35",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-04T01:52:55+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 12369.525908288282,
+        "min": 11705.880328718544,
+        "ci95_lo": 11901.019109373607,
+        "ci95_hi": 13476.091154729325,
+        "cv": 0.07285138309162871
+      },
+      "values_per_s": {
+        "median": 5300580325.553865,
+        "min": 4598359882.037175,
+        "ci95_lo": 4878046106.141714,
+        "ci95_hi": 5508824917.520662,
+        "cv": 0.06942196597841459
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  }
+]

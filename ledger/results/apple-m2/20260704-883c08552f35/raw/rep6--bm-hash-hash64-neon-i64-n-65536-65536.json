@@ -1,0 +1,57 @@
+{
+  "context": {
+    "date": "2026-07-03T21:25:34-04:00",
+    "host_name": "mous-2.local",
+    "executable": "/Users/nasr/repos/quiver/build/bench/bin/quiver_bench_hash",
+    "num_cpus": 8,
+    "mhz_per_cpu": 24,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 0
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 131072,
+        "num_sharing": 0
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 4194304,
+        "num_sharing": 1
+      }
+    ],
+    "load_avg": [2.04443,2.54639,2.57373],
+    "library_version": "v0.3.0-2-gef338b00-dirty",
+    "library_build_type": "release",
+    "json_schema_version": 1,
+    "compiler": "Apple LLVM 21.0.0 (clang-2100.1.1.101)",
+    "cxx_flags": " [Release]",
+    "git_dirty": "dirty",
+    "git_sha": "ef338b00afa5",
+    "pmu": "unavailable",
+    "quiver_version": "0.1.0"
+  },
+  "benchmarks": [
+    {
+      "name": "BM_hash/hash64/neon/i64/n=65536/65536",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_hash/hash64/neon/i64/n=65536/65536",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 74592,
+      "real_time": 3.7607011033081937e+04,
+      "cpu_time": 3.7606311668811657e+04,
+      "time_unit": "ns",
+      "items_per_second": 1.7426861899448514e+09
+    }
+  ]
+}
