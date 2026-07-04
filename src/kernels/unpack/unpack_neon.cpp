@@ -76,7 +76,8 @@ void unpack_bytes(const std::uint8_t* packed, std::int64_t n, Out base, Out* out
     widen_store<Out, kSrcBytes>(packed + i * kSrcBytes, base, out + i);
   }
   for (; i < n; ++i) {  // scalar tail, same gather arithmetic
-    const std::uint64_t v = scalar_impl::gather_bits(packed, i * (8 * kSrcBytes), 8u * kSrcBytes);
+    const std::uint64_t v =
+        scalar_impl::gather_bits(packed, i * (std::int64_t{8} * kSrcBytes), 8u * kSrcBytes);
     out[i] = static_cast<Out>(base + static_cast<Out>(v));
   }
 }
