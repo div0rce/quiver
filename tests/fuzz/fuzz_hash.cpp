@@ -38,8 +38,7 @@ void run(quiver_fuzz::Decoder& d) {
       }
       continue;
     }
-    quiver_fuzz::check(std::memcmp(got.data(), first.data(),
-                                   static_cast<std::size_t>(n) * 8) == 0,
+    quiver_fuzz::check(std::memcmp(got.data(), first.data(), static_cast<std::size_t>(n) * 8) == 0,
                        "K7 cross-backend hash mismatch");
   }
   quiver::clear_isa_override();

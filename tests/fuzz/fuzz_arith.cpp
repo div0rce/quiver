@@ -61,16 +61,15 @@ void run(quiver_fuzz::Decoder& d) {
     std::int64_t count = 0;
     if constexpr (std::is_integral_v<T>) {
       std::vector<T> wrapped(static_cast<std::size_t>(n) + 1);
-      count = scalar_rhs
-                  ? quiver::arith_checked(op, quiver::BatchView<T>{a.data(), n}, rhs,
-                                          wrapped.data(), bits.data())
-                  : quiver::arith_checked(op, quiver::BatchView<T>{a.data(), n},
-                                          quiver::BatchView<T>{b.data(), n}, wrapped.data(),
-                                          bits.data());
+      count = scalar_rhs ? quiver::arith_checked(op, quiver::BatchView<T>{a.data(), n}, rhs,
+                                                 wrapped.data(), bits.data())
+                         : quiver::arith_checked(op, quiver::BatchView<T>{a.data(), n},
+                                                 quiver::BatchView<T>{b.data(), n}, wrapped.data(),
+                                                 bits.data());
       // checked wrapped values must equal the plain wrapping results (same op)
-      quiver_fuzz::check(std::memcmp(wrapped.data(), got.data(),
-                                     static_cast<std::size_t>(n) * sizeof(T)) == 0,
-                         "K10 wrapped != K9 wrap");
+      quiver_fuzz::check(
+          std::memcmp(wrapped.data(), got.data(), static_cast<std::size_t>(n) * sizeof(T)) == 0,
+          "K10 wrapped != K9 wrap");
       std::vector<T> sat(static_cast<std::size_t>(n) + 1);
       if (scalar_rhs) {
         quiver::arith_saturating(op, quiver::BatchView<T>{a.data(), n}, rhs, sat.data());
@@ -81,8 +80,7 @@ void run(quiver_fuzz::Decoder& d) {
       for (std::int64_t i = 0; i < n; ++i) {
         const T vb = scalar_rhs ? rhs : b[static_cast<std::size_t>(i)];
         quiver_fuzz::check(sat[static_cast<std::size_t>(i)] ==
-                               ref::arith_saturate_expected(op, a[static_cast<std::size_t>(i)],
-                                                            vb),
+                               ref::arith_saturate_expected(op, a[static_cast<std::size_t>(i)], vb),
                            "K10 saturation vs oracle");
       }
     }
@@ -97,31 +95,30 @@ void run(quiver_fuzz::Decoder& d) {
         quiver_fuzz::check(value_matches(got[static_cast<std::size_t>(i)], want),
                            "K9 scalar vs oracle");
         if constexpr (std::is_integral_v<T>) {
-          quiver_fuzz::check(ref::bit_get(first_bits.data(), i) ==
-                                 ref::arith_overflows_expected(op,
-                                                               a[static_cast<std::size_t>(i)],
-                                                               vb),
-                             "K10 overflow bit vs oracle");
+          quiver_fuzz::check(
+              ref::bit_get(first_bits.data(), i) ==
+                  ref::arith_overflows_expected(op, a[static_cast<std::size_t>(i)], vb),
+              "K10 overflow bit vs oracle");
         }
       }
       continue;
     }
     if constexpr (std::is_floating_point_v<T>) {
       for (std::int64_t i = 0; i < n; ++i) {  // NaN-class cross-backend (see value_matches)
-        quiver_fuzz::check(value_matches(got[static_cast<std::size_t>(i)],
-                                         first[static_cast<std::size_t>(i)]),
-                           "K9 cross-backend mismatch");
+        quiver_fuzz::check(
+            value_matches(got[static_cast<std::size_t>(i)], first[static_cast<std::size_t>(i)]),
+            "K9 cross-backend mismatch");
       }
     } else {
-      quiver_fuzz::check(std::memcmp(got.data(), first.data(),
-                                     static_cast<std::size_t>(n) * sizeof(T)) == 0,
-                         "K9 cross-backend mismatch");
+      quiver_fuzz::check(
+          std::memcmp(got.data(), first.data(), static_cast<std::size_t>(n) * sizeof(T)) == 0,
+          "K9 cross-backend mismatch");
     }
     if constexpr (std::is_integral_v<T>) {
       quiver_fuzz::check(count == first_count, "K10 count mismatch");
-      quiver_fuzz::check(std::memcmp(bits.data(), first_bits.data(),
-                                     (static_cast<std::size_t>(n) + 7) / 8) == 0,
-                         "K10 bitmap mismatch");
+      quiver_fuzz::check(
+          std::memcmp(bits.data(), first_bits.data(), (static_cast<std::size_t>(n) + 7) / 8) == 0,
+          "K10 bitmap mismatch");
     }
   }
   quiver::clear_isa_override();

@@ -26,9 +26,9 @@ namespace {
 QUIVER_FORCE_INLINE __m256i mul64_lo(__m256i a, __m256i b) noexcept {
   const __m256i a_hi = _mm256_srli_epi64(a, 32);
   const __m256i b_hi = _mm256_srli_epi64(b, 32);
-  const __m256i lo_lo = _mm256_mul_epu32(a, b);        // lo(a)*lo(b), full 64
-  const __m256i lo_hi = _mm256_mul_epu32(a, b_hi);     // lo(a)*hi(b)
-  const __m256i hi_lo = _mm256_mul_epu32(a_hi, b);     // hi(a)*lo(b)
+  const __m256i lo_lo = _mm256_mul_epu32(a, b);     // lo(a)*lo(b), full 64
+  const __m256i lo_hi = _mm256_mul_epu32(a, b_hi);  // lo(a)*hi(b)
+  const __m256i hi_lo = _mm256_mul_epu32(a_hi, b);  // hi(a)*lo(b)
   const __m256i cross = _mm256_add_epi64(lo_hi, hi_lo);
   return _mm256_add_epi64(lo_lo, _mm256_slli_epi64(cross, 32));
 }

@@ -66,8 +66,7 @@ void bm_hash_i64(benchmark::State& state) {
   bool ok = true;
   for (std::int64_t i = 0; i < n; ++i) {
     ok = ok && out[static_cast<std::size_t>(i)] ==
-                   qhash64_local(static_cast<std::uint64_t>(v[static_cast<std::size_t>(i)]),
-                                 seed);
+                   qhash64_local(static_cast<std::uint64_t>(v[static_cast<std::size_t>(i)]), seed);
   }
   quiver::bench::validate_or_abort("BM_hash", ok, "hashes vs frozen-formula recompute");
 
@@ -118,9 +117,9 @@ void register_benchmarks() {
         quiver::bench::bench_name("hash", "hash64", variant, "i64", "n=" + std::to_string(n)),
         bm_hash_i64<false>)
         ->Args({n});
-    benchmark::RegisterBenchmark(quiver::bench::bench_name("hash", "combine", variant, "u64",
-                                                           "n=" + std::to_string(n)),
-                                 bm_hash_combine)
+    benchmark::RegisterBenchmark(
+        quiver::bench::bench_name("hash", "combine", variant, "u64", "n=" + std::to_string(n)),
+        bm_hash_combine)
         ->Args({n});
   }
 #if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)

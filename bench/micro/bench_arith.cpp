@@ -52,9 +52,9 @@ void bm_add_i64(benchmark::State& state) {
   run();
   bool ok = true;
   for (std::int64_t i = 0; i < n; ++i) {  // wrapping recompute
-    const auto want = static_cast<std::int64_t>(
-        static_cast<std::uint64_t>(a[static_cast<std::size_t>(i)]) +
-        static_cast<std::uint64_t>(b[static_cast<std::size_t>(i)]));
+    const auto want =
+        static_cast<std::int64_t>(static_cast<std::uint64_t>(a[static_cast<std::size_t>(i)]) +
+                                  static_cast<std::uint64_t>(b[static_cast<std::size_t>(i)]));
     ok = ok && out[static_cast<std::size_t>(i)] == want;
   }
   quiver::bench::validate_or_abort("BM_arith", ok, "wrap-add vs independent recompute");
@@ -108,8 +108,8 @@ void register_benchmarks() {
   // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
     for (const std::int64_t n : {4096, 65536}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("arith", "add", "autovec-avx2",
-                                                             "i64", "n=" + std::to_string(n)),
+      benchmark::RegisterBenchmark(quiver::bench::bench_name("arith", "add", "autovec-avx2", "i64",
+                                                             "n=" + std::to_string(n)),
                                    bm_add_i64<true>)
           ->Args({n});
     }

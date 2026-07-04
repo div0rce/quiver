@@ -29,8 +29,8 @@ QUIVER_FORCE_INLINE __m256i mul64_lo(__m256i a, __m256i b) noexcept {
 // Modular 8-bit multiply: widen even/odd bytes to 16-bit via masking, multiply, repack lows.
 QUIVER_FORCE_INLINE __m256i mul8_lo(__m256i a, __m256i b) noexcept {
   const __m256i lo_mask = _mm256_set1_epi16(0x00FF);
-  const __m256i even = _mm256_mullo_epi16(_mm256_and_si256(a, lo_mask),
-                                          _mm256_and_si256(b, lo_mask));
+  const __m256i even =
+      _mm256_mullo_epi16(_mm256_and_si256(a, lo_mask), _mm256_and_si256(b, lo_mask));
   const __m256i odd = _mm256_mullo_epi16(_mm256_srli_epi16(a, 8), _mm256_srli_epi16(b, 8));
   return _mm256_or_si256(_mm256_and_si256(even, lo_mask), _mm256_slli_epi16(odd, 8));
 }
@@ -169,11 +169,11 @@ struct ScalarRhs {
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K9_DEFINE(T)                                                                        \
-  void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {            \
-    arith_impl<T>(op, a, BatchRhs<T>{b}, n, out);                                             \
+  void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {             \
+    arith_impl<T>(op, a, BatchRhs<T>{b}, n, out);                                                  \
   }                                                                                                \
-  void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {        \
-    arith_impl<T>(op, a, ScalarRhs<T>{b}, n, out);                                              \
+  void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {         \
+    arith_impl<T>(op, a, ScalarRhs<T>{b}, n, out);                                                 \
   }
 
 QUIVER_K9_DEFINE(std::int8_t)

@@ -60,8 +60,7 @@ void bm_checked_add_i64(benchmark::State& state) {
 
   const std::int64_t got =
       quiver::arith_checked(quiver::ArithOp::kAdd, quiver::BatchView<std::int64_t>{a.data(), n},
-                            quiver::BatchView<std::int64_t>{b.data(), n}, out.data(),
-                            bits.data());
+                            quiver::BatchView<std::int64_t>{b.data(), n}, out.data(), bits.data());
   // Validate all THREE outputs (REQ-BENCH-004): wrapped values, per-lane overflow bitmap,
   // and the total count — a correct count alone does not imply correct out[]/bits[].
   std::int64_t want = 0;
@@ -72,14 +71,15 @@ void bm_checked_add_i64(benchmark::State& state) {
     const bool ovf = (y > 0 && x > std::numeric_limits<std::int64_t>::max() - y) ||
                      (y < 0 && x < std::numeric_limits<std::int64_t>::min() - y);
     want += ovf ? 1 : 0;
-    const auto wrapped = static_cast<std::int64_t>(static_cast<std::uint64_t>(x) +
-                                                   static_cast<std::uint64_t>(y));
+    const auto wrapped =
+        static_cast<std::int64_t>(static_cast<std::uint64_t>(x) + static_cast<std::uint64_t>(y));
     ok = ok && out[static_cast<std::size_t>(i)] == wrapped;
     const bool bit = ((bits[static_cast<std::size_t>(i >> 3)] >> (i & 7)) & 1u) != 0;
     ok = ok && bit == ovf;
   }
-  quiver::bench::validate_or_abort("BM_arith_guarded", got == want && ok,
-                                   "checked add: count + wrapped values + overflow bitmap vs recompute");
+  quiver::bench::validate_or_abort(
+      "BM_arith_guarded", got == want && ok,
+      "checked add: count + wrapped values + overflow bitmap vs recompute");
 
   g_pmu.start();
   for (auto _ : state) {
@@ -105,19 +105,17 @@ void bm_saturating_add_i64(benchmark::State& state) {
     const std::int64_t y = b[static_cast<std::size_t>(i)];
     const bool ovf = (y > 0 && x > std::numeric_limits<std::int64_t>::max() - y) ||
                      (y < 0 && x < std::numeric_limits<std::int64_t>::min() - y);
-    const std::int64_t want =
-        ovf ? (x < 0 ? std::numeric_limits<std::int64_t>::min()
-                     : std::numeric_limits<std::int64_t>::max())
-            : static_cast<std::int64_t>(static_cast<std::uint64_t>(x) +
-                                        static_cast<std::uint64_t>(y));
+    const std::int64_t want = ovf ? (x < 0 ? std::numeric_limits<std::int64_t>::min()
+                                           : std::numeric_limits<std::int64_t>::max())
+                                  : static_cast<std::int64_t>(static_cast<std::uint64_t>(x) +
+                                                              static_cast<std::uint64_t>(y));
     ok = ok && out[static_cast<std::size_t>(i)] == want;
   }
   quiver::bench::validate_or_abort("BM_arith_saturating", ok,
                                    "saturation vs independent recompute");
   g_pmu.start();
   for (auto _ : state) {
-    quiver::arith_saturating(quiver::ArithOp::kAdd,
-                             quiver::BatchView<std::int64_t>{a.data(), n},
+    quiver::arith_saturating(quiver::ArithOp::kAdd, quiver::BatchView<std::int64_t>{a.data(), n},
                              quiver::BatchView<std::int64_t>{b.data(), n}, out.data());
     benchmark::DoNotOptimize(out.data());
   }
@@ -130,15 +128,14 @@ void register_benchmarks() {
     for (const int permille : {0, 1, 500}) {  // overflow_density axis: 0, 0.1%, 50%
       benchmark::RegisterBenchmark(
           quiver::bench::bench_name("arith_guarded", "checked_add", variant, "i64",
-                                    "n=" + std::to_string(n) +
-                                        "/ovf=" + std::to_string(permille)),
+                                    "n=" + std::to_string(n) + "/ovf=" + std::to_string(permille)),
           bm_checked_add_i64)
           ->Args({n, permille});
     }
-    benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("arith_guarded", "saturating_add", variant, "i64",
-                                  "n=" + std::to_string(n)),
-        bm_saturating_add_i64)
+    benchmark::RegisterBenchmark(quiver::bench::bench_name("arith_guarded", "saturating_add",
+                                                           variant, "i64",
+                                                           "n=" + std::to_string(n)),
+                                 bm_saturating_add_i64)
         ->Args({n});
   }
 }

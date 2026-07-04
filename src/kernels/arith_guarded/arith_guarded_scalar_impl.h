@@ -155,8 +155,7 @@ std::int64_t arith_checked_core(ArithOp op, const T* a, Rhs rhs, std::int64_t n,
 template <class T>
 std::int64_t arith_checked(ArithOp op, const T* a, const T* b, std::int64_t n, T* out,
                            std::uint8_t* overflow_bits) noexcept {
-  return arith_checked_core(op, a, [&](std::int64_t i) { return b[i]; }, n, out,
-                            overflow_bits);
+  return arith_checked_core(op, a, [&](std::int64_t i) { return b[i]; }, n, out, overflow_bits);
 }
 
 template <class T>
@@ -182,8 +181,7 @@ QUIVER_FORCE_INLINE T saturate_one(ArithOp op, T a, T b) noexcept {
     case ArithOp::kSub:
       return (a < b) ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
     case ArithOp::kMul:
-      return ((a < 0) != (b < 0)) ? std::numeric_limits<T>::min()
-                                  : std::numeric_limits<T>::max();
+      return ((a < 0) != (b < 0)) ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
     }
     return r;  // unreachable for in-contract op values
   } else {
@@ -206,8 +204,7 @@ void arith_saturating(ArithOp op, const T* a, const T* b, std::int64_t n, T* out
 }
 
 template <class T>
-void arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n,
-                                 T* out) noexcept {
+void arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {
   for (std::int64_t i = 0; i < n; ++i) {
     out[i] = saturate_one(op, a[i], b);
   }

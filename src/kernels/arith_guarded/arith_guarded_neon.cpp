@@ -127,51 +127,46 @@ QUIVER_FORCE_INLINE std::uint32_t mask_bits(uint8x16_t m) noexcept {
 
 // Native saturating add/sub at T's width (sqadd/uqadd/sqsub/uqsub — all widths on A64).
 template <class T>
-QUIVER_FORCE_INLINE uint8x16_t saturating_block(ArithOp op, uint8x16_t a,
-                                                uint8x16_t b) noexcept {
+QUIVER_FORCE_INLINE uint8x16_t saturating_block(ArithOp op, uint8x16_t a, uint8x16_t b) noexcept {
   constexpr bool kSigned = std::is_signed_v<T>;
   if constexpr (sizeof(T) == 1) {
     if (op == ArithOp::kAdd) {
-      return kSigned ? vreinterpretq_u8_s8(
-                           vqaddq_s8(vreinterpretq_s8_u8(a), vreinterpretq_s8_u8(b)))
-                     : vqaddq_u8(a, b);
+      return kSigned
+                 ? vreinterpretq_u8_s8(vqaddq_s8(vreinterpretq_s8_u8(a), vreinterpretq_s8_u8(b)))
+                 : vqaddq_u8(a, b);
     }
-    return kSigned ? vreinterpretq_u8_s8(
-                         vqsubq_s8(vreinterpretq_s8_u8(a), vreinterpretq_s8_u8(b)))
+    return kSigned ? vreinterpretq_u8_s8(vqsubq_s8(vreinterpretq_s8_u8(a), vreinterpretq_s8_u8(b)))
                    : vqsubq_u8(a, b);
   } else if constexpr (sizeof(T) == 2) {
     if (op == ArithOp::kAdd) {
-      return kSigned ? vreinterpretq_u8_s16(vqaddq_s16(vreinterpretq_s16_u8(a),
-                                                       vreinterpretq_s16_u8(b)))
+      return kSigned ? vreinterpretq_u8_s16(
+                           vqaddq_s16(vreinterpretq_s16_u8(a), vreinterpretq_s16_u8(b)))
                      : vreinterpretq_u8_u16(
                            vqaddq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
     }
-    return kSigned ? vreinterpretq_u8_s16(vqsubq_s16(vreinterpretq_s16_u8(a),
-                                                     vreinterpretq_s16_u8(b)))
-                   : vreinterpretq_u8_u16(
-                         vqsubq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
+    return kSigned
+               ? vreinterpretq_u8_s16(vqsubq_s16(vreinterpretq_s16_u8(a), vreinterpretq_s16_u8(b)))
+               : vreinterpretq_u8_u16(vqsubq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
   } else if constexpr (sizeof(T) == 4) {
     if (op == ArithOp::kAdd) {
-      return kSigned ? vreinterpretq_u8_s32(vqaddq_s32(vreinterpretq_s32_u8(a),
-                                                       vreinterpretq_s32_u8(b)))
+      return kSigned ? vreinterpretq_u8_s32(
+                           vqaddq_s32(vreinterpretq_s32_u8(a), vreinterpretq_s32_u8(b)))
                      : vreinterpretq_u8_u32(
                            vqaddq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
     }
-    return kSigned ? vreinterpretq_u8_s32(vqsubq_s32(vreinterpretq_s32_u8(a),
-                                                     vreinterpretq_s32_u8(b)))
-                   : vreinterpretq_u8_u32(
-                         vqsubq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
+    return kSigned
+               ? vreinterpretq_u8_s32(vqsubq_s32(vreinterpretq_s32_u8(a), vreinterpretq_s32_u8(b)))
+               : vreinterpretq_u8_u32(vqsubq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
   } else {
     if (op == ArithOp::kAdd) {
-      return kSigned ? vreinterpretq_u8_s64(vqaddq_s64(vreinterpretq_s64_u8(a),
-                                                       vreinterpretq_s64_u8(b)))
+      return kSigned ? vreinterpretq_u8_s64(
+                           vqaddq_s64(vreinterpretq_s64_u8(a), vreinterpretq_s64_u8(b)))
                      : vreinterpretq_u8_u64(
                            vqaddq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
     }
-    return kSigned ? vreinterpretq_u8_s64(vqsubq_s64(vreinterpretq_s64_u8(a),
-                                                     vreinterpretq_s64_u8(b)))
-                   : vreinterpretq_u8_u64(
-                         vqsubq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
+    return kSigned
+               ? vreinterpretq_u8_s64(vqsubq_s64(vreinterpretq_s64_u8(a), vreinterpretq_s64_u8(b)))
+               : vreinterpretq_u8_u64(vqsubq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
   }
 }
 
@@ -248,8 +243,7 @@ std::int64_t checked_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int6
 }
 
 template <class T, class LoadB>
-void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n,
-                            T* out) noexcept {
+void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n, T* out) noexcept {
   constexpr std::int64_t kW = static_cast<std::int64_t>(16 / sizeof(T));
   std::int64_t i = 0;
   for (; i + kW <= n; i += kW) {
@@ -265,14 +259,14 @@ void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K10_DEFINE(T)                                                                       \
-  std::int64_t k10_arith_checked(ArithOp op, const T* a, const T* b, std::int64_t n, T* out,      \
+  std::int64_t k10_arith_checked(ArithOp op, const T* a, const T* b, std::int64_t n, T* out,       \
                                  std::uint8_t* overflow_bits) noexcept {                           \
     if (op == ArithOp::kMul) {                                                                     \
       return scalar_impl::arith_checked<T>(op, a, b, n, out, overflow_bits);                       \
     }                                                                                              \
     return checked_addsub_impl<T>(op, a, BatchRhs<T>{b}, n, out, overflow_bits);                   \
   }                                                                                                \
-  std::int64_t k10_arith_checked_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out,  \
+  std::int64_t k10_arith_checked_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out,   \
                                             std::uint8_t* overflow_bits) noexcept {                \
     if (op == ArithOp::kMul) {                                                                     \
       return scalar_impl::arith_checked_scalar_rhs<T>(op, a, b, n, out, overflow_bits);            \
@@ -286,8 +280,8 @@ void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n
     }                                                                                              \
     saturating_addsub_impl<T>(op, a, BatchRhs<T>{b}, n, out);                                      \
   }                                                                                                \
-  void k10_arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out)       \
-      noexcept {                                                                                   \
+  void k10_arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n,                \
+                                       T* out) noexcept {                                          \
     if (op == ArithOp::kMul) {                                                                     \
       scalar_impl::arith_saturating_scalar_rhs<T>(op, a, b, n, out);                               \
       return;                                                                                      \

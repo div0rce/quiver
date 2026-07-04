@@ -52,9 +52,9 @@ void run(quiver_fuzz::Decoder& d, const std::uint8_t* raw, std::size_t raw_size)
       }
       continue;
     }
-    quiver_fuzz::check(std::memcmp(got.data(), first.data(),
-                                   static_cast<std::size_t>(n) * sizeof(Out)) == 0,
-                       "K8 cross-backend mismatch");
+    quiver_fuzz::check(
+        std::memcmp(got.data(), first.data(), static_cast<std::size_t>(n) * sizeof(Out)) == 0,
+        "K8 cross-backend mismatch");
   }
   quiver::clear_isa_override();
 }

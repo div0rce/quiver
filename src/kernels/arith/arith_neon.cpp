@@ -177,10 +177,10 @@ struct ScalarRhs {
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K9_DEFINE(T)                                                                        \
-  void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {            \
+  void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {             \
     arith_impl<T>(op, a, BatchRhs<T>{b}, n, out);                                                  \
   }                                                                                                \
-  void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {        \
+  void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {         \
     arith_impl<T>(op, a, ScalarRhs<T>{b}, n, out);                                                 \
   }
 

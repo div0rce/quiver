@@ -78,8 +78,7 @@ void hash64(const T* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out)
   }
 }
 
-QUIVER_FORCE_INLINE constexpr std::uint64_t combine_one(std::uint64_t a,
-                                                        std::uint64_t b) noexcept {
+QUIVER_FORCE_INLINE constexpr std::uint64_t combine_one(std::uint64_t a, std::uint64_t b) noexcept {
   return fmix64(a ^ (b + kHashGolden + (a << 6) + (a >> 2)));
 }
 

@@ -76,8 +76,7 @@ void unpack_bytes(const std::uint8_t* packed, std::int64_t n, Out base, Out* out
     widen_store<Out, kSrcBytes>(packed + i * kSrcBytes, base, out + i);
   }
   for (; i < n; ++i) {  // scalar tail, same gather arithmetic
-    const std::uint64_t v =
-        scalar_impl::gather_bits(packed, i * (8 * kSrcBytes), 8u * kSrcBytes);
+    const std::uint64_t v = scalar_impl::gather_bits(packed, i * (8 * kSrcBytes), 8u * kSrcBytes);
     out[i] = static_cast<Out>(base + static_cast<Out>(v));
   }
 }
@@ -117,9 +116,9 @@ void unpack_impl(const std::uint8_t* packed, std::int64_t n, int bit_width, Out 
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K8_DEFINE(T)                                                                        \
-  void k8_unpack(const std::uint8_t* packed, std::int64_t n, int bit_width, T base,              \
+  void k8_unpack(const std::uint8_t* packed, std::int64_t n, int bit_width, T base,                \
                  T* out) noexcept {                                                                \
-    unpack_impl<T>(packed, n, bit_width, base, out);                                              \
+    unpack_impl<T>(packed, n, bit_width, base, out);                                               \
   }
 
 QUIVER_K8_DEFINE(std::uint8_t)

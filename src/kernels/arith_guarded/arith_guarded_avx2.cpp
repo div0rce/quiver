@@ -30,11 +30,9 @@ QUIVER_FORCE_INLINE std::uint32_t movemask_bits(__m256i lane_mask) noexcept {
   } else if constexpr (sizeof(T) == 2) {
     return _pext_u32(static_cast<std::uint32_t>(_mm256_movemask_epi8(lane_mask)), 0xAAAAAAAAu);
   } else if constexpr (sizeof(T) == 4) {
-    return static_cast<std::uint32_t>(
-        _mm256_movemask_ps(_mm256_castsi256_ps(lane_mask)));
+    return static_cast<std::uint32_t>(_mm256_movemask_ps(_mm256_castsi256_ps(lane_mask)));
   } else {
-    return static_cast<std::uint32_t>(
-        _mm256_movemask_pd(_mm256_castsi256_pd(lane_mask)));
+    return static_cast<std::uint32_t>(_mm256_movemask_pd(_mm256_castsi256_pd(lane_mask)));
   }
 }
 
@@ -201,17 +199,16 @@ QUIVER_FORCE_INLINE __m256i saturating_block(ArithOp op, __m256i a, __m256i b) n
     const __m256i r = checked_block<T>(op, a, b, &ov);
     __m256i limit;
     if constexpr (kSigned) {
-      const __m256i vmax = (sizeof(T) == 4)
-                               ? _mm256_set1_epi32(0x7FFFFFFF)
-                               : _mm256_set1_epi64x(0x7FFFFFFFFFFFFFFFll);
+      const __m256i vmax = (sizeof(T) == 4) ? _mm256_set1_epi32(0x7FFFFFFF)
+                                            : _mm256_set1_epi64x(0x7FFFFFFFFFFFFFFFll);
       const __m256i vmin = (sizeof(T) == 4)
                                ? _mm256_set1_epi32(static_cast<int>(0x80000000u))
                                : _mm256_set1_epi64x(static_cast<long long>(0x8000000000000000ull));
       // Overflow direction: add -> sign(a) picks MIN; sub -> (a < b) picks MIN.
-      const __m256i toward_min = (op == ArithOp::kAdd)
-                                     ? sign_mask<T>(a)
-                                     : ((sizeof(T) == 4) ? _mm256_cmpgt_epi32(b, a)
-                                                         : _mm256_cmpgt_epi64(b, a));
+      const __m256i toward_min =
+          (op == ArithOp::kAdd)
+              ? sign_mask<T>(a)
+              : ((sizeof(T) == 4) ? _mm256_cmpgt_epi32(b, a) : _mm256_cmpgt_epi64(b, a));
       limit = _mm256_blendv_epi8(vmax, vmin, toward_min);
     } else {
       // Unsigned: add overflows toward MAX, sub toward 0.
@@ -223,8 +220,7 @@ QUIVER_FORCE_INLINE __m256i saturating_block(ArithOp op, __m256i a, __m256i b) n
 }
 
 template <class T, class LoadB>
-void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n,
-                            T* out) noexcept {
+void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n, T* out) noexcept {
   constexpr std::int64_t kW = static_cast<std::int64_t>(32 / sizeof(T));
   std::int64_t i = 0;
   for (; i + kW <= n; i += kW) {
@@ -267,14 +263,14 @@ struct ScalarRhs {
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K10_DEFINE(T)                                                                       \
-  std::int64_t k10_arith_checked(ArithOp op, const T* a, const T* b, std::int64_t n, T* out,      \
+  std::int64_t k10_arith_checked(ArithOp op, const T* a, const T* b, std::int64_t n, T* out,       \
                                  std::uint8_t* overflow_bits) noexcept {                           \
     if (op == ArithOp::kMul) {                                                                     \
       return scalar_impl::arith_checked<T>(op, a, b, n, out, overflow_bits);                       \
     }                                                                                              \
     return checked_addsub_impl<T>(op, a, BatchRhs<T>{b}, n, out, overflow_bits);                   \
   }                                                                                                \
-  std::int64_t k10_arith_checked_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out,  \
+  std::int64_t k10_arith_checked_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out,   \
                                             std::uint8_t* overflow_bits) noexcept {                \
     if (op == ArithOp::kMul) {                                                                     \
       return scalar_impl::arith_checked_scalar_rhs<T>(op, a, b, n, out, overflow_bits);            \
@@ -288,8 +284,8 @@ struct ScalarRhs {
     }                                                                                              \
     saturating_addsub_impl<T>(op, a, BatchRhs<T>{b}, n, out);                                      \
   }                                                                                                \
-  void k10_arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out)       \
-      noexcept {                                                                                   \
+  void k10_arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n,                \
+                                       T* out) noexcept {                                          \
     if (op == ArithOp::kMul) {                                                                     \
       scalar_impl::arith_saturating_scalar_rhs<T>(op, a, b, n, out);                               \
       return;                                                                                      \

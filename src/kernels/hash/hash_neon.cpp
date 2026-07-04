@@ -80,8 +80,7 @@ QUIVER_FORCE_INLINE uint64x2_t key64_vec(const T* p) noexcept {
 }
 
 template <class T>
-void hash64_vector(const T* in, std::int64_t n, std::uint64_t seed,
-                   std::uint64_t* out) noexcept {
+void hash64_vector(const T* in, std::int64_t n, std::uint64_t seed, std::uint64_t* out) noexcept {
   const std::uint64_t premix = seed + scalar_impl::kHashGolden;
   const uint64x2_t premix_v = vdupq_n_u64(premix);
   std::int64_t i = 0;
