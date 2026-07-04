@@ -29,10 +29,18 @@ add_library(quiver_bench_harness STATIC
   harness/meta.cpp)
 target_link_libraries(quiver_bench_harness PUBLIC quiver::quiver benchmark::benchmark)
 target_include_directories(quiver_bench_harness PUBLIC ${CMAKE_SOURCE_DIR})
+# LTO state for the ledger manifest (REQ-BUILD-014, REQ-LEDGER-003): the standard
+# CMAKE_INTERPROCEDURAL_OPTIMIZATION variable controls it and is OFF unless set.
+if(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+  set(_quiver_lto "on")
+else()
+  set(_quiver_lto "off")
+endif()
 target_compile_definitions(quiver_bench_harness PRIVATE
   QUIVER_BENCH_GIT_SHA="${_quiver_git_sha}"
   QUIVER_BENCH_GIT_DIRTY="${_quiver_git_dirty}"
-  QUIVER_BENCH_CXX_FLAGS="${CMAKE_CXX_FLAGS} [${CMAKE_BUILD_TYPE}]")
+  QUIVER_BENCH_CXX_FLAGS="${CMAKE_CXX_FLAGS} [${CMAKE_BUILD_TYPE}]"
+  QUIVER_BENCH_LTO="${_quiver_lto}")
 
 # Third-party headers exempt from the warning policy (REQ-BUILD-008).
 get_target_property(_quiver_gb_incs benchmark::benchmark INTERFACE_INCLUDE_DIRECTORIES)
