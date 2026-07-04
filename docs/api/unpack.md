@@ -28,7 +28,7 @@ The family's semantics are defined by `src/kernels/unpack/unpack_scalar_impl.h` 
 - **scalar** (v0.4): direct `gather_bits` loop; byte-aligned widths (8/16/32/64) reduce to widening copies the auto-vectorizer handles well.
 - **AVX2** (v0.4): byte-aligned widths {8, 16, 32, 64} use vector widening loads (`vpmovzx*`); sub-byte and non-byte-aligned widths delegate to the scalar core — the general shift-network unpacker is a documented follow-up, so for those widths `avx2` ≡ scalar reference and the ledger row says what that costs. The exact `⌈n·w/8⌉` read bound holds on every path (REQ-K8-002).
 - **NEON** (v0.4): same posture as AVX2 — byte-aligned widths {8, 16, 32, 64} via `vmovl` widening chains, other widths delegate to the scalar core.
-- **AVX-512 (M7):** lands with its milestone; techniques per PRD [08 §5](../prd/08-kernel-design.md) and [09](../prd/09-simd-architecture.md).
+- **AVX-512** (v0.5): byte-aligned widths {8, 16, 32, 64} use 512-bit widening loads (`_mm512_cvtepu*`), reading exactly the value bytes; sub-byte and irregular widths delegate to the scalar core (same posture as AVX2). Base set F+BW+DQ+VL only (correct on SDE `-skx`). Exact `⌈n·w/8⌉` read bound on every path; validated (incl. width-exhaustive differential + guard-page) under Intel SDE (ADR-010).
 
 ## Ledger
 
