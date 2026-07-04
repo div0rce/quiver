@@ -223,4 +223,29 @@ TEST(Dispatch, EnvVarMatrix) {
 }
 #endif  // !_WIN32
 
+// AVX-512 dispatch reachability (REQ-DISP-004/-011, M7 validation slice). Robust in every
+// environment: on a host without the F+BW+DQ+VL feature bits (native ARM/macOS, plain x86, or
+// SDE -skx before VBMI2 concerns) the AVX-512 tier must NOT be selectable (the negative case);
+// where the bits ARE present — real AVX-512 silicon, SDE -spr, or the QUIVER_TEST_FORCE_ISA
+// seam — the public dispatch API must resolve to the AVX-512 tier (proving slot [3] is wired
+// and reached). Kernel-output correctness under AVX-512 is proven separately by the SDE
+// differential suite (ADR-010; local emulators do not reliably execute AVX-512).
+TEST(DispatchAvx512, TierSelectableIffFeatureBitsPresent) {
+  using quiver::Isa;
+  quiver::clear_isa_override();
+  quiver::warmup();
+  const bool supported = quiver::cpu_supports(Isa::kAvx512);
+  const bool overrode = quiver::set_isa_override(Isa::kAvx512);
+  quiver::warmup();
+  if (supported) {
+    EXPECT_TRUE(overrode);
+    EXPECT_EQ(quiver::active_isa(), Isa::kAvx512);
+  } else {
+    EXPECT_FALSE(overrode);  // never selectable without F+BW+DQ+VL (REQ-DISP-004)
+    EXPECT_NE(quiver::active_isa(), Isa::kAvx512);
+  }
+  quiver::clear_isa_override();
+  quiver::warmup();
+}
+
 }  // namespace

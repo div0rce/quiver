@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 
 #if defined(__x86_64__) || defined(_M_X64)
@@ -79,6 +80,9 @@ void read_brand_x86(char (&brand)[64]) noexcept {
   }
   std::memcpy(brand, raw, 48);
   brand[48] = '\0';
+  if (brand[0] == '\0') {  // some emulators (e.g. SDE -skx) expose the leaves but return no
+    std::memcpy(brand, "x86_64", 7);  // string — keep the brand non-empty like the older path
+  }
 }
 
 CpuFeatures detect_x86() noexcept {
@@ -157,12 +161,29 @@ CpuFeatures detect_fallback() noexcept {
 
 CpuFeatures detect_cpu_features() noexcept {
 #if defined(QUIVER_CPU_X86_64)
-  return detect_x86();
+  CpuFeatures f = detect_x86();
 #elif defined(QUIVER_CPU_ARM64)
-  return detect_arm64();
+  CpuFeatures f = detect_arm64();
 #else
-  return detect_fallback();
+  CpuFeatures f = detect_fallback();
 #endif
+#if defined(QUIVER_TEST_SEAMS)
+  // Test-only seam (compiled out of any tests-off/release/install build — shipped detection is
+  // pure CPUID, PRD 07). QUIVER_TEST_FORCE_ISA lets a host whose emulator EXECUTES AVX-512 but
+  // reports no AVX-512 in CPUID (QEMU) exercise the AVX-512 dispatch path; the three values
+  // mirror the SDE -skx (no VBMI2) and -spr (VBMI2/VPOPCNTDQ) profiles. Monotone.
+  if (const char* forced = std::getenv("QUIVER_TEST_FORCE_ISA")) {
+    const bool vbmi2 = std::strcmp(forced, "avx512vbmi2") == 0;
+    const bool vpopcntdq = std::strcmp(forced, "avx512vpopcntdq") == 0;
+    if (std::strcmp(forced, "avx512") == 0 || vbmi2 || vpopcntdq) {
+      f.avx2 = true;
+      f.avx512 = true;
+      f.avx512vbmi2 = vbmi2;
+      f.avx512vpopcntdq = vpopcntdq;
+    }
+  }
+#endif
+  return f;
 }
 
 }  // namespace detail
