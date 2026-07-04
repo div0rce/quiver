@@ -229,6 +229,11 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 #define QUIVER_AVX512_IMPL_k7_hash_f32 ~, &avx512::k7_hash64
 #define QUIVER_AVX512_IMPL_k7_hash_f64 ~, &avx512::k7_hash64
 #define QUIVER_AVX512_IMPL_k7_comb ~, &avx512::k7_hash64_combine
+// K8 unpack (512-bit widening):
+#define QUIVER_AVX512_IMPL_k8_unpack_u8 ~, &avx512::k8_unpack
+#define QUIVER_AVX512_IMPL_k8_unpack_u16 ~, &avx512::k8_unpack
+#define QUIVER_AVX512_IMPL_k8_unpack_u32 ~, &avx512::k8_unpack
+#define QUIVER_AVX512_IMPL_k8_unpack_u64 ~, &avx512::k8_unpack
 #endif
 // slot [3] = &avx512::<name> if QUIVER_AVX512_IMPL_<uid> is defined, else nullptr (the marker
 // supplies a leading dummy arg so the pointer lands in the second position; undefined markers
