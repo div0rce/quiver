@@ -18,3 +18,15 @@
 - **Consequences:** source files must keep guard style and internal-include forms uniform (enforced by [17-coding-standards.md](../prd/17-coding-standards.md) REQ-STD-006) so the generator stays trivial.
 - **Reconsideration:** if the file count or macro complexity makes text transformation error-prone, switch to a libclang-based generator (PRD amendment).
 - **Related:** REQ-BUILD-013, REQ-REPO-011, ADR-002/003.
+
+- **Amendment (M8, 2026-07-05) — MSVC narrowing is unnecessary for the default-`/arch` build.**
+  The decision above prescribed per-ISA `#if` narrowing (`QUIVER_AMALG_HAS_AVX2` from `__AVX2__`)
+  so only baseline-compatible backends compile on MSVC. An empirical `windows-latest` probe (Visual
+  Studio 2022) showed this is not needed: with the **default `/arch`** (SSE2 baseline) MSVC compiles
+  the AVX2 **and** AVX-512 intrinsics — self-contained at their call sites — while leaving the scalar
+  and dispatch code at baseline, so the single-TU amalgamation compiles all backends and the unit
+  suite passes with runtime dispatch intact (baseline-safe by construction). The supported MSVC
+  configuration is therefore "build the amalgamation with default `/arch`", verified by the
+  `msvc-amalgamation` CI leg; the narrowing guards are not implemented. A narrowing scheme for
+  consumers who deliberately set `/arch:AVX2`+ (which would raise the whole-TU baseline and could
+  leak higher-ISA codegen into the baseline path) is a tier-2 deferral, tracked as risk **R-17**.

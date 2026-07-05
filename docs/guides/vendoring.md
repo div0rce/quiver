@@ -75,7 +75,16 @@ suite against it, requiring byte-identical kernel outputs versus the normal mult
 
 ### MSVC
 
-On GCC and Clang the single translation unit compiles every backend with no global ISA flags.
-MSVC has no per-function target attribute, so the amalgamation's SIMD-backend narrowing behavior
-on MSVC (baseline backends always; AVX2/AVX-512 only when the consumer sets `/arch`) is documented
-with the MSVC support leg.
+On GCC and Clang the single translation unit compiles every backend with no global ISA flags
+(per-function target attributes confine each backend's instructions to itself). MSVC has no such
+attribute, but it still works — **build the amalgamation with the default `/arch`** (the SSE2
+baseline). MSVC self-contains AVX2 and AVX-512 intrinsics at their call sites, so the SIMD
+backends compile without `/arch:AVX2`/`/arch:AVX512` while the scalar and dispatch code stay
+baseline; runtime dispatch then selects the best backend the CPU supports, exactly as on the
+tier-1 platforms. This is verified by the `msvc-amalgamation` CI leg.
+
+Do **not** build the amalgamation with `/arch:AVX2` or higher: `/arch` raises the baseline for the
+*whole* translation unit, which can emit AVX2/AVX-512 into the scalar and dispatch code and produce
+a binary that crashes on older CPUs. The default `/arch` is the supported configuration; a
+narrowing scheme for `/arch`-setting consumers is not implemented (tier-2 deferral, see
+[ADR-018](../adr/ADR-018-amalgamation-generation-strategy.md)).

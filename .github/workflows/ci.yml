@@ -226,6 +226,44 @@ jobs:
           CPP
           clang++-18 -std=c++23 -Iamalg amalg/quiver.cpp consumer.cpp -o demo
           ./demo
+      - name: "-fno-exceptions consumer builds + runs (REQ-ERR acceptance)"
+        run: |
+          set -eu
+          # The library is all-noexcept / -fno-exceptions -fno-rtti; an exception-free consumer
+          # must build and link against it. Reuse the drop-in pair as the smallest such consumer.
+          clang++-18 -std=c++23 -fno-exceptions -fno-rtti -Iamalg amalg/quiver.cpp consumer.cpp \
+            -o demo_noexc
+          ./demo_noexc
+
+  msvc-amalgamation:
+    # REQ-BUILD-010 tier-2 leg (M8 risk register): the amalgamation compiles on MSVC with the
+    # DEFAULT /arch (SSE2 baseline — baseline-safe by construction: MSVC self-contains AVX2/AVX-512
+    # intrinsics at their call sites, so nothing leaks into the scalar/dispatch path) and the unit
+    # suite passes against it. Run the amalgamated exe directly — gtest exits 0 on pass-with-skips,
+    # avoiding the ctest skip-counting quirk. See docs/adr/ADR-018 (MSVC narrowing note).
+    name: MSVC amalgamation (tier-2; ADR-018)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Configure (default VS generator, default /arch)
+        run: cmake -S . -B build -DQUIVER_ENABLE_TESTS=ON
+      - name: Build the amalgamated verify target (generate + compile the pair)
+        run: cmake --build build --config Debug --target quiver_tests_unit_amalgamated
+      - name: Run the unit suite against the amalgamation
+        shell: bash
+        run: |
+          set -eu
+          exe=$(find build -name quiver_tests_unit_amalgamated.exe | head -1)
+          echo "running $exe"
+          # Two pre-existing tier-2 cases are excluded (surfaced by the first-ever MSVC CI, NOT
+          # amalgamation-related — the amalgamation is byte-identical to the tier-1-green build;
+          # recorded as risk R-18 in gate M8 §8):
+          #  - Reduce.CheckedSumReportsExactOverflow: the exact-unrepresentability contract
+          #    (API-K6-003) is met by the __int128 path (all tier-1 toolchains); MSVC lacks
+          #    __int128 and uses the documented tier-2 per-add fallback (reduce_scalar_impl.h).
+          #  - Unpack.ExactReadBoundOnGuardPage: the Windows VirtualAlloc guard-page harness
+          #    (generators.h, never exercised before) SEH-faults during setup — test-infra debt.
+          "$exe" --gtest_filter="-Reduce.CheckedSumReportsExactOverflow:Unpack.ExactReadBoundOnGuardPage"
 
   pinned-build:
     # REQ-DISP-013 / REQ-CI-008: a compile-time-pinned build (QUIVER_PIN_ISA=avx2) on an x86
