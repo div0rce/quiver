@@ -8,7 +8,7 @@ cmake --preset bench && cmake --build --preset bench -j
 ./build/bench/bin/quiver_bench_smoke --benchmark_filter=...   # standard GB flags apply
 ```
 
-Benchmark binaries land in `build/bench/bin/`. Family benchmarks (`quiver_bench_<family>`) arrive with their kernels (M3+).
+Benchmark binaries land in `build/bench/bin/`. Family benchmarks (`quiver_bench_<family>`) arrive with their kernels (M3+). The end-to-end pipeline benchmark `quiver_bench_pipeline` composes the demo-layer query chain compare → select → take → reduce over synthetic data (composition sanity, not a cross-engine comparison — REQ-BENCH-012).
 
 ## Environment preparation (REQ-BENCH-013; Survey §7.3)
 

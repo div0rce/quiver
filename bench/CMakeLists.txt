@@ -73,10 +73,17 @@ if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
   set_source_files_properties(baselines/baseline_avx2.cpp PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
 endif()
 
-# Family microbenchmarks (bench/pipeline/ arrives at M8).
+# Family microbenchmarks.
 foreach(fam compare filter select mask take reduce dispatch hash unpack arith arith_guarded)
   add_executable(quiver_bench_${fam} micro/bench_${fam}.cpp)
   target_link_libraries(quiver_bench_${fam} PRIVATE quiver_bench_harness quiver_bench_baselines)
   set_target_properties(quiver_bench_${fam} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 endforeach()
+
+# End-to-end pipeline benchmark (REQ-BENCH-012, Charter §6.6 demo layer): composition, not a
+# per-kernel verdict, so it links no autovec baseline.
+add_executable(quiver_bench_pipeline pipeline/bench_pipeline.cpp)
+target_link_libraries(quiver_bench_pipeline PRIVATE quiver_bench_harness)
+set_target_properties(quiver_bench_pipeline PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
