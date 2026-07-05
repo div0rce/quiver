@@ -234,7 +234,7 @@ void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n
 }
 
 template <class T>
-struct BatchRhs {
+struct ag_BatchRhs {
   const T* b;
   __m256i operator()(std::int64_t i) const noexcept {
     return _mm256_loadu_si256(reinterpret_cast<const __m256i*>(b + i));
@@ -243,7 +243,7 @@ struct BatchRhs {
 };
 
 template <class T>
-struct ScalarRhs {
+struct ag_ScalarRhs {
   T b;
   __m256i operator()(std::int64_t) const noexcept {
     if constexpr (sizeof(T) == 1) {
@@ -268,21 +268,21 @@ struct ScalarRhs {
     if (op == ArithOp::kMul) {                                                                     \
       return scalar_impl::arith_checked<T>(op, a, b, n, out, overflow_bits);                       \
     }                                                                                              \
-    return checked_addsub_impl<T>(op, a, BatchRhs<T>{b}, n, out, overflow_bits);                   \
+    return checked_addsub_impl<T>(op, a, ag_BatchRhs<T>{b}, n, out, overflow_bits);                \
   }                                                                                                \
   std::int64_t k10_arith_checked_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out,   \
                                             std::uint8_t* overflow_bits) noexcept {                \
     if (op == ArithOp::kMul) {                                                                     \
       return scalar_impl::arith_checked_scalar_rhs<T>(op, a, b, n, out, overflow_bits);            \
     }                                                                                              \
-    return checked_addsub_impl<T>(op, a, ScalarRhs<T>{b}, n, out, overflow_bits);                  \
+    return checked_addsub_impl<T>(op, a, ag_ScalarRhs<T>{b}, n, out, overflow_bits);               \
   }                                                                                                \
   void k10_arith_saturating(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept { \
     if (op == ArithOp::kMul) {                                                                     \
       scalar_impl::arith_saturating<T>(op, a, b, n, out); /* REQ-K10-003 concession */             \
       return;                                                                                      \
     }                                                                                              \
-    saturating_addsub_impl<T>(op, a, BatchRhs<T>{b}, n, out);                                      \
+    saturating_addsub_impl<T>(op, a, ag_BatchRhs<T>{b}, n, out);                                   \
   }                                                                                                \
   void k10_arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n,                \
                                        T* out) noexcept {                                          \
@@ -290,7 +290,7 @@ struct ScalarRhs {
       scalar_impl::arith_saturating_scalar_rhs<T>(op, a, b, n, out);                               \
       return;                                                                                      \
     }                                                                                              \
-    saturating_addsub_impl<T>(op, a, ScalarRhs<T>{b}, n, out);                                     \
+    saturating_addsub_impl<T>(op, a, ag_ScalarRhs<T>{b}, n, out);                                  \
   }
 
 QUIVER_K10_DEFINE(std::int8_t)

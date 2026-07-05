@@ -25,7 +25,8 @@
     "ledger",
     "site",
     "src",
-    "tests"
+    "tests",
+    "tools"
   ],
   "required": [
     "LICENSE",
@@ -46,6 +47,9 @@
     "cmake/packaging/vcpkg/vcpkg.json",
     "cmake/packaging/vcpkg/portfile.cmake",
     "cmake/packaging/conan/conanfile.py",
+    "tools/amalgamate/amalgamate.py",
+    "tools/amalgamate/test_amalgamate.py",
+    "docs/guides/vendoring.md",
     "examples/CMakeLists.txt",
     "examples/01_minimal_filter.cpp",
     "examples/02_filter_take_reduce.cpp",
@@ -277,9 +281,7 @@
     "docs/releases/gates/M7.md",
     "docs/releases/v0.5.0.md"
   ],
-  "forbidden_at_milestone": [
-    "tools"
-  ],
+  "forbidden_at_milestone": [],
   "docs_dirs_requiring_readme": [
     "docs",
     "docs/research",

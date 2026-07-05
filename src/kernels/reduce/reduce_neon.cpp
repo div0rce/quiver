@@ -89,57 +89,57 @@ QUIVER_FORCE_INLINE std::int64_t valid_count(const std::uint8_t* v, std::int64_t
 // --- Type-dispatched vector plumbing ----------------------------------------------------------
 
 template <class T>
-struct VecOf;
+struct red_VecOf;
 template <>
-struct VecOf<std::int8_t> {
+struct red_VecOf<std::int8_t> {
   using type = int8x16_t;
 };
 template <>
-struct VecOf<std::uint8_t> {
+struct red_VecOf<std::uint8_t> {
   using type = uint8x16_t;
 };
 template <>
-struct VecOf<std::int16_t> {
+struct red_VecOf<std::int16_t> {
   using type = int16x8_t;
 };
 template <>
-struct VecOf<std::uint16_t> {
+struct red_VecOf<std::uint16_t> {
   using type = uint16x8_t;
 };
 template <>
-struct VecOf<std::int32_t> {
+struct red_VecOf<std::int32_t> {
   using type = int32x4_t;
 };
 template <>
-struct VecOf<std::uint32_t> {
+struct red_VecOf<std::uint32_t> {
   using type = uint32x4_t;
 };
 template <>
-struct VecOf<std::int64_t> {
+struct red_VecOf<std::int64_t> {
   using type = int64x2_t;
 };
 template <>
-struct VecOf<std::uint64_t> {
+struct red_VecOf<std::uint64_t> {
   using type = uint64x2_t;
 };
 template <>
-struct VecOf<float> {
+struct red_VecOf<float> {
   using type = float32x4_t;
 };
 template <>
-struct VecOf<double> {
+struct red_VecOf<double> {
   using type = float64x2_t;
 };
 template <class T>
-using Vec = typename VecOf<T>::type;
+using red_Vec = typename red_VecOf<T>::type;
 
 template <class T>
-constexpr std::int64_t vec_lanes() noexcept {
+constexpr std::int64_t red_vec_lanes() noexcept {
   return static_cast<std::int64_t>(16 / sizeof(T));
 }
 
 template <class T>
-QUIVER_FORCE_INLINE Vec<T> load_vec(const T* p) noexcept {
+QUIVER_FORCE_INLINE red_Vec<T> red_load_vec(const T* p) noexcept {
   if constexpr (std::is_same_v<T, std::int8_t>) {
     return vld1q_s8(p);
   } else if constexpr (std::is_same_v<T, std::uint8_t>) {
@@ -164,7 +164,7 @@ QUIVER_FORCE_INLINE Vec<T> load_vec(const T* p) noexcept {
 }
 
 template <class T>
-QUIVER_FORCE_INLINE Vec<T> broadcast(T v) noexcept {
+QUIVER_FORCE_INLINE red_Vec<T> red_broadcast(T v) noexcept {
   if constexpr (std::is_same_v<T, std::int8_t>) {
     return vdupq_n_s8(v);
   } else if constexpr (std::is_same_v<T, std::uint8_t>) {
@@ -205,7 +205,8 @@ QUIVER_FORCE_INLINE auto group_mask(const std::uint8_t* validity, std::int64_t i
 // Byte-level blend (mask lanes are all-ones/all-zero, so vbslq_u8 is width-agnostic).
 // memcpy bit-copies replace per-type vreinterpretq chains; they compile to nothing.
 template <class T, class M>
-QUIVER_FORCE_INLINE Vec<T> blend(M lane_mask, Vec<T> on_true, Vec<T> on_false) noexcept {
+QUIVER_FORCE_INLINE red_Vec<T> blend(M lane_mask, red_Vec<T> on_true,
+                                     red_Vec<T> on_false) noexcept {
   uint8x16_t m;
   uint8x16_t t;
   uint8x16_t f;
@@ -213,7 +214,7 @@ QUIVER_FORCE_INLINE Vec<T> blend(M lane_mask, Vec<T> on_true, Vec<T> on_false) n
   std::memcpy(&t, &on_true, 16);
   std::memcpy(&f, &on_false, 16);
   const uint8x16_t r = vbslq_u8(m, t, f);
-  Vec<T> out;
+  red_Vec<T> out;
   std::memcpy(&out, &r, 16);
   return out;
 }
@@ -221,7 +222,7 @@ QUIVER_FORCE_INLINE Vec<T> blend(M lane_mask, Vec<T> on_true, Vec<T> on_false) n
 // --- Dense min/max ------------------------------------------------------------------------------
 
 template <class T, bool IsMin>
-QUIVER_FORCE_INLINE Vec<T> minmax_step(Vec<T> acc, Vec<T> v) noexcept {
+QUIVER_FORCE_INLINE red_Vec<T> minmax_step(red_Vec<T> acc, red_Vec<T> v) noexcept {
   if constexpr (std::is_same_v<T, std::int8_t>) {
     return IsMin ? vminq_s8(acc, v) : vmaxq_s8(acc, v);
   } else if constexpr (std::is_same_v<T, std::uint8_t>) {
@@ -267,7 +268,7 @@ T first_participating_zero(const T* in, std::int64_t n, const std::uint8_t* vali
 
 template <class T, bool WantMin, bool WantMax>
 MinMax<T> dense_minmax(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
-  constexpr std::int64_t kW = vec_lanes<T>();
+  constexpr std::int64_t kW = red_vec_lanes<T>();
   constexpr T kIdMin = std::numeric_limits<T>::max();
   constexpr T kIdMax = std::numeric_limits<T>::lowest();
   T bmin = kIdMin;
@@ -275,15 +276,15 @@ MinMax<T> dense_minmax(const T* in, std::int64_t n, const std::uint8_t* validity
   bool saw_nan = false;
   std::int64_t i = 0;
   if (n >= kW) {
-    const Vec<T> idmin = broadcast(kIdMin);
-    const Vec<T> idmax = broadcast(kIdMax);
-    Vec<T> accmin = idmin;
-    Vec<T> accmax = idmax;
+    const red_Vec<T> idmin = red_broadcast(kIdMin);
+    const red_Vec<T> idmax = red_broadcast(kIdMax);
+    red_Vec<T> accmin = idmin;
+    red_Vec<T> accmax = idmax;
     [[maybe_unused]] uint8x16_t nans = vdupq_n_u8(0);
     for (; i + kW <= n; i += kW) {
-      const Vec<T> v = load_vec(in + i);
-      Vec<T> vn = v;
-      Vec<T> vx = v;
+      const red_Vec<T> v = red_load_vec(in + i);
+      red_Vec<T> vn = v;
+      red_Vec<T> vx = v;
       if (validity != nullptr) {
         const auto lm = group_mask<T>(validity, i);
         vn = blend<T>(lm, v, idmin);
@@ -364,15 +365,15 @@ template <class T>
 SumType<T> dense_sum_wrap_int(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
   using S = SumType<T>;
   using U = std::make_unsigned_t<S>;
-  constexpr std::int64_t kW = vec_lanes<T>();
+  constexpr std::int64_t kW = red_vec_lanes<T>();
   constexpr bool kSigned = std::is_signed_v<T>;
   // One vector's worth of elements, fully widened to 64-bit lanes (exact — no intermediate
   // stage can overflow; the 64-bit wrap IS the spec).
   const auto widened = [&](std::int64_t at) -> uint64x2_t {
-    Vec<T> v = load_vec(in + at);
+    red_Vec<T> v = red_load_vec(in + at);
     if (validity != nullptr) {
       const auto lm = group_mask<T>(validity, at);
-      v = blend<T>(lm, v, broadcast(T{0}));
+      v = blend<T>(lm, v, red_broadcast(T{0}));
     }
     if constexpr (sizeof(T) == 1) {
       if constexpr (kSigned) {
@@ -431,15 +432,16 @@ SumType<T> dense_sum_wrap_int(const T* in, std::int64_t n, const std::uint8_t* v
 
 template <class T>
 T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
-  constexpr std::int64_t kW = vec_lanes<T>();  // f32: 4, f64: 2
+  constexpr std::int64_t kW = red_vec_lanes<T>();  // f32: 4, f64: 2
   constexpr int kA = 4;
   T s = T{0};
   std::int64_t i = 0;
-  Vec<T> acc[kA] = {broadcast(T{0}), broadcast(T{0}), broadcast(T{0}), broadcast(T{0})};
-  const Vec<T> neg0 = broadcast(T{-0.0});
+  red_Vec<T> acc[kA] = {red_broadcast(T{0}), red_broadcast(T{0}), red_broadcast(T{0}),
+                        red_broadcast(T{0})};
+  const red_Vec<T> neg0 = red_broadcast(T{-0.0});
   for (; i + kA * kW <= n; i += kA * kW) {
     for (int k = 0; k < kA; ++k) {
-      Vec<T> v = load_vec(in + i + k * kW);
+      red_Vec<T> v = red_load_vec(in + i + k * kW);
       if (validity != nullptr) {
         const auto lm = group_mask<T>(validity, i + k * kW);
         v = blend<T>(lm, v, neg0);
@@ -451,7 +453,7 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
       }
     }
   }
-  Vec<T> vsum;
+  red_Vec<T> vsum;
   if constexpr (std::is_same_v<T, float>) {  // ADR-013 frozen combine: (0+2),(1+3), then +
     vsum = vaddq_f32(vaddq_f32(acc[0], acc[2]), vaddq_f32(acc[1], acc[3]));
   } else {

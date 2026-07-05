@@ -66,7 +66,8 @@ constexpr int kLanes = 64 / static_cast<int>(sizeof(T));  // lanes per 512-bit g
   }                                                                                                \
   return 0
 
-// Compare a full group of lanes at `p` against a broadcast scalar; returns the N predicate bits.
+// Compare a full group of lanes at `p` against a cmp_broadcast scalar; returns the N predicate
+// bits.
 template <class T>
 QUIVER_FORCE_INLINE std::uint64_t cmp_scalar_group(CompareOp op, const T* p, T comparand) noexcept {
   if constexpr (std::is_same_v<T, float>) {

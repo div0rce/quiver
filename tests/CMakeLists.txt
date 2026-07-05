@@ -12,7 +12,7 @@ if(NOT MSVC)
   target_compile_options(quiver_testkit PRIVATE -Wall -Wextra)
 endif()
 
-add_executable(quiver_tests_unit
+set(QUIVER_UNIT_SOURCES
   unit/test_main.cpp
   unit/test_core.cpp
   unit/test_dispatch.cpp
@@ -27,6 +27,8 @@ add_executable(quiver_tests_unit
   unit/test_hash.cpp
   unit/test_unpack.cpp
   unit/test_arith.cpp)
+
+add_executable(quiver_tests_unit ${QUIVER_UNIT_SOURCES})
 
 target_link_libraries(quiver_tests_unit PRIVATE quiver::quiver quiver_testkit GTest::gtest)
 # Tests may include internal headers ("src/..." form, REQ-STD-006); consumers may not.
@@ -139,6 +141,51 @@ add_executable(quiver_drift_check
   ${CMAKE_SOURCE_DIR}/bench/harness/distributions.cpp)
 target_link_libraries(quiver_drift_check PRIVATE quiver_testkit)
 add_test(NAME Testkit.BenchDistributionDriftAlarm COMMAND quiver_drift_check)
+
+# --- Amalgamation verify (REQ-BUILD-013): compile the generated single-file pair and run the
+# unit suite against it, requiring byte-identical kernel outputs versus the normal build. The
+# generated quiver.cpp is built as its own library under the shipped-library warning + no-
+# exceptions baseline; the test TUs link ONLY it (never quiver::quiver) so there is exactly one
+# definition of every kernel. `test_amalgamate.py` covers the generator's determinism and rules.
+if(TARGET quiver_amalgamate)
+  set_source_files_properties("${QUIVER_AMALG_CPP}" PROPERTIES GENERATED TRUE)
+  add_library(quiver_amalgamated STATIC "${QUIVER_AMALG_CPP}")
+  add_dependencies(quiver_amalgamated quiver_amalgamate)
+  target_include_directories(quiver_amalgamated PUBLIC "${QUIVER_AMALG_DIR}")
+  target_compile_features(quiver_amalgamated PUBLIC cxx_std_23)
+  quiver_apply_warnings(quiver_amalgamated)
+  quiver_apply_library_constraints(quiver_amalgamated)
+
+  # Reuse the unit suite + testkit source directly (not the testkit lib, which pulls
+  # quiver::quiver PUBLIC — that would double-define every symbol against the amalgamation).
+  add_executable(quiver_tests_unit_amalgamated ${QUIVER_UNIT_SOURCES} testkit/generators.cpp)
+  target_link_libraries(quiver_tests_unit_amalgamated PRIVATE quiver_amalgamated GTest::gtest)
+  target_include_directories(quiver_tests_unit_amalgamated
+    PRIVATE ${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/include)
+  if(_quiver_gtest_incs)
+    target_include_directories(quiver_tests_unit_amalgamated SYSTEM PRIVATE ${_quiver_gtest_incs})
+  endif()
+  if(QUIVER_ENABLE_ASSERTS)
+    target_compile_definitions(quiver_tests_unit_amalgamated PRIVATE QUIVER_ENABLE_ASSERTS=1)
+  endif()
+  target_compile_definitions(quiver_tests_unit_amalgamated PRIVATE
+    QUIVER_GOLDEN_DIR="${CMAKE_SOURCE_DIR}/tests/golden")
+  if(MSVC)
+    target_compile_options(quiver_tests_unit_amalgamated PRIVATE /W4)
+  else()
+    target_compile_options(quiver_tests_unit_amalgamated PRIVATE -Wall -Wextra)
+  endif()
+  gtest_discover_tests(quiver_tests_unit_amalgamated DISCOVERY_TIMEOUT 60
+    TEST_PREFIX "Amalgamated.")
+
+  # Generator self-tests (determinism, guard/include stripping, --check catches violations).
+  if(Python3_FOUND AND NOT Python3_VERSION VERSION_LESS 3.11)
+    add_test(NAME Amalgamate.GeneratorUnit
+             COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/amalgamate/test_amalgamate.py)
+    add_test(NAME Amalgamate.SourceRulesCheck
+             COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/amalgamate/amalgamate.py --check)
+  endif()
+endif()
 
 # MOD-LEDGER runner unit tests (REQ-INT-004: Python >= 3.11 stdlib only): ADR-020 golden
 # statistics + QLS-1 schema accept/reject fixtures (PRD 11 §10).

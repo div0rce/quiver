@@ -186,6 +186,46 @@ jobs:
           cmake --build build/consume-fc -j 4
           ./build/consume-fc/consumer
 
+  amalgamation:
+    # REQ-BUILD-013 / REQ-INT-005 / REQ-STD-006 / REQ-BUILD-010 mode (c): lint the source
+    # amalgamation-compatibility rules, compile the generated single-file pair and run the unit
+    # suite against it (byte-identical kernel outputs), and prove the two-file drop-in builds with
+    # one compiler command. GCC/Clang only here; the MSVC narrowing path is a separate leg.
+    name: amalgamation (verify + drop-in; REQ-BUILD-013)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned clang
+        run: sudo apt-get update -q && sudo apt-get install -y -q clang-18
+      - name: "REQ-STD-006: amalgamation-compatibility lint"
+        run: python3 tools/amalgamate/amalgamate.py --check
+      - name: "Verify: compile the pair + run the unit suite against it (WERROR)"
+        env: { CC: clang-18, CXX: clang++-18 }
+        run: |
+          set -eu
+          cmake --preset dev -DQUIVER_ENABLE_WERROR=ON
+          cmake --build --preset dev --target quiver_tests_unit_amalgamated -j 4
+          ctest --preset dev --output-on-failure -R '^(Amalgamated|Amalgamate)\.'
+      - name: "Mode (c): two-file drop-in builds with a single compiler command"
+        run: |
+          set -eu
+          python3 tools/amalgamate/amalgamate.py --out-dir amalg
+          cat > consumer.cpp <<'CPP'
+          #include "quiver.h"
+          #include <cstdint>
+          #include <cstdio>
+          int main() {
+            const int v[] = {1, 9, 3, 7, 2, 8};
+            std::uint8_t bits[1] = {0};
+            const auto c = quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<int>{v, 6},
+                                                  4, quiver::BitmapView{nullptr}, bits);
+            std::printf("drop-in kept=%lld isa=%d\n", (long long)c, (int)quiver::active_isa());
+            return c == 3 ? 0 : 1;
+          }
+          CPP
+          clang++-18 -std=c++23 -Iamalg amalg/quiver.cpp consumer.cpp -o demo
+          ./demo
+
   asan-ubsan:
     name: sanitizers (ASan+UBSan, clang)
     runs-on: ubuntu-24.04

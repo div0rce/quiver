@@ -23,7 +23,7 @@ namespace detail::avx2 {
 namespace {
 
 // Wrapping 64x64 -> low-64 multiply via three vpmuludq partials (no vpmullq before AVX-512).
-QUIVER_FORCE_INLINE __m256i mul64_lo(__m256i a, __m256i b) noexcept {
+QUIVER_FORCE_INLINE __m256i hsh_mul64_lo(__m256i a, __m256i b) noexcept {
   const __m256i a_hi = _mm256_srli_epi64(a, 32);
   const __m256i b_hi = _mm256_srli_epi64(b, 32);
   const __m256i lo_lo = _mm256_mul_epu32(a, b);     // lo(a)*lo(b), full 64
@@ -37,9 +37,9 @@ QUIVER_FORCE_INLINE __m256i fmix64_vec(__m256i x) noexcept {
   const __m256i c1 = _mm256_set1_epi64x(static_cast<long long>(scalar_impl::kHashC1));
   const __m256i c2 = _mm256_set1_epi64x(static_cast<long long>(scalar_impl::kHashC2));
   x = _mm256_xor_si256(x, _mm256_srli_epi64(x, 33));
-  x = mul64_lo(x, c1);
+  x = hsh_mul64_lo(x, c1);
   x = _mm256_xor_si256(x, _mm256_srli_epi64(x, 33));
-  x = mul64_lo(x, c2);
+  x = hsh_mul64_lo(x, c2);
   x = _mm256_xor_si256(x, _mm256_srli_epi64(x, 33));
   return x;
 }
