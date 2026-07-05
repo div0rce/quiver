@@ -4,6 +4,38 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-07-05
+
+### Added
+
+- M8 — the vendoring and packaging surface (Charter §6.5):
+  - Installable CMake package: `install()` exports the headers, the static archive, and a
+    `find_package(Quiver CONFIG)` package (`quiver::quiver`), and nothing else (REQ-BUILD-009).
+  - Single-file **amalgamation**: `tools/amalgamate/amalgamate.py` generates the drop-in pair
+    `quiver.h` + `quiver.cpp` (byte-deterministic, ADR-018); `quiver_amalgamate_verify` compiles
+    it and runs the unit suite against it with byte-identical kernel outputs (REQ-BUILD-013).
+  - All three consumption modes CI-verified — find_package, FetchContent, amalgamation drop-in —
+    including a `-fno-exceptions` consumer (REQ-BUILD-010).
+  - Four runnable examples (REQ-INT-006); an end-to-end pipeline benchmark composing
+    compare→select→take→reduce (REQ-BENCH-012); vcpkg/Conan packaging skeletons (REQ-BUILD-015).
+  - Compile-time ISA pinning `QUIVER_PIN_ISA=scalar|neon|avx2|avx512` (REQ-DISP-013): a build
+    that statically resolves every dispatch entry to the pinned tier.
+  - A tag-triggered `release.yml` producing the amalgamation pair + source archive with
+    `SHA256SUMS` and a GitHub build-provenance attestation (REQ-CI-009, REQ-REL-004).
+  - LTO state recorded as a benchmark ledger manifest field (REQ-BUILD-014).
+
+### Changed
+
+- ISA backend TUs use family-unique anonymous-namespace helper names so the amalgamation's
+  single translation unit has no collisions (behavior-preserving; REQ-STD-006 amendment).
+- `ci.yml`/`nightly.yml` are reusable (`workflow_call`) so a release tag runs the full gate.
+
+### Notes
+
+- ADR-018 amended: the MSVC per-ISA narrowing is unnecessary for the default-`/arch` build
+  (empirical finding); `/arch`-consumer narrowing is a tier-2 deferral (R-17). The version
+  constant still trails the SemVer tags at 0.1.0 (pre-existing; see gate M8 §8).
+
 ## [0.5.0] — 2026-07-04
 
 ### Added

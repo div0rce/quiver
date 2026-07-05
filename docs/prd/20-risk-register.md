@@ -22,6 +22,8 @@ Engineering risks with likelihood (L), impact (I) on a low/med/high scale, mitig
 | R-14 | Avalanche suite gives false confidence vs full SMHasher | low | med | documented as SMHasher-subset (ADR-012); one full SMHasher run recorded in family doc at M6 | M6 gate |
 | R-15 | Ledger repo growth (raw JSON) beyond comfortable clone size | low | low | monitored; git-lfs contingency (ADR-021) | repo size at gates |
 | R-16 | Charter/PRD conflict discovered mid-implementation | low | high | stop-and-report rule (master prompt Part 12; [00 §1](00-executive-summary.md)); amendment process defined (Charter §0, PRD [README](README.md)) | any stop-report |
+| R-17 | Amalgamation consumer sets MSVC `/arch:AVX2`+, raising the whole-TU baseline and leaking higher-ISA codegen into the baseline path | low | med | supported config is default `/arch` (baseline-safe by construction), enforced by the `msvc-amalgamation` CI leg + vendoring guide; per-ISA narrowing deferred (tier-2), [ADR-018](../adr/ADR-018-amalgamation-generation-strategy.md) M8 amendment | msvc-amalgamation job; vendoring.md |
+| R-18 | Pre-existing tier-2 MSVC gaps surfaced by the first MSVC CI (M8): `reduce_sum_checked` on MSVC uses the documented no-`__int128` per-add fallback (weaker than the tier-1 exact-unrepresentability contract, API-K6-003); the Windows VirtualAlloc guard-page test harness SEH-faults | low | low | the `__int128` path is exact on all tier-1 toolchains; the two cases are excluded on the `msvc-amalgamation` leg with a cited reason; reopening = manual 128-bit fallback + a working Windows guard-page harness, if MSVC is promoted beyond best-effort tier-2 | msvc-amalgamation job; gate M8 §8 |
 
 ## 2. Traceability
 

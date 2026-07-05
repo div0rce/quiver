@@ -1,5 +1,5 @@
 {
-  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M8 (in progress).",
+  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M8 complete (v0.6.0).",
   "milestone": "M8",
   "allowed_toplevel": [
     ".clang-format",
@@ -281,7 +281,9 @@
     "src/kernels/filter/filter_avx512.cpp",
     "src/kernels/select/select_avx512.cpp",
     "docs/releases/gates/M7.md",
-    "docs/releases/v0.5.0.md"
+    "docs/releases/v0.5.0.md",
+    "docs/releases/gates/M8.md",
+    "docs/releases/v0.6.0.md"
   ],
   "forbidden_at_milestone": [],
   "docs_dirs_requiring_readme": [

@@ -99,8 +99,10 @@ nav:
       - Gate M5: releases/gates/M5.md
       - Gate M6: releases/gates/M6.md
       - Gate M7: releases/gates/M7.md
+      - Gate M8: releases/gates/M8.md
       - v0.1.0: releases/v0.1.0.md
       - v0.2.0: releases/v0.2.0.md
       - v0.3.0: releases/v0.3.0.md
       - v0.4.0: releases/v0.4.0.md
       - v0.5.0: releases/v0.5.0.md
+      - v0.6.0: releases/v0.6.0.md
