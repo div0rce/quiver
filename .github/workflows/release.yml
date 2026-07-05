@@ -1,0 +1,59 @@
+# Release workflow (MOD-CI) — REQ-CI-009, REQ-REL-003/-004. On a vX.Y.Z tag: run the full
+# ci.yml gate set and the nightly suite, then build the release artifacts (amalgamation pair +
+# source archive), generate SHA256SUMS and a GitHub artifact attestation (REQ-SEC-006), and open
+# a DRAFT release from the notes template. Publication stays manual — a maintainer reviews the
+# draft (REQ-REL-003 §5 step 7). Amalgamation artifacts are release-only, never committed
+# (REQ-REPO-011). Action pins by commit SHA per REQ-CI-001.
+name: release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: full CI gate
+    uses: ./.github/workflows/ci.yml
+
+  nightly:
+    name: nightly suite
+    uses: ./.github/workflows/nightly.yml
+
+  publish:
+    name: build artifacts + draft release
+    needs: [gate, nightly]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # create the draft release
+      id-token: write # artifact attestation (REQ-SEC-006)
+      attestations: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # tags + history for the amalgamation version stamp and source archive
+      - name: Build release artifacts (amalgamation pair + source archive)
+        run: |
+          set -eu
+          tag="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          python3 tools/amalgamate/amalgamate.py --out-dir dist
+          git archive --format=tar.gz --prefix="quiver-${tag}/" \
+            -o "dist/quiver-${tag}-src.tar.gz" "${tag}"
+          (cd dist && sha256sum quiver.h quiver.cpp "quiver-${tag}-src.tar.gz" > SHA256SUMS)
+          cat dist/SHA256SUMS
+      - name: Attest build provenance (REQ-SEC-006)
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: "dist/quiver.h,dist/quiver.cpp,dist/quiver-*-src.tar.gz"
+      - name: Draft release from the notes template
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          tag="${GITHUB_REF_NAME}"
+          sed "s/{{VERSION}}/${tag}/g" .github/release-notes-template.md > dist/notes.md
+          gh release create "${tag}" --draft --title "Quiver ${tag}" --notes-file dist/notes.md \
+            dist/quiver.h dist/quiver.cpp "dist/quiver-${tag}-src.tar.gz" dist/SHA256SUMS

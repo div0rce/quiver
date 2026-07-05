@@ -157,6 +157,8 @@
     "tests/invariant/inv_guard_pages.cpp",
     "tests/regression/README.md",
     ".github/workflows/nightly.yml",
+    ".github/workflows/release.yml",
+    ".github/release-notes-template.md",
     "docs/guides/getting-started.md",
     "docs/releases/gates/M3.md",
     "docs/releases/v0.1.0.md",
