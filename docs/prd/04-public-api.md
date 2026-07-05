@@ -39,6 +39,9 @@ concept IntElement = Element<T> && std::integral<T>;
 template <class T>
 concept CodeType = std::same_as<T, std::uint8_t> || std::same_as<T, std::uint16_t>
                  || std::same_as<T, std::uint32_t>;
+template <class T>  // K8 unpack output width
+concept UnpackOut = std::same_as<T, std::uint8_t> || std::same_as<T, std::uint16_t>
+                 || std::same_as<T, std::uint32_t> || std::same_as<T, std::uint64_t>;
 
 enum class CompareOp : std::uint8_t { kEq, kNe, kLt, kLe, kGt, kGe };
 enum class MaskOp    : std::uint8_t { kAnd, kOr, kAndNot, kXor };
@@ -199,8 +202,8 @@ quiver::hash64_combine(h1, h2, n, h1);   // out == a aliasing permitted
 
 | API ID | Signature |
 |---|---|
-| API-K8-001 | `template<class Out> void unpack(const std::uint8_t* packed, std::int64_t n, int bit_width, Out* out) noexcept;` — `Out ∈ {uint8_t, uint16_t, uint32_t, uint64_t}` |
-| API-K8-002 | `template<class Out> void unpack_for(const std::uint8_t* packed, std::int64_t n, int bit_width, Out base, Out* out) noexcept;` — `out[i] = base + value_i` (wrapping) |
+| API-K8-001 | `template<UnpackOut Out> void unpack(const std::uint8_t* packed, std::int64_t n, int bit_width, Out* out) noexcept;` — `Out ∈ {uint8_t, uint16_t, uint32_t, uint64_t}` |
+| API-K8-002 | `template<UnpackOut Out> void unpack_for(const std::uint8_t* packed, std::int64_t n, int bit_width, Out base, Out* out) noexcept;` — `out[i] = base + value_i` (wrapping) |
 
 **Purpose:** bit-unpack packed integers; frame-of-reference fusion (Charter K8; Survey §1.4 PFOR lineage). **Layout (ADR-026):** value *i* occupies bits `[i·w, (i+1)·w)` of the stream; bit *j* = byte `j/8`, bit `j%8` (LSB-first little-endian; Parquet-compatible). **Preconditions:** `0 ≤ bit_width ≤ 8·sizeof(Out)`; `packed` readable for exactly `⌈n·bit_width/8⌉` bytes — the kernel shall not read beyond that bound (hardened + fuzz-prioritized: REQ-SEC-004); `bit_width == 0` means all values equal 0 (or `base` for `unpack_for`) and `packed` may be null. **Postconditions:** writes exactly `n` elements. **Tests/benchmarks:** width sweep 0..8·sizeof(Out) exhaustive in the differential matrix; `bench_unpack.cpp` (width × Out × ISA).
 
