@@ -22,8 +22,10 @@
 
 **Failure modes.** Unknown CPUs resolve to scalar (never a crash); invalid `QUIVER_ISA` values are ignored; `set_isa_override` on an unsupported tier returns `false` with no state change; a null-scalar backend row is structurally excluded (asserted).
 
-**Performance notes.** Steady-state overhead: ≤ 3 atomic loads (one acquire, two relaxed) + 1 predictable branch + 1 indirect call (REQ-DISP-003); measured by `bench_dispatch` from M3.
+**Compile-time pinning (`QUIVER_PIN_ISA`, REQ-DISP-013).** Setting the build option `QUIVER_PIN_ISA` to `scalar`, `neon`, `avx2`, or `avx512` produces a build in which every entry statically resolves to the pinned tier: backend TUs above the pin are not compiled (scalar always compiles as the base fallback, REQ-DISP-001; AVX2 stays as AVX-512's fallback), and the dispatch rows null the excluded slots to match. In a pinned build `active_isa()` returns the pin, `QUIVER_ISA` is ignored, and `set_isa_override` accepts only `kScalar` (to force the base fallback) and the pin itself — higher tiers are absent so an override to them could never resolve. A pinned build run on hardware lacking the pinned tier is the embedder's contract violation: caught by a first-touch debug assertion (`cpu_supports(pin)`), undefined behavior in release. Use it to shrink a build for a known deployment target or to A/B a single tier; leave it unset for portable binaries. Verified by the pinned-build CI leg (`QUIVER_PIN_ISA=avx2`, REQ-CI-008).
+
+**Performance notes.** Steady-state overhead: ≤ 3 atomic loads (one acquire, two relaxed) + 1 predictable branch + 1 indirect call (REQ-DISP-003); measured by `bench_dispatch` from M3. A pinned build removes the environment/override policy width, so the cap folds to a constant (asserts off).
 
 **Validation.** `tests/unit/test_dispatch.cpp`: env matrix (one child process per value), override round-trip, monotonicity, synthetic-entry resolution incl. null-row skipping and epoch retraction, warmup idempotence, and the TSan-validated concurrent-resolution test.
 
-**Related requirements.** REQ-DISP-001..012, REQ-INT-001. **Related ADRs:** [ADR-004](../adr/ADR-004-lazy-atomic-per-entry-dispatch-with-policy-epoch.md), [ADR-005](../adr/ADR-005-first-party-cpu-feature-detection.md).
+**Related requirements.** REQ-DISP-001..013, REQ-INT-001. **Related ADRs:** [ADR-004](../adr/ADR-004-lazy-atomic-per-entry-dispatch-with-policy-epoch.md), [ADR-005](../adr/ADR-005-first-party-cpu-feature-detection.md).
