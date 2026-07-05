@@ -29,52 +29,52 @@ namespace {
 // --- Type-dispatched vector aliases, loads, broadcasts ---------------------------------------
 
 template <class T>
-struct VecOf;
+struct cmp_VecOf;
 template <>
-struct VecOf<std::int8_t> {
+struct cmp_VecOf<std::int8_t> {
   using type = int8x16_t;
 };
 template <>
-struct VecOf<std::uint8_t> {
+struct cmp_VecOf<std::uint8_t> {
   using type = uint8x16_t;
 };
 template <>
-struct VecOf<std::int16_t> {
+struct cmp_VecOf<std::int16_t> {
   using type = int16x8_t;
 };
 template <>
-struct VecOf<std::uint16_t> {
+struct cmp_VecOf<std::uint16_t> {
   using type = uint16x8_t;
 };
 template <>
-struct VecOf<std::int32_t> {
+struct cmp_VecOf<std::int32_t> {
   using type = int32x4_t;
 };
 template <>
-struct VecOf<std::uint32_t> {
+struct cmp_VecOf<std::uint32_t> {
   using type = uint32x4_t;
 };
 template <>
-struct VecOf<std::int64_t> {
+struct cmp_VecOf<std::int64_t> {
   using type = int64x2_t;
 };
 template <>
-struct VecOf<std::uint64_t> {
+struct cmp_VecOf<std::uint64_t> {
   using type = uint64x2_t;
 };
 template <>
-struct VecOf<float> {
+struct cmp_VecOf<float> {
   using type = float32x4_t;
 };
 template <>
-struct VecOf<double> {
+struct cmp_VecOf<double> {
   using type = float64x2_t;
 };
 template <class T>
-using Vec = typename VecOf<T>::type;
+using cmp_Vec = typename cmp_VecOf<T>::type;
 
 template <class T>
-QUIVER_FORCE_INLINE Vec<T> load_vec(const T* p) noexcept {
+QUIVER_FORCE_INLINE cmp_Vec<T> cmp_load_vec(const T* p) noexcept {
   if constexpr (std::is_same_v<T, std::int8_t>) {
     return vld1q_s8(p);
   } else if constexpr (std::is_same_v<T, std::uint8_t>) {
@@ -99,7 +99,7 @@ QUIVER_FORCE_INLINE Vec<T> load_vec(const T* p) noexcept {
 }
 
 template <class T>
-QUIVER_FORCE_INLINE Vec<T> broadcast(T v) noexcept {
+QUIVER_FORCE_INLINE cmp_Vec<T> cmp_broadcast(T v) noexcept {
   if constexpr (std::is_same_v<T, std::int8_t>) {
     return vdupq_n_s8(v);
   } else if constexpr (std::is_same_v<T, std::uint8_t>) {
@@ -125,7 +125,7 @@ QUIVER_FORCE_INLINE Vec<T> broadcast(T v) noexcept {
 
 // Unsigned lane-mask type of T's width (what vector compares return).
 template <class T>
-QUIVER_FORCE_INLINE auto cmp_eq(Vec<T> a, Vec<T> b) noexcept {
+QUIVER_FORCE_INLINE auto cmp_eq(cmp_Vec<T> a, cmp_Vec<T> b) noexcept {
   if constexpr (sizeof(T) == 1) {
     if constexpr (std::is_signed_v<T>) {
       return vceqq_s8(a, b);
@@ -158,7 +158,7 @@ QUIVER_FORCE_INLINE auto cmp_eq(Vec<T> a, Vec<T> b) noexcept {
 }
 
 template <class T>
-QUIVER_FORCE_INLINE auto cmp_gt(Vec<T> a, Vec<T> b) noexcept {
+QUIVER_FORCE_INLINE auto cmp_gt(cmp_Vec<T> a, cmp_Vec<T> b) noexcept {
   if constexpr (sizeof(T) == 1) {
     if constexpr (std::is_signed_v<T>) {
       return vcgtq_s8(a, b);
@@ -191,7 +191,8 @@ QUIVER_FORCE_INLINE auto cmp_gt(Vec<T> a, Vec<T> b) noexcept {
 }
 
 template <class T>
-QUIVER_FORCE_INLINE auto cmp_ge(Vec<T> a, Vec<T> b) noexcept {  // floats only (native ordered)
+QUIVER_FORCE_INLINE auto cmp_ge(cmp_Vec<T> a,
+                                cmp_Vec<T> b) noexcept {  // floats only (native ordered)
   if constexpr (std::is_same_v<T, float>) {
     return vcgeq_f32(a, b);
   } else {
@@ -200,7 +201,8 @@ QUIVER_FORCE_INLINE auto cmp_ge(Vec<T> a, Vec<T> b) noexcept {  // floats only (
 }
 
 template <class T>
-QUIVER_FORCE_INLINE auto cmp_le(Vec<T> a, Vec<T> b) noexcept {  // floats only (native ordered)
+QUIVER_FORCE_INLINE auto cmp_le(cmp_Vec<T> a,
+                                cmp_Vec<T> b) noexcept {  // floats only (native ordered)
   if constexpr (std::is_same_v<T, float>) {
     return vcleq_f32(a, b);
   } else {
@@ -268,7 +270,7 @@ QUIVER_FORCE_INLINE std::uint32_t pack4_bits(uint64x2_t m0, uint64x2_t m1, uint6
 // --- (integers + float kNe only); one(i) is the exact scalar predicate for tails.
 
 template <class T>
-QUIVER_FORCE_INLINE auto op_mask(CompareOp op, Vec<T> a, Vec<T> b) noexcept {
+QUIVER_FORCE_INLINE auto op_mask(CompareOp op, cmp_Vec<T> a, cmp_Vec<T> b) noexcept {
   if constexpr (std::is_floating_point_v<T>) {
     // Native ordered compares (NaN false); kNe = post-pack inversion of eq (NaN true, exact).
     switch (op) {
@@ -315,9 +317,9 @@ struct CmpRhs {  // in[i] <op> comparand
   CompareOp op;
   const T* in;
   T comparand;
-  Vec<T> bvec;
+  cmp_Vec<T> bvec;
   QUIVER_FORCE_INLINE auto mask(std::int64_t i) const noexcept {
-    return op_mask<T>(op, load_vec(in + i), bvec);
+    return op_mask<T>(op, cmp_load_vec(in + i), bvec);
   }
   QUIVER_FORCE_INLINE bool inv() const noexcept { return op_inverts<T>(op); }
   QUIVER_FORCE_INLINE bool one(std::int64_t i) const noexcept {
@@ -331,7 +333,7 @@ struct CmpBatch {  // a[i] <op> b[i]
   const T* a;
   const T* b;
   QUIVER_FORCE_INLINE auto mask(std::int64_t i) const noexcept {
-    return op_mask<T>(op, load_vec(a + i), load_vec(b + i));
+    return op_mask<T>(op, cmp_load_vec(a + i), cmp_load_vec(b + i));
   }
   QUIVER_FORCE_INLINE bool inv() const noexcept { return op_inverts<T>(op); }
   QUIVER_FORCE_INLINE bool one(std::int64_t i) const noexcept {
@@ -344,10 +346,10 @@ struct CmpBetween {  // lo <= in[i] && in[i] <= hi (inclusive; NaN excluded by o
   const T* in;
   T lo;
   T hi;
-  Vec<T> lo_vec;
-  Vec<T> hi_vec;
+  cmp_Vec<T> lo_vec;
+  cmp_Vec<T> hi_vec;
   QUIVER_FORCE_INLINE auto mask(std::int64_t i) const noexcept {
-    const Vec<T> a = load_vec(in + i);
+    const cmp_Vec<T> a = cmp_load_vec(in + i);
     if constexpr (std::is_floating_point_v<T>) {
       return mask_and(cmp_ge<T>(a, lo_vec), cmp_le<T>(a, hi_vec));
     } else {
@@ -393,14 +395,14 @@ constexpr std::int64_t group_lanes() noexcept {
   return sizeof(T) == 1 ? 16 : 8;
 }
 template <class T>
-constexpr std::int64_t vec_lanes() noexcept {
+constexpr std::int64_t cmp_vec_lanes() noexcept {
   return static_cast<std::int64_t>(16 / sizeof(T));
 }
 
 // Packed predicate bits for the group starting at element i (inversion applied, width-masked).
 template <class T, class Pred>
 QUIVER_FORCE_INLINE std::uint32_t group_bits(const Pred& pred, std::int64_t i) noexcept {
-  constexpr std::int64_t kV = vec_lanes<T>();
+  constexpr std::int64_t kV = cmp_vec_lanes<T>();
   std::uint32_t bits;
   if constexpr (sizeof(T) <= 2) {
     bits = pack_bits(pred.mask(i));
@@ -490,7 +492,7 @@ std::int64_t emit_selvec_neon(std::int64_t n, const Pred& pred, const Validity& 
 #define QUIVER_K1_DEFINE(T)                                                                        \
   std::int64_t k1_compare_bitmap(CompareOp op, const T* in, std::int64_t n, T comparand,           \
                                  const std::uint8_t* validity, std::uint8_t* out) noexcept {       \
-    return emit_bitmap_neon<T>(n, CmpRhs<T>{op, in, comparand, broadcast(comparand)},              \
+    return emit_bitmap_neon<T>(n, CmpRhs<T>{op, in, comparand, cmp_broadcast(comparand)},          \
                                OneValidity{validity}, out);                                        \
   }                                                                                                \
   std::int64_t k1_compare_bitmap2(CompareOp op, const T* a, const T* b, std::int64_t n,            \
@@ -502,12 +504,12 @@ std::int64_t emit_selvec_neon(std::int64_t n, const Pred& pred, const Validity& 
   std::int64_t k1_compare_between_bitmap(const T* in, std::int64_t n, T lo, T hi,                  \
                                          const std::uint8_t* validity,                             \
                                          std::uint8_t* out) noexcept {                             \
-    return emit_bitmap_neon<T>(n, CmpBetween<T>{in, lo, hi, broadcast(lo), broadcast(hi)},         \
+    return emit_bitmap_neon<T>(n, CmpBetween<T>{in, lo, hi, cmp_broadcast(lo), cmp_broadcast(hi)}, \
                                OneValidity{validity}, out);                                        \
   }                                                                                                \
   std::int64_t k1_compare_selvec(CompareOp op, const T* in, std::int64_t n, T comparand,           \
                                  const std::uint8_t* validity, std::uint32_t* out) noexcept {      \
-    return emit_selvec_neon<T>(n, CmpRhs<T>{op, in, comparand, broadcast(comparand)},              \
+    return emit_selvec_neon<T>(n, CmpRhs<T>{op, in, comparand, cmp_broadcast(comparand)},          \
                                OneValidity{validity}, out);                                        \
   }                                                                                                \
   std::int64_t k1_compare_selvec2(CompareOp op, const T* a, const T* b, std::int64_t n,            \
@@ -519,7 +521,7 @@ std::int64_t emit_selvec_neon(std::int64_t n, const Pred& pred, const Validity& 
   std::int64_t k1_compare_between_selvec(const T* in, std::int64_t n, T lo, T hi,                  \
                                          const std::uint8_t* validity,                             \
                                          std::uint32_t* out) noexcept {                            \
-    return emit_selvec_neon<T>(n, CmpBetween<T>{in, lo, hi, broadcast(lo), broadcast(hi)},         \
+    return emit_selvec_neon<T>(n, CmpBetween<T>{in, lo, hi, cmp_broadcast(lo), cmp_broadcast(hi)}, \
                                OneValidity{validity}, out);                                        \
   }
 

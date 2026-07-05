@@ -29,7 +29,7 @@ namespace {
 // --- Vector loads/broadcasts (type-dispatched; integer forms work on the byte image) --------
 
 template <class T>
-QUIVER_FORCE_INLINE auto load_vec(const T* p) noexcept {
+QUIVER_FORCE_INLINE auto cmp_load_vec(const T* p) noexcept {
   if constexpr (std::is_same_v<T, float>) {
     return _mm256_loadu_ps(p);
   } else if constexpr (std::is_same_v<T, double>) {
@@ -40,7 +40,7 @@ QUIVER_FORCE_INLINE auto load_vec(const T* p) noexcept {
 }
 
 template <class T>
-QUIVER_FORCE_INLINE auto broadcast(T value) noexcept {
+QUIVER_FORCE_INLINE auto cmp_broadcast(T value) noexcept {
   if constexpr (std::is_same_v<T, float>) {
     return _mm256_set1_ps(value);
   } else if constexpr (std::is_same_v<T, double>) {
@@ -161,8 +161,8 @@ QUIVER_FORCE_INLINE __m256d f64_mask(CompareOp op, __m256d a, __m256d b) noexcep
 }
 
 template <class T>
-QUIVER_FORCE_INLINE auto typed_mask(CompareOp op, decltype(load_vec<T>(nullptr)) a,
-                                    decltype(load_vec<T>(nullptr)) b) noexcept {
+QUIVER_FORCE_INLINE auto typed_mask(CompareOp op, decltype(cmp_load_vec<T>(nullptr)) a,
+                                    decltype(cmp_load_vec<T>(nullptr)) b) noexcept {
   if constexpr (std::is_same_v<T, float>) {
     return f32_mask(op, a, b);
   } else if constexpr (std::is_same_v<T, double>) {
@@ -181,9 +181,9 @@ struct CmpRhs {  // in[i] <op> comparand
   CompareOp op;
   const T* in;
   T comparand;
-  decltype(broadcast(T{})) bvec;
+  decltype(cmp_broadcast(T{})) bvec;
   QUIVER_FORCE_INLINE auto mask(std::int64_t i) const noexcept {
-    return typed_mask<T>(op, load_vec(in + i), bvec);
+    return typed_mask<T>(op, cmp_load_vec(in + i), bvec);
   }
   QUIVER_FORCE_INLINE bool inv() const noexcept { return std::is_integral_v<T> && int_invert(op); }
   QUIVER_FORCE_INLINE bool one(std::int64_t i) const noexcept {
@@ -197,7 +197,7 @@ struct CmpBatch {  // a[i] <op> b[i]
   const T* a;
   const T* b;
   QUIVER_FORCE_INLINE auto mask(std::int64_t i) const noexcept {
-    return typed_mask<T>(op, load_vec(a + i), load_vec(b + i));
+    return typed_mask<T>(op, cmp_load_vec(a + i), cmp_load_vec(b + i));
   }
   QUIVER_FORCE_INLINE bool inv() const noexcept { return std::is_integral_v<T> && int_invert(op); }
   QUIVER_FORCE_INLINE bool one(std::int64_t i) const noexcept {
@@ -210,8 +210,8 @@ struct CmpBetween {  // lo <= in[i] && in[i] <= hi (inclusive; NaN excluded by o
   const T* in;
   T lo;
   T hi;
-  decltype(broadcast(T{})) lo_vec;
-  decltype(broadcast(T{})) hi_vec;
+  decltype(cmp_broadcast(T{})) lo_vec;
+  decltype(cmp_broadcast(T{})) hi_vec;
   QUIVER_FORCE_INLINE auto mask(std::int64_t i) const noexcept {
     if constexpr (std::is_same_v<T, float>) {
       const __m256 a = _mm256_loadu_ps(in + i);
@@ -223,7 +223,7 @@ struct CmpBetween {  // lo <= in[i] && in[i] <= hi (inclusive; NaN excluded by o
                            _mm256_cmp_pd(a, hi_vec, _CMP_LE_OQ));
     } else {
       // in-range = !(lo > a || a > hi): OR the two exclusions, complement after packing.
-      const __m256i a = load_vec(in + i);
+      const __m256i a = cmp_load_vec(in + i);
       return _mm256_or_si256(int_gt<T>(lo_vec, a), int_gt<T>(a, hi_vec));
     }
   }
@@ -374,7 +374,7 @@ std::int64_t emit_selvec_avx2(std::int64_t n, const Pred& pred, const Validity& 
 #define QUIVER_K1_DEFINE(T)                                                                        \
   std::int64_t k1_compare_bitmap(CompareOp op, const T* in, std::int64_t n, T comparand,           \
                                  const std::uint8_t* validity, std::uint8_t* out) noexcept {       \
-    return emit_bitmap_avx2<T>(n, CmpRhs<T>{op, in, comparand, broadcast(comparand)},              \
+    return emit_bitmap_avx2<T>(n, CmpRhs<T>{op, in, comparand, cmp_broadcast(comparand)},          \
                                OneValidity{validity}, out);                                        \
   }                                                                                                \
   std::int64_t k1_compare_bitmap2(CompareOp op, const T* a, const T* b, std::int64_t n,            \
@@ -386,12 +386,12 @@ std::int64_t emit_selvec_avx2(std::int64_t n, const Pred& pred, const Validity& 
   std::int64_t k1_compare_between_bitmap(const T* in, std::int64_t n, T lo, T hi,                  \
                                          const std::uint8_t* validity,                             \
                                          std::uint8_t* out) noexcept {                             \
-    return emit_bitmap_avx2<T>(n, CmpBetween<T>{in, lo, hi, broadcast(lo), broadcast(hi)},         \
+    return emit_bitmap_avx2<T>(n, CmpBetween<T>{in, lo, hi, cmp_broadcast(lo), cmp_broadcast(hi)}, \
                                OneValidity{validity}, out);                                        \
   }                                                                                                \
   std::int64_t k1_compare_selvec(CompareOp op, const T* in, std::int64_t n, T comparand,           \
                                  const std::uint8_t* validity, std::uint32_t* out) noexcept {      \
-    return emit_selvec_avx2<T>(n, CmpRhs<T>{op, in, comparand, broadcast(comparand)},              \
+    return emit_selvec_avx2<T>(n, CmpRhs<T>{op, in, comparand, cmp_broadcast(comparand)},          \
                                OneValidity{validity}, out);                                        \
   }                                                                                                \
   std::int64_t k1_compare_selvec2(CompareOp op, const T* a, const T* b, std::int64_t n,            \
@@ -403,7 +403,7 @@ std::int64_t emit_selvec_avx2(std::int64_t n, const Pred& pred, const Validity& 
   std::int64_t k1_compare_between_selvec(const T* in, std::int64_t n, T lo, T hi,                  \
                                          const std::uint8_t* validity,                             \
                                          std::uint32_t* out) noexcept {                            \
-    return emit_selvec_avx2<T>(n, CmpBetween<T>{in, lo, hi, broadcast(lo), broadcast(hi)},         \
+    return emit_selvec_avx2<T>(n, CmpBetween<T>{in, lo, hi, cmp_broadcast(lo), cmp_broadcast(hi)}, \
                                OneValidity{validity}, out);                                        \
   }
 

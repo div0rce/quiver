@@ -31,7 +31,7 @@ namespace {
 constexpr bool kUseVectorHash = (QUIVER_K7_HASH_VECTOR != 0);
 
 // Wrapping 64x64 -> low-64 multiply via umull/umlal 32x32 partials.
-QUIVER_FORCE_INLINE uint64x2_t mul64_lo(uint64x2_t a, uint64x2_t b) noexcept {
+QUIVER_FORCE_INLINE uint64x2_t hsh_mul64_lo(uint64x2_t a, uint64x2_t b) noexcept {
   const uint32x2_t a_lo = vmovn_u64(a);
   const uint32x2_t b_lo = vmovn_u64(b);
   const uint32x2_t a_hi = vshrn_n_u64(a, 32);
@@ -46,9 +46,9 @@ QUIVER_FORCE_INLINE uint64x2_t fmix64_vec(uint64x2_t x) noexcept {
   const uint64x2_t c1 = vdupq_n_u64(scalar_impl::kHashC1);
   const uint64x2_t c2 = vdupq_n_u64(scalar_impl::kHashC2);
   x = veorq_u64(x, vshrq_n_u64(x, 33));
-  x = mul64_lo(x, c1);
+  x = hsh_mul64_lo(x, c1);
   x = veorq_u64(x, vshrq_n_u64(x, 33));
-  x = mul64_lo(x, c2);
+  x = hsh_mul64_lo(x, c2);
   x = veorq_u64(x, vshrq_n_u64(x, 33));
   return x;
 }

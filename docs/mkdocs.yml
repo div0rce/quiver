@@ -50,6 +50,7 @@ nav:
   - Guides:
       - Getting started: guides/getting-started.md
       - Building: guides/building.md
+      - Vendoring: guides/vendoring.md
       - Disputing a ledger number: guides/disputes.md
   - API reference:
       - Core types: api/core.md

@@ -169,6 +169,35 @@ if(QUIVER_ENABLE_TESTS)
   target_compile_definitions(quiver PRIVATE QUIVER_TEST_SEAMS=1)
 endif()
 
+# --- Amalgamation (MOD-AMALG; ADR-018, REQ-BUILD-013): generate the single-file drop-in pair
+# quiver.h + quiver.cpp with the rule-based generator; the verify target (tests/) compiles the
+# pair and runs the unit suite against it, requiring byte-identical kernel outputs. Top-level
+# only, needs Python 3; the generated pair is a build artifact, never committed (REQ-REPO-011).
+option(QUIVER_ENABLE_AMALGAMATION "Enable the amalgamation generate/verify targets"
+       ${QUIVER_ENABLE_TESTS})
+if(PROJECT_IS_TOP_LEVEL AND QUIVER_ENABLE_AMALGAMATION)
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(Python3_Interpreter_FOUND)
+    set(QUIVER_AMALG_DIR "${CMAKE_BINARY_DIR}/amalgamation")
+    set(QUIVER_AMALG_H "${QUIVER_AMALG_DIR}/quiver.h")
+    set(QUIVER_AMALG_CPP "${QUIVER_AMALG_DIR}/quiver.cpp")
+    file(GLOB_RECURSE _quiver_amalg_inputs CONFIGURE_DEPENDS
+      "${CMAKE_CURRENT_SOURCE_DIR}/include/quiver/*.h"
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+      "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+    add_custom_command(
+      OUTPUT "${QUIVER_AMALG_H}" "${QUIVER_AMALG_CPP}"
+      COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate/amalgamate.py"
+              --out-dir "${QUIVER_AMALG_DIR}"
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate/amalgamate.py" ${_quiver_amalg_inputs}
+      COMMENT "Generating single-file amalgamation (ADR-018)"
+      VERBATIM)
+    add_custom_target(quiver_amalgamate DEPENDS "${QUIVER_AMALG_H}" "${QUIVER_AMALG_CPP}")
+  else()
+    message(STATUS "Quiver: Python3 not found — amalgamation targets disabled")
+  endif()
+endif()
+
 # --- Dev trees (never installed, never part of the export set: REQ-REPO-007) ------------------
 if(QUIVER_ENABLE_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
   enable_testing()

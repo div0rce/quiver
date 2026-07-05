@@ -1,5 +1,5 @@
 // K3 sel_convert — AVX2 backend. bitmap_to_selvec uses the emulated-compress core: for each
-// selection byte, the kCompactLut32 row IS the compacted lane-index list — add the broadcast
+// selection byte, the kCompactLut32 row IS the compacted lane-index list — add the sel_broadcast
 // base and store 8 indices, advancing by popcount (PRD 09 §6; full-vector stores stay within
 // the n-element capacity region, REQ-MEM-008). selvec_to_bitmap is scalar-dominant by design
 // (sorted scatter; PRD 08 K3) and delegates to the scalar core.

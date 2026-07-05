@@ -124,7 +124,7 @@ void arith_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n, T* out) no
 }
 
 template <class T>
-struct BatchRhs {
+struct ar_BatchRhs {
   const T* b;
   auto operator()(std::int64_t i) const noexcept {
     if constexpr (std::is_same_v<T, float>) {
@@ -139,7 +139,7 @@ struct BatchRhs {
 };
 
 template <class T>
-struct ScalarRhs {
+struct ar_ScalarRhs {
   T b;
   auto operator()(std::int64_t) const noexcept {
     if constexpr (std::is_same_v<T, float>) {
@@ -164,10 +164,10 @@ struct ScalarRhs {
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K9_DEFINE(T)                                                                        \
   void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {             \
-    arith_impl<T>(op, a, BatchRhs<T>{b}, n, out);                                                  \
+    arith_impl<T>(op, a, ar_BatchRhs<T>{b}, n, out);                                               \
   }                                                                                                \
   void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {         \
-    arith_impl<T>(op, a, ScalarRhs<T>{b}, n, out);                                                 \
+    arith_impl<T>(op, a, ar_ScalarRhs<T>{b}, n, out);                                              \
   }
 
 QUIVER_K9_DEFINE(std::int8_t)

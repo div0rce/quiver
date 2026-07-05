@@ -20,7 +20,7 @@ namespace detail::avx2 {
 
 namespace {
 
-QUIVER_FORCE_INLINE __m256i mul64_lo(__m256i a, __m256i b) noexcept {
+QUIVER_FORCE_INLINE __m256i ar_mul64_lo(__m256i a, __m256i b) noexcept {
   const __m256i cross = _mm256_add_epi64(_mm256_mul_epu32(a, _mm256_srli_epi64(b, 32)),
                                          _mm256_mul_epu32(_mm256_srli_epi64(a, 32), b));
   return _mm256_add_epi64(_mm256_mul_epu32(a, b), _mm256_slli_epi64(cross, 32));
@@ -71,7 +71,7 @@ QUIVER_FORCE_INLINE __m256i apply_op(ArithOp op, __m256i a, __m256i b) noexcept 
     case ArithOp::kSub:
       return _mm256_sub_epi64(a, b);
     case ArithOp::kMul:
-      return mul64_lo(a, b);
+      return ar_mul64_lo(a, b);
     }
   }
   return a;  // unreachable for in-contract op values
@@ -130,7 +130,7 @@ void arith_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n, T* out) no
 }
 
 template <class T>
-struct BatchRhs {
+struct ar_BatchRhs {
   const T* b;
   auto operator()(std::int64_t i) const noexcept {
     if constexpr (std::is_same_v<T, float>) {
@@ -145,7 +145,7 @@ struct BatchRhs {
 };
 
 template <class T>
-struct ScalarRhs {
+struct ar_ScalarRhs {
   T b;
   auto operator()(std::int64_t) const noexcept {
     if constexpr (std::is_same_v<T, float>) {
@@ -170,10 +170,10 @@ struct ScalarRhs {
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K9_DEFINE(T)                                                                        \
   void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {             \
-    arith_impl<T>(op, a, BatchRhs<T>{b}, n, out);                                                  \
+    arith_impl<T>(op, a, ar_BatchRhs<T>{b}, n, out);                                               \
   }                                                                                                \
   void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {         \
-    arith_impl<T>(op, a, ScalarRhs<T>{b}, n, out);                                                 \
+    arith_impl<T>(op, a, ar_ScalarRhs<T>{b}, n, out);                                              \
   }
 
 QUIVER_K9_DEFINE(std::int8_t)
