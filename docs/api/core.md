@@ -10,6 +10,7 @@ The vocabulary types (API-CORE-001). Contracts mirror PRD [04 §3](../prd/04-pub
 | `Element<T>` | exactly: `int8/16/32/64_t`, `uint8/16/32/64_t`, `float`, `double` (REQ-API-004) |
 | `IntElement<T>` | `Element<T>` ∧ integral |
 | `CodeType<T>` | exactly: `uint8_t`, `uint16_t`, `uint32_t` (dictionary codes) |
+| `UnpackOut<T>` | exactly: `uint8_t`, `uint16_t`, `uint32_t`, `uint64_t` (K8 unpack output width) |
 | `SumType<T>` | `int64_t` for signed integers, `uint64_t` for unsigned, `T` for floats |
 
 ## Enums (values frozen)

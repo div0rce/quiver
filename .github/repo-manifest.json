@@ -1,6 +1,6 @@
 {
-  "comment": "Repository tree manifest \u2014 REQ-REPO-001 (docs/prd/02-repository-architecture.md \u00a711). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 \u00a73. State: M9 in progress (study pre-registered; multi-\u00b5arch data deferred R-06).",
-  "milestone": "M9",
+  "comment": "Repository tree manifest \u2014 REQ-REPO-001 (docs/prd/02-repository-architecture.md \u00a711). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 \u00a73. State: M10 \u2014 API surface frozen-clean; v1.0 certification deferred (R-06).",
+  "milestone": "M10",
   "allowed_toplevel": [
     ".clang-format",
     ".clang-tidy",
@@ -290,7 +290,9 @@
     "docs/releases/v0.5.0.md",
     "docs/releases/gates/M8.md",
     "docs/releases/v0.6.0.md",
-    "docs/releases/gates/M9.md"
+    "docs/releases/gates/M9.md",
+    "docs/releases/gates/M10.md",
+    "docs/releases/final-implementation-report.md"
   ],
   "forbidden_at_milestone": [],
   "docs_dirs_requiring_readme": [

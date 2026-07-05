@@ -9,7 +9,7 @@ All functions inherit the common contract: `noexcept`, allocation-free, borrowed
 | API | Semantics |
 |---|---|
 | `reduce_min/max(in, validity[, sel])` | participation = selected ∧ valid; identities on empty (min→max(), max→lowest()); float NaN → canonical qNaN |
-| `reduce_sum_wrap(in, validity[, sel])` | integers: wrapping into `SumType<T>`; floats: **strict left fold** (the scalar backend is the charter's strict-order recourse, ADR-013) |
+| `reduce_sum_wrap(in, validity[, sel])` | integers: wrapping into `SumType<T>`; floats: the documented **ADR-013 reassociation policy** — the scalar backend is the strict-order recourse (A=1 left fold), SIMD backends use the blocked A=4 accumulator; results are reproducible per (version, ISA, build) but not bit-identical across ISAs |
 | `reduce_sum_checked(in, validity[, sel], &sum)` | integers only; → true iff mathematically unrepresentable (exact, 128-bit accumulation); `sum` holds the wrapped value |
 | `compute_sma(in, validity[, sel])` | one pass: min + max + null_count (selected-but-invalid) |
 | `reduce_count_valid(validity, n[, sel])` | delegates to K4 popcount (the documented cross-family exception) |

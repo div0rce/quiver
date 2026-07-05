@@ -108,6 +108,8 @@ nav:
       - Gate M7: releases/gates/M7.md
       - Gate M8: releases/gates/M8.md
       - Gate M9: releases/gates/M9.md
+      - Gate M10: releases/gates/M10.md
+      - Final implementation report: releases/final-implementation-report.md
       - v0.1.0: releases/v0.1.0.md
       - v0.2.0: releases/v0.2.0.md
       - v0.3.0: releases/v0.3.0.md
