@@ -149,6 +149,7 @@ endif()
 
 target_include_directories(quiver
   PUBLIC  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+          $<INSTALL_INTERFACE:include>
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(quiver PUBLIC cxx_std_23)
 
@@ -176,7 +177,30 @@ endif()
 if(QUIVER_ENABLE_BENCH AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/bench/CMakeLists.txt")
   add_subdirectory(bench)
 endif()
-# examples/ arrives at M8 (docs/prd/18-milestones.md).
+if(QUIVER_ENABLE_EXAMPLES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/CMakeLists.txt")
+  add_subdirectory(examples)
+endif()
+
+# --- Install / export (REQ-BUILD-009): exactly headers + the static library + the CMake
+# package (find_package(Quiver CONFIG) → quiver::quiver). Nothing else (REQ-REPO-007).
+# Top-level only: as a subproject (FetchContent/add_subdirectory) consumers use the target
+# directly and must not trigger our install rules.
+if(PROJECT_IS_TOP_LEVEL)
+  include(GNUInstallDirs)
+  include(CMakePackageConfigHelpers)
+  set(_quiver_cmakedir ${CMAKE_INSTALL_LIBDIR}/cmake/Quiver)
+  install(TARGETS quiver EXPORT QuiverTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(DIRECTORY include/quiver DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  install(EXPORT QuiverTargets FILE QuiverTargets.cmake NAMESPACE quiver::
+          DESTINATION ${_quiver_cmakedir})
+  configure_package_config_file(cmake/QuiverConfig.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/QuiverConfig.cmake" INSTALL_DESTINATION ${_quiver_cmakedir})
+  write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/QuiverConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/QuiverConfig.cmake"
+                "${CMAKE_CURRENT_BINARY_DIR}/QuiverConfigVersion.cmake"
+          DESTINATION ${_quiver_cmakedir})
+endif()
 
 message(STATUS "Quiver ${PROJECT_VERSION} | tests=${QUIVER_ENABLE_TESTS} bench=${QUIVER_ENABLE_BENCH} "
                "examples=${QUIVER_ENABLE_EXAMPLES} asserts=${QUIVER_ENABLE_ASSERTS} "

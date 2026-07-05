@@ -1,6 +1,6 @@
 {
-  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M7.",
-  "milestone": "M7",
+  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M8 (in progress).",
+  "milestone": "M8",
   "allowed_toplevel": [
     ".clang-format",
     ".clang-tidy",
@@ -20,6 +20,7 @@
     "build",
     "cmake",
     "docs",
+    "examples",
     "include",
     "ledger",
     "site",
@@ -42,6 +43,11 @@
     "cmake/flags.cmake",
     "cmake/sanitizers.cmake",
     "cmake/QuiverConfig.cmake.in",
+    "examples/CMakeLists.txt",
+    "examples/01_minimal_filter.cpp",
+    "examples/02_filter_take_reduce.cpp",
+    "examples/03_isa_override.cpp",
+    "examples/04_nullable_pipeline.cpp",
     ".github/workflows/ci.yml",
     ".github/ISSUE_TEMPLATE/bug.yml",
     ".github/ISSUE_TEMPLATE/benchmark-dispute.yml",
@@ -268,8 +274,7 @@
     "docs/releases/v0.5.0.md"
   ],
   "forbidden_at_milestone": [
-    "tools",
-    "examples"
+    "tools"
   ],
   "docs_dirs_requiring_readme": [
     "docs",
