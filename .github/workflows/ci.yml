@@ -12,6 +12,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_call:  # invoked as the gate set by release.yml (REQ-CI-009)
 
 permissions:
   contents: read  # REQ-SEC-008: minimal default
