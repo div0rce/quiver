@@ -119,6 +119,34 @@ set(QUIVER_AVX512_SOURCES
   src/kernels/arith/arith_avx512.cpp
   src/kernels/filter/filter_avx512.cpp
   src/kernels/select/select_avx512.cpp)
+
+# --- Compile-time ISA pinning (REQ-DISP-013): a pinned build excludes backend TUs above the
+# pinned tier so every dispatch entry statically resolves to the pin (scalar always compiles,
+# REQ-DISP-001; lower tiers stay as the pin's fallbacks). QUIVER_PIN_ISA_TIER (the Isa enum int:
+# scalar 0, neon 1, avx2 2, avx512 3) reaches dispatch_tables.cpp, which nulls the excluded row
+# slots to match. Left empty = ordinary runtime dispatch.
+set(_quiver_pin_tier "")
+if(QUIVER_PIN_ISA STREQUAL "scalar")
+  set(_quiver_pin_tier 0)
+elseif(QUIVER_PIN_ISA STREQUAL "neon")
+  set(_quiver_pin_tier 1)
+elseif(QUIVER_PIN_ISA STREQUAL "avx2")
+  set(_quiver_pin_tier 2)
+elseif(QUIVER_PIN_ISA STREQUAL "avx512")
+  set(_quiver_pin_tier 3)
+endif()
+if(NOT _quiver_pin_tier STREQUAL "")
+  if(NOT _quiver_pin_tier EQUAL 1)  # NEON only when pinned to neon (ARM-only, not an x86 fallback)
+    set(QUIVER_NEON_SOURCES "")
+  endif()
+  if(_quiver_pin_tier LESS 2)  # AVX2 stays for avx2 and avx512 pins (AVX-512 fallback)
+    set(QUIVER_AVX2_SOURCES "")
+  endif()
+  if(_quiver_pin_tier LESS 3)  # AVX-512 only when pinned to avx512
+    set(QUIVER_AVX512_SOURCES "")
+  endif()
+endif()
+
 add_library(quiver STATIC
   src/cpu/cpu_features.cpp
   src/dispatch/dispatch_tables.cpp
@@ -152,6 +180,11 @@ target_include_directories(quiver
           $<INSTALL_INTERFACE:include>
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(quiver PUBLIC cxx_std_23)
+if(NOT _quiver_pin_tier STREQUAL "")
+  # PUBLIC so the in-tree tests (which link quiver::quiver) can skip the runtime-dispatch-policy
+  # cases that a pinned build fixes. Inert for consumers — no public header references it.
+  target_compile_definitions(quiver PUBLIC QUIVER_PIN_ISA_TIER=${_quiver_pin_tier})
+endif()
 
 quiver_apply_warnings(quiver)
 quiver_apply_library_constraints(quiver)  # -fno-exceptions -fno-rtti (REQ-BUILD-004)

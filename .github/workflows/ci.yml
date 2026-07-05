@@ -226,6 +226,32 @@ jobs:
           clang++-18 -std=c++23 -Iamalg amalg/quiver.cpp consumer.cpp -o demo
           ./demo
 
+  pinned-build:
+    # REQ-DISP-013 / REQ-CI-008: a compile-time-pinned build (QUIVER_PIN_ISA=avx2) on an x86
+    # runner statically resolves every entry to AVX2 — build it, run the unit suite (the
+    # runtime-dispatch-policy cases self-skip under a pin), and assert active_isa() == avx2.
+    name: pinned build (QUIVER_PIN_ISA=avx2; REQ-DISP-013)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Install pinned clang
+        run: sudo apt-get update -q && sudo apt-get install -y -q clang-18
+      - name: Build the pinned library, unit suite, and ISA example
+        env: { CC: clang-18, CXX: clang++-18 }
+        run: |
+          set -eu
+          cmake -S . -B build/pin -DQUIVER_PIN_ISA=avx2 -DQUIVER_ENABLE_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Debug -DQUIVER_ENABLE_ASSERTS=ON
+          cmake --build build/pin --target quiver_tests_unit quiver_example_03_isa_override -j 4
+      - name: Unit suite passes under the pin
+        run: ctest --test-dir build/pin --output-on-failure -R '^Dispatch'
+      - name: "active_isa() resolves to the pinned tier (avx2)"
+        run: |
+          set -eu
+          out=$(./build/pin/bin/quiver_example_03_isa_override)
+          echo "$out"
+          echo "$out" | grep -q "default active ISA: avx2"
+
   asan-ubsan:
     name: sanitizers (ASan+UBSan, clang)
     runs-on: ubuntu-24.04

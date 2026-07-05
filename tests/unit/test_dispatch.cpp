@@ -198,6 +198,9 @@ int probe_active_isa_with_env(const std::string& env_assignment) {
 }
 
 TEST(Dispatch, EnvVarMatrix) {
+#if defined(QUIVER_PIN_ISA_TIER)
+  GTEST_SKIP() << "pinned build: QUIVER_ISA is ignored, the cap is fixed to the pin (REQ-DISP-013)";
+#endif
   ASSERT_NE(quiver_test::g_self_path, nullptr);
   const int hw = static_cast<int>(quiver::active_isa());
 
@@ -232,6 +235,10 @@ TEST(Dispatch, EnvVarMatrix) {
 // differential suite (ADR-010; local emulators do not reliably execute AVX-512).
 TEST(DispatchAvx512, TierSelectableIffFeatureBitsPresent) {
   using quiver::Isa;
+#if defined(QUIVER_PIN_ISA_TIER)
+  GTEST_SKIP() << "pinned build: tier selectability is fixed to the pin, not runtime bits "
+                  "(REQ-DISP-013)";
+#endif
   quiver::clear_isa_override();
   quiver::warmup();
   const bool supported = quiver::cpu_supports(Isa::kAvx512);

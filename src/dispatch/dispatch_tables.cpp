@@ -112,9 +112,24 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 #undef QUIVER_DECLARE_BACKEND
 }  // namespace scalar
 
+// Which ISA tiers are compiled in. All of them in an ordinary build; only tiers <= the pin when
+// QUIVER_PIN_ISA_TIER is set (REQ-DISP-013: backends above the pin are not compiled, so their
+// row slots must be null to match). Isa enum: scalar 0, neon 1, avx2 2, avx512 3.
+#if defined(QUIVER_PIN_ISA_TIER)
+// NEON is ARM-only and never a fallback for an x86 pin, so it is compiled only when the pin IS
+// neon; AVX2 stays as AVX-512's fallback (REQ-DISP-001), hence `>= 2`.
+#define QUIVER_ISA_COMPILED_NEON (QUIVER_PIN_ISA_TIER == 1)
+#define QUIVER_ISA_COMPILED_AVX2 (QUIVER_PIN_ISA_TIER >= 2)
+#define QUIVER_ISA_COMPILED_AVX512 (QUIVER_PIN_ISA_TIER >= 3)
+#else
+#define QUIVER_ISA_COMPILED_NEON 1
+#define QUIVER_ISA_COMPILED_AVX2 1
+#define QUIVER_ISA_COMPILED_AVX512 1
+#endif
+
 // --- AVX2 backend declarations (defined in the family *_avx2.cpp TUs, x86-64 builds only;
 // --- the Tier A inventory has full AVX2 coverage, so the whole list declares) ---------------
-#if defined(__x86_64__) || defined(_M_X64)
+#if (defined(__x86_64__) || defined(_M_X64)) && QUIVER_ISA_COMPILED_AVX2
 namespace avx2 {
 #define QUIVER_DECLARE_BACKEND(uid, ret, name, params, args) ret name params noexcept;
 QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
@@ -127,7 +142,7 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 
 // --- NEON backend declarations (defined in the family *_neon.cpp TUs, ARM64 builds only;
 // --- full Tier A coverage, so the whole list declares) --------------------------------------
-#if defined(__aarch64__) || defined(_M_ARM64)
+#if (defined(__aarch64__) || defined(_M_ARM64)) && QUIVER_ISA_COMPILED_NEON
 namespace neon {
 #define QUIVER_DECLARE_BACKEND(uid, ret, name, params, args) ret name params noexcept;
 QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
@@ -142,7 +157,7 @@ QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
 // --- declared, but slot [3] is wired only for symbols with a real avx512 definition, keyed by
 // --- a per-uid marker below; the rest keep slot [3] empty and fall through to AVX2. Becomes
 // --- the uniform pattern once every family is covered. -------------------------------------
-#if defined(__x86_64__) || defined(_M_X64)
+#if (defined(__x86_64__) || defined(_M_X64)) && QUIVER_ISA_COMPILED_AVX512
 namespace avx512 {
 #define QUIVER_DECLARE_BACKEND(uid, ret, name, params, args) ret name params noexcept;
 QUIVER_KERNEL_ENTRY_LIST(QUIVER_DECLARE_BACKEND)
@@ -311,6 +326,20 @@ std::uint32_t current_policy_epoch() noexcept {
 }
 
 Isa current_policy_cap() noexcept {
+#if defined(QUIVER_PIN_ISA_TIER)
+  // Compile-time pin (REQ-DISP-013): the cap is the pinned tier, lowerable only to scalar via an
+  // override. A first-touch debug assertion catches a pinned build run on unsupporting hardware;
+  // release omits the check (asserts off) and is UB by the embedder's contract. With the assert
+  // compiled out no CPU detection runs, so the pinned build resolves statically.
+  QUIVER_ASSERT(mask_supports(feature_mask(), static_cast<Isa>(QUIVER_PIN_ISA_TIER)),
+                "QUIVER_PIN_ISA: pinned tier unsupported on this CPU [REQ-DISP-013]");
+  Isa cap = static_cast<Isa>(QUIVER_PIN_ISA_TIER);
+  const std::int8_t ovr = g_override.load(std::memory_order_relaxed);
+  if (ovr >= 0 && static_cast<Isa>(ovr) < cap) {
+    cap = static_cast<Isa>(ovr);
+  }
+  return cap;
+#else
   const std::uint8_t mask = feature_mask();
   Isa cap = hw_max(mask);
   // Environment cap applies only when the named tier is supported on this CPU; unsupported
@@ -325,6 +354,7 @@ Isa current_policy_cap() noexcept {
     cap = static_cast<Isa>(ovr);
   }
   return cap;
+#endif
 }
 
 }  // namespace detail
@@ -340,11 +370,19 @@ bool cpu_supports(Isa isa) noexcept {
 }
 
 bool set_isa_override(Isa isa) noexcept {
+#if defined(QUIVER_PIN_ISA_TIER)
+  // Pinned build (REQ-DISP-013): only kScalar and the pinned tier itself are accepted — higher
+  // tiers are not compiled in, so an override to them could never resolve.
+  if (isa != Isa::kScalar && isa != static_cast<Isa>(QUIVER_PIN_ISA_TIER)) {
+    return false;
+  }
+#else
   // kScalar is always accepted; other tiers require CPU support; out-of-range enum values
   // return false with no state change (API-DISP-003).
   if (isa != Isa::kScalar && !cpu_supports(isa)) {
     return false;
   }
+#endif
   detail::g_override.store(static_cast<std::int8_t>(isa), std::memory_order_release);
   detail::g_policy_epoch.fetch_add(1, std::memory_order_release);
   return true;
