@@ -73,10 +73,48 @@ void bm_compare_bitmap(benchmark::State& state) {
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
 
+// Selvec output form of the same K1 predicate — the other half of the representation study
+// (bitmap vs selvec, Charter §6.2): identical input + comparand, output is a selection vector.
+// Cost is expected to scale with selectivity (one store per match) where the bitmap is flat.
+void bm_compare_selvec(benchmark::State& state) {
+  const auto n = static_cast<std::int64_t>(state.range(0));
+  const int sel_pct = static_cast<int>(state.range(1));
+  quiver::bench::Rng rng(kSeed);
+  std::vector<std::int64_t> v(static_cast<std::size_t>(n));
+  quiver::bench::fill_uniform(rng, v.data(), n);
+  const std::int64_t comparand = static_cast<std::int64_t>(
+      static_cast<std::uint64_t>(~0ull) / 100 * (100 - sel_pct) - (~0ull >> 1));
+  std::vector<std::uint32_t> sel(static_cast<std::size_t>(n));
+
+  const auto run = [&]() {
+    return quiver::compare_selvec(quiver::CompareOp::kGt,
+                                  quiver::BatchView<std::int64_t>{v.data(), n}, comparand,
+                                  quiver::BitmapView{nullptr}, sel.data());
+  };
+  const std::int64_t got = run();
+  std::int64_t want = 0;  // independent recompute (REQ-BENCH-004)
+  for (std::int64_t i = n - 1; i >= 0; --i) {
+    want += v[static_cast<std::size_t>(i)] > comparand ? 1 : 0;
+  }
+  quiver::bench::validate_or_abort("BM_compare_selvec", got == want,
+                                   "count vs independent recompute");
+
+  g_pmu.start();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(run());
+  }
+  attach_pmu(state, g_pmu.stop_and_read(), n);
+}
+
 void register_benchmarks() {
   const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {1024, 4096, 65536}) {
     for (const int pct : {1, 10, 50, 90, 99}) {
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name("compare", "selvec_gt", variant, "i64",
+                                    "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),
+          bm_compare_selvec)
+          ->Args({n, pct});
       benchmark::RegisterBenchmark(
           quiver::bench::bench_name("compare", "bitmap_gt", variant, "i64",
                                     "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),

@@ -85,6 +85,13 @@ nav:
   - Investigations:
       - K5 gather vs scalar (AVX2): investigations/k5-gather-avx2.md
       - K7 NEON hash vs GPR chain: investigations/k7-neon-hash.md
+      - Representation study:
+          - Overview: benchmarks/investigations/representation-study/README.md
+          - Question: benchmarks/investigations/representation-study/question.md
+          - Method: benchmarks/investigations/representation-study/method.md
+          - Data: benchmarks/investigations/representation-study/entries.md
+          - Analysis: benchmarks/investigations/representation-study/analysis.md
+          - Conclusion: benchmarks/investigations/representation-study/conclusion.md
   - ADRs: adr/README.md
   - Specifications:
       - Design Charter: design/DESIGN_CHARTER.md
@@ -100,6 +107,7 @@ nav:
       - Gate M6: releases/gates/M6.md
       - Gate M7: releases/gates/M7.md
       - Gate M8: releases/gates/M8.md
+      - Gate M9: releases/gates/M9.md
       - v0.1.0: releases/v0.1.0.md
       - v0.2.0: releases/v0.2.0.md
       - v0.3.0: releases/v0.3.0.md
