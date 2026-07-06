@@ -72,6 +72,7 @@ nav:
   - Benchmarks:
       - Methodology (QLM-1): benchmarks/methodology.md
       - Running benchmarks: benchmarks/running.md
+      - Hardware coverage plan (R-06): benchmarks/hardware-coverage-plan.md
       - Overview: benchmarks/README.md
   - Testing:
       - Testkit: testing/testkit.md
