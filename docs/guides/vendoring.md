@@ -1,7 +1,10 @@
 # Vendoring Quiver
 
+This page shows the three ways to add Quiver to your project. Pick one and copy the snippet. There
+are no dependencies to install either way.
+
 Quiver is a dependency-free static library with zero runtime dependencies (Charter T4). It can
-be consumed in three ways, each verified in CI from M8 onward (REQ-BUILD-010):
+be consumed in three ways, each verified in CI (REQ-BUILD-010):
 
 | Mode | Use when | What you get |
 |------|----------|--------------|
@@ -9,7 +12,7 @@ be consumed in three ways, each verified in CI from M8 onward (REQ-BUILD-010):
 | **(b) Source subproject** | You build Quiver from source alongside your project | `FetchContent` / `add_subdirectory` → `quiver::quiver` |
 | **(c) Amalgamation drop-in** | You want no build-system entanglement at all | Two files: `quiver.h` + `quiver.cpp` |
 
-## (a) Installed package — `find_package`
+## (a) Installed package, `find_package`
 
 ```sh
 cmake -S quiver -B build -DCMAKE_BUILD_TYPE=Release -DQUIVER_ENABLE_TESTS=OFF
@@ -23,9 +26,9 @@ target_link_libraries(your_target PRIVATE quiver::quiver)
 ```
 
 The install tree contains exactly the public headers, the static archive, and the CMake package
-files — nothing else (REQ-BUILD-009).
+files, nothing else (REQ-BUILD-009).
 
-## (b) Source subproject — `FetchContent`
+## (b) Source subproject, `FetchContent`
 
 ```cmake
 include(FetchContent)
@@ -48,7 +51,7 @@ vendoring pattern). It is **published as a release asset and never committed** t
 python3 tools/amalgamate/amalgamate.py --out-dir amalg   # writes amalg/quiver.{h,cpp}
 ```
 
-Drop the two files into your tree and build with a **single compiler command** — no CMake, no
+Drop the two files into your tree and build with a **single compiler command**, no CMake, no
 flags beyond the language standard (the per-ISA backends select their target features internally
 via compiler pragmas, ADR-003):
 
@@ -57,7 +60,7 @@ c++ -std=c++23 -Iamalg amalg/quiver.cpp your_app.cpp -o your_app
 ```
 
 `#include "quiver.h"` gives the complete public surface. Runtime dispatch still selects the best
-backend the CPU supports at run time — the amalgamation compiles every backend into the one
+backend the CPU supports at run time, the amalgamation compiles every backend into the one
 translation unit exactly as the normal multi-file build does.
 
 ### How the amalgamation is generated and verified
@@ -71,13 +74,13 @@ amalgamation-compatibility rules, which `amalgamate.py --check` lints in CI.
 
 The `quiver_amalgamate_verify` build target compiles the generated pair and runs the full unit
 suite against it, requiring byte-identical kernel outputs versus the normal multi-file build
-(REQ-BUILD-013) — so the drop-in is never a second-class citizen.
+(REQ-BUILD-013), so the drop-in is never a second-class citizen.
 
 ### MSVC
 
 On GCC and Clang the single translation unit compiles every backend with no global ISA flags
 (per-function target attributes confine each backend's instructions to itself). MSVC has no such
-attribute, but it still works — **build the amalgamation with the default `/arch`** (the SSE2
+attribute, but it still works, **build the amalgamation with the default `/arch`** (the SSE2
 baseline). MSVC self-contains AVX2 and AVX-512 intrinsics at their call sites, so the SIMD
 backends compile without `/arch:AVX2`/`/arch:AVX512` while the scalar and dispatch code stay
 baseline; runtime dispatch then selects the best backend the CPU supports, exactly as on the
