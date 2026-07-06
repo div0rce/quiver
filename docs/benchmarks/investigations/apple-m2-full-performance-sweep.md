@@ -175,6 +175,7 @@ preserved as the justification; they are the pre-delegation handwritten measurem
 | arith/add | i64 | n=65536 | 0.897 | `qle:apple-m2-20260704-883c08552f35-e-bm-arith-add-neon-i64-n-65536-65536` `qle:apple-m2-20260704-883c08552f35-f-bm-arith-add-autovec-i64-n-65536-65536` |
 | arith/mul | f64 | n=65536 | 0.891 | `qle:apple-m2-20260704-883c08552f35-bm-arith-mul-neon-f64-n-65536-65536` `qle:apple-m2-20260704-883c08552f35-f-bm-arith-mul-autovec-f64-n-65536-65536` |
 | compare/bitmap_gt | i64 | n=1024,sel=10 | 0.698 | `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-1024-sel-10-1024-10` |
+| compare/bitmap_gt | i64 | n=4096,sel=90 | 0.69 | `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-neon-i64-n-4096-sel-90-4096-90` `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-4096-sel-90-4096-90` |
 | compare/bitmap_gt | i64 | n=4096,sel=99 | 0.696 | `qle:apple-m2-20260703-4ec273e2904d-bm-compare-bitmap-gt-autovec-i64-n-4096-sel-99-4096-99` |
 
 See the [Apple M2 NEON losses investigation](apple-m2-neon-losses.md) for the full PR #27 record,
