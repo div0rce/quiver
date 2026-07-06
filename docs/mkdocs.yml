@@ -93,6 +93,7 @@ nav:
       - K7 NEON hash vs GPR chain: investigations/k7-neon-hash.md
       - Apple M2 NEON losses: benchmarks/investigations/apple-m2-neon-losses.md
       - Apple M2 full performance sweep: benchmarks/investigations/apple-m2-full-performance-sweep.md
+      - Apple M2 sub-byte unpack candidate: benchmarks/investigations/apple-m2-subbyte-unpack-neon.md
       - Representation study:
           - Overview: benchmarks/investigations/representation-study/README.md
           - Question: benchmarks/investigations/representation-study/question.md
