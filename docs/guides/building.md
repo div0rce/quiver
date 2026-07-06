@@ -1,6 +1,8 @@
 # Building Quiver
 
-> **M0 status:** the build is a **configure-only skeleton** — the option surface, presets, and toolchain checks are live, but no build targets exist yet. The library target (`quiver::quiver`) arrives at milestone M1; tests at M1+; benchmarks at M2 (PRD [18-milestones.md](../prd/18-milestones.md)).
+This page covers building Quiver from source: the prerequisites, the CMake presets, and the build
+options. As of v0.6.0 the library, tests, and benchmarks all build. If you only want to add Quiver
+to your own project, see the [vendoring guide](vendoring.md) instead.
 
 ## Prerequisites
 
@@ -10,7 +12,7 @@
 
 ## Configure
 
-Always use presets (REQ-BUILD-011 — CI invokes presets only, never ad-hoc flags):
+Always use presets (REQ-BUILD-011, CI invokes presets only, never ad-hoc flags):
 
 ```sh
 cmake --preset dev        # Debug, asserts on, tests on
@@ -22,7 +24,7 @@ Preset inventory: `dev`, `release`, `bench`, `asan-ubsan`, `tsan`, `msan`, `ci-g
 
 ## Options
 
-The exact option surface (REQ-BUILD-006 — additions require a PRD amendment):
+The exact option surface (REQ-BUILD-006, additions require a PRD amendment):
 
 | Option | Default | Meaning |
 |---|---|---|
@@ -35,7 +37,7 @@ The exact option surface (REQ-BUILD-006 — additions require a PRD amendment):
 | `QUIVER_DISABLE_AVX512` | OFF | broken-toolchain escape hatch only |
 | `QUIVER_PIN_ISA` | empty | compile-time ISA pinning (REQ-DISP-013): `scalar`/`neon`/`avx2`/`avx512` |
 
-`BUILD_SHARED_LIBS` is ignored with a warning — Quiver v1 is static-only (REQ-BUILD-002).
+`BUILD_SHARED_LIBS` is ignored with a warning, Quiver v1 is static-only (REQ-BUILD-002).
 
 ## Building the documentation site
 
@@ -48,4 +50,4 @@ mkdocs serve -f docs/mkdocs.yml            # local preview
 
 ## Consuming Quiver (from M8)
 
-Three supported modes — installed package (`find_package(Quiver CONFIG)`), `FetchContent`/`add_subdirectory`, and the two-file amalgamation — all CI-verified from milestone M8 (REQ-BUILD-010; vendoring guide arrives then).
+Three supported modes, installed package (`find_package(Quiver CONFIG)`), `FetchContent`/`add_subdirectory`, and the two-file amalgamation, all CI-verified from milestone M8 (REQ-BUILD-010; vendoring guide arrives then).

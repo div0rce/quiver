@@ -1,5 +1,23 @@
 # The Quiver Performance Ledger
 
+The ledger is Quiver's honest scorecard. It records how fast each operation runs,
+on which CPU, under which conditions, in a form anyone can re-run and check. It is deliberately hard
+to fake: every run happens on a registered machine, is repeated in shuffled fresh processes, gets
+statistical confidence intervals, and is thrown out if it is too noisy to trust. If the evidence is
+not there, the number is not published. Today it holds real data from one machine (an Apple M2);
+more CPUs are needed before broad speed claims can be made.
+
+How a number gets into the ledger:
+
+```mermaid
+flowchart TD
+  M["Registered machine<br/>(real hardware, not CI)"] --> R["Run: fresh process per repetition,<br/>shuffled order, warmed up"]
+  R --> S["Aggregate: median + min,<br/>bootstrap confidence intervals"]
+  S --> CV{"Noise check<br/>(coefficient of variation)"}
+  CV -->|"under 5%"| P["Published: append-only under<br/>results/&lt;uarch&gt;/&lt;date&gt;-&lt;sha&gt;/"]
+  CV -->|"5% or more"| X["Excluded until re-run<br/>(never published noisy)"]
+```
+
 Quiver's second product (Charter §1): a versioned, machine-readable, reproducible record of
 what the kernels cost per (variant, microarchitecture, input configuration). Data model and
 policies: PRD [11](../docs/prd/11-performance-ledger.md); methodology QLM-1:
@@ -14,22 +32,22 @@ policies: PRD [11](../docs/prd/11-performance-ledger.md); methodology QLM-1:
 | `runner/quiver_ledger.py` | the stdlib-only runner: environment checklist → shuffled fresh-process repetitions → bootstrap aggregation → append-only results |
 | `runner/qledger/` | runner modules (statistics per ADR-020, schema checks, environment capture, GB driver) |
 | `runner/tests/` | golden statistics tests + schema accept/reject fixtures (run in ctest) |
-| `machines/` | the machine registry — runs execute **only** on registered machines (REQ-LEDGER-007); CI runners are prohibited as ledger sources |
-| `results/<uarch>/<yyyymmdd>-<shortsha>/` | committed runs: `entries.json` (aggregates), `raw/` (per-repetition GB output, retained), `manifest.json` — append-only, corrections supersede, history is never rewritten |
+| `machines/` | the machine registry, runs execute **only** on registered machines (REQ-LEDGER-007); CI runners are prohibited as ledger sources |
+| `results/<uarch>/<yyyymmdd>-<shortsha>/` | committed runs: `entries.json` (aggregates), `raw/` (per-repetition GB output, retained), `manifest.json`, append-only, corrections supersede, history is never rewritten |
 
 ## Reading results
 
 Entries are referenced from docs by `entry_id` (checked at docs build, REQ-LEDGER-015).
 Statistics per entry: median and min with seeded percentile-bootstrap 95% CIs and CV
-(ADR-020; CI pair reported for the median estimator). Flags: `noisy` (CV in the 3–5% band —
+(ADR-020; CI pair reported for the median estimator). Flags: `noisy` (CV in the 3-5% band,
 published with an explanation; above 5% the entry is excluded until rerun), `no_pmu`,
 `secondary_platform` (Apple Silicon entries carry both and omit `cycles_per_value`,
 REQ-LEDGER-008).
 
-## Coverage — read this before citing numbers
+## Coverage: read this before citing numbers
 
 The ledger never claims coverage it does not have (Charter T7). The registry currently
 holds **one** machine (Apple M2, a secondary platform). The REQ-LEDGER-012 v0.3 gate calls
 for three microarchitectures (Zen 4/5, Golden-Cove-class, Apple M-series); the missing x86
-machines are an **open, recorded deferral** — see `docs/releases/gates/M5.md`. x86 numbers
+machines are an **open, recorded deferral**, see `docs/releases/gates/M5.md`. x86 numbers
 will appear only when measured on registered x86 hardware; none are invented in the interim.

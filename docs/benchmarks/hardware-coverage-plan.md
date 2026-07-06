@@ -5,6 +5,14 @@ That single-µarch state (risk **R-06** / REQ-LEDGER-012) is the one blocker beh
 complete deliverables. This page is the concrete plan to close it. It changes no conclusions on its
 own, it says exactly what evidence is missing and how to add it without rewriting what exists.
 
+```mermaid
+flowchart LR
+  NOW["Today:<br/>1 machine (Apple M2)"] --> BLK["Blocked:<br/>AVX-512 numbers,<br/>study conclusion,<br/>v1.0 certification"]
+  ADD["Register more CPUs:<br/>Intel AVX2, AMD AVX-512,<br/>a second Arm"] --> RUN["Run the ledger on each,<br/>append results (never rewrite)"]
+  RUN --> OK["Unblocked:<br/>cross-CPU numbers,<br/>study concludes,<br/>v1.0 can certify"]
+  BLK -. "needs hardware" .-> ADD
+```
+
 ## What is blocked
 
 | Deferred | Why it needs more machines |

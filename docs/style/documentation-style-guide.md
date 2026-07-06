@@ -13,8 +13,8 @@ readable; they differ only in where the rigor goes.
 
 - **Public docs** explain the user's problem first, then the solution. Internal identifiers and
   cross-references belong in a short "Traceability" section near the end, not in the opening.
-- **Internal docs** may keep their precise, identifier-heavy language, but must open with a short
-  "Plain English" summary (2 to 5 sentences) that says what the page is about in ordinary words.
+- **Internal docs** may keep their precise, identifier-heavy language, but must open with a short 
+  summary (2 to 5 sentences) that says what the page is about in ordinary words.
 
 ## Rules
 
@@ -22,7 +22,7 @@ readable; they differ only in where the rigor goes.
    hyphen with spaces. (This keeps a consistent voice and avoids a common AI-writing tell.)
 2. **Explain the problem before the implementation.** Say what a reader wants to do before naming
    the mechanism that does it.
-3. **Every technical page needs a plain-English summary near the top.** A few sentences a
+3. **Every technical page needs a summary near the top.** A few sentences a
    non-specialist can follow.
 4. **Explain an abbreviation on first use.** Write the words out once, then use the short form.
 5. **Every number must be sourced.** Counts, versions, and measurements must come from the code,
