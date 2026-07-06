@@ -109,6 +109,7 @@
     "docs/testing/testkit.md",
     "docs/benchmarks/methodology.md",
     "docs/benchmarks/running.md",
+    "docs/benchmarks/hardware-coverage-plan.md",
     "docs/benchmarks/investigations/representation-study/README.md",
     "docs/benchmarks/investigations/representation-study/question.md",
     "docs/benchmarks/investigations/representation-study/method.md",
