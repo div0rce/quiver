@@ -28,7 +28,11 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight
   # REQ-DOC-006: C++ snippets in docs are extracted from tests/ or examples/, never free-typed.
   - pymdownx.snippets:
@@ -52,6 +56,7 @@ nav:
       - Building: guides/building.md
       - Vendoring: guides/vendoring.md
       - Disputing a ledger number: guides/disputes.md
+      - Documentation style guide: style/documentation-style-guide.md
   - API reference:
       - Core types: api/core.md
       - Dispatch: api/dispatch.md

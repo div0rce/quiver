@@ -1,9 +1,9 @@
-# Hardware coverage plan — closing R-06
+# Hardware coverage plan: closing R-06
 
 The ledger currently holds **one** registered machine (Apple M2, a secondary, no-PMU platform).
 That single-µarch state (risk **R-06** / REQ-LEDGER-012) is the one blocker behind three otherwise-
 complete deliverables. This page is the concrete plan to close it. It changes no conclusions on its
-own — it says exactly what evidence is missing and how to add it without rewriting what exists.
+own, it says exactly what evidence is missing and how to add it without rewriting what exists.
 
 ## What is blocked
 
@@ -18,13 +18,13 @@ own — it says exactly what evidence is missing and how to add it without rewri
 REQ-LEDGER-012 calls for ≥5 microarchitectures across ≥3 ISAs; the registry has 1. **Minimum useful
 set to unblock** (each a distinct, widely-deployed µarch spanning the shipped ISAs):
 
-- **Intel x86 with AVX2** (e.g. a Golden-Cove-class part) — the mainstream AVX2 baseline.
-- **AMD x86 with AVX-512** (Zen 4/5) — the first *measured* AVX-512 numbers (today AVX-512 is
+- **Intel x86 with AVX2** (e.g. a Golden-Cove-class part), the mainstream AVX2 baseline.
+- **AMD x86 with AVX-512** (Zen 4/5), the first *measured* AVX-512 numbers (today AVX-512 is
   SDE-correctness-only).
-- **A second ARM µarch** (e.g. AWS Graviton 3/4) — cross-validates the Apple M2 NEON numbers on a
+- **A second ARM µarch** (e.g. AWS Graviton 3/4), cross-validates the Apple M2 NEON numbers on a
   different ARM implementation.
 
-Registered machines only — **CI runners are prohibited as ledger sources** (REQ-LEDGER-007); these
+Registered machines only, **CI runners are prohibited as ledger sources** (REQ-LEDGER-007); these
 must be real, quiescable hosts.
 
 ## Procedure per machine
@@ -48,10 +48,10 @@ must be real, quiescable hosts.
 ## Append-only, never rewrite
 
 New machines **add** `results/<uarch>/…` directories and `qle:<entry_id>` references; they never
-edit prior runs. Corrections supersede via a new dated run — history is not rewritten
+edit prior runs. Corrections supersede via a new dated run, history is not rewritten
 (ADR-021). Existing Apple M2 numbers and their verdicts stay exactly as published; cross-µarch
 analysis is layered on top once the data exists. Do not move dev-run / indicative / extrapolated
-figures into `ledger/results/` — only CV-gated, empty-`deviations` runs are publishable.
+figures into `ledger/results/`, only CV-gated, empty-`deviations` runs are publishable.
 
 ## How this unblocks the deferrals
 
@@ -60,7 +60,7 @@ figures into `ledger/results/` — only CV-gated, empty-`deviations` runs are pu
 - With ≥3 ISAs across ≥5 µarchs, the M9 study evaluates its pre-registered decision rule and its
   [conclusion](investigations/representation-study/conclusion.md) can finally be drawn.
 - With the coverage gate met and a regression subset on ≥2 machines showing no unexplained >3%
-  regressions, the M10 v1.0 certification proceeds — the API surface is already frozen-clean, so
+  regressions, the M10 v1.0 certification proceeds, the API surface is already frozen-clean, so
   only this evidence stands between v0.6.0 and a v1.0 tag.
 
 Until then, the M9 conclusion and v1.0 certification remain **pending**, and no cross-µarch
