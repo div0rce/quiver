@@ -1,6 +1,6 @@
 # Getting started
 
-Quiver v0.1 ships the six Tier A kernel families (compare, filter, sel_convert, mask_algebra, take/dict_decode, reduce/SMA) with scalar backends and the full dispatch/testing infrastructure. SIMD backends land per milestone (AVX2 → NEON → AVX-512); the performance ledger arrives with v0.3.
+Quiver is a small C++23 library of fast analytical building blocks (compare, filter, mask, gather, reduce, hash, unpack, checked arithmetic). As of v0.6.0 all ten operation groups are implemented on scalar, AVX2, and NEON, with the AVX-512 versions correctness-validated under Intel's CPU emulator. This page takes you from cloning the repo to running a first working pipeline. See the [project README](https://github.com/div0rce/quiver#readme) for the wider picture.
 
 ## Build and link
 
@@ -9,7 +9,7 @@ git clone https://github.com/div0rce/quiver && cd quiver
 cmake --preset release && cmake --build --preset release -j
 ```
 
-Consume via `add_subdirectory(quiver)` + `target_link_libraries(app PRIVATE quiver::quiver)` (installed-package and amalgamation modes arrive at M8). Requirements: CMake ≥ 3.28, GCC ≥ 13 / Clang ≥ 17 / AppleClang ≥ 16 ([building guide](building.md)).
+Consume Quiver three ways: an installed CMake package (`find_package(Quiver CONFIG)`), a source subproject (`add_subdirectory(quiver)` or `FetchContent`, then `target_link_libraries(app PRIVATE quiver::quiver)`), or the single-file drop-in. All three are covered in the [vendoring guide](vendoring.md). Requirements: CMake 3.28 or newer, GCC 13+ / Clang 17+ / AppleClang 16+ ([building guide](building.md)).
 
 ## First pipeline: filter → gather → reduce
 
