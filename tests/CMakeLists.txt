@@ -92,7 +92,7 @@ quiver_add_test_suite(quiver_tests_differential
   differential/diff_isa_select.cpp differential/diff_isa_mask.cpp
   differential/diff_isa_take.cpp differential/diff_isa_reduce.cpp
   differential/diff_isa_hash.cpp differential/diff_isa_unpack.cpp
-  differential/diff_isa_arith.cpp)
+  differential/diff_isa_arith.cpp differential/diff_unpack_subbyte.cpp)
 quiver_add_test_suite(quiver_tests_invariant
   invariant/inv_bitmap_tail.cpp invariant/inv_determinism.cpp
   invariant/inv_selvec_sorted.cpp invariant/inv_noalloc.cpp invariant/inv_guard_pages.cpp)

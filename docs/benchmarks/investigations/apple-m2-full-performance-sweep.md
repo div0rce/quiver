@@ -4,10 +4,10 @@ Status: closed for this pass. Every implemented operation group was inventoried 
 committed Apple M2 ledger, every one-sided (unknown) shape was explained, the parity and roofline
 claims were proven at the assembly level rather than asserted, and a per-family assembly audit
 mapped where real optimization headroom exists. One optimization candidate (sub-byte NEON unpack)
-was identified as high value and is pursued as an experimental candidate in a separate follow-up
-change; it is not wired to production dispatch until it is proven correct and measured on a quiet
-machine. No benchmark data was invented, no losing result was deleted, and the CV and noise policy
-was not touched.
+was identified as high value and is pursued as an experimental candidate (see the
+[sub-byte unpack investigation](apple-m2-subbyte-unpack-neon.md)); it is not wired to production
+dispatch until it is proven correct and measured on a quiet machine. No benchmark data was invented,
+no losing result was deleted, and the CV and noise policy was not touched.
 
 This sweep is Apple M2 only (REQ-LEDGER, R-06: one registered machine). No claim here generalizes to
 any other microarchitecture.
@@ -250,8 +250,9 @@ irregular widths (w = 1, 4, 7, 24) delegate to the scalar gather and sit at abou
 mechanism (replace a per-value serial bit gather with a vectorized widen that streams toward the same
 output-write roofline the byte-aligned path already hits) is near-certain in direction. This is a
 recorded follow-up (gate M6, unpack API notes), not a rejected option. It is implemented as an
-experimental candidate behind an internal seam in a follow-up change and is not wired to production
-dispatch until it is proven correct and measured on a quiet machine.
+experimental candidate behind an internal seam and is not wired to production dispatch until it is
+proven correct and measured on a quiet machine. See the
+[sub-byte unpack investigation](apple-m2-subbyte-unpack-neon.md).
 
 Deferred and unmeasured (mechanism identified, not implemented here): each of these is a plausible
 improvement whose net benefit is either input-distribution dependent or below the current noise
@@ -303,5 +304,5 @@ only (R-06, one registered machine).
 
 REQ-KERNEL-007 (resolution-time backend choice), REQ-LEDGER-005 (CV policy), REQ-LEDGER-015 (ledger
 entry references), Charter T7 (publish honest verdicts). Related: [Apple M2 NEON
-losses](apple-m2-neon-losses.md), [K7 NEON hash](../../investigations/k7-neon-hash.md). The sub-byte
-unpack candidate and its investigation land in a follow-up change.
+losses](apple-m2-neon-losses.md), [sub-byte unpack candidate](apple-m2-subbyte-unpack-neon.md),
+[K7 NEON hash](../../investigations/k7-neon-hash.md).
