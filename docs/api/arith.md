@@ -34,7 +34,7 @@ K9's semantics are defined by `src/kernels/arith/arith_scalar_impl.h` (wrapping 
 
 **Verdict (Apple M2, v0.4, `neon` vs `autovec`):**
 
-- **K9 `arith` — a published loss (~0.90×).** For pure elementwise `add`/`mul` the autovectorizer is the ideal case and slightly beats the explicit NEON loop; the family is bandwidth-bound and this is the honest T7 outcome (the bench hypothesis predicted parity/loss territory).
+- **K9 `arith` (8-byte types): the handwritten loop lost (~0.90×), so it now delegates to the autovectorized scalar reference.** For pure elementwise `add`/`mul` on 8-byte elements (`i64`/`u64`/`f64`) the family is bandwidth-bound and the compiler's autovectorized scalar loop beat the explicit NEON loop (tighter tail and scheduling). Acting on that committed evidence, the shipped 64-bit `arith` path delegates to that reference and runs at the `autovec` numbers (REQ-KERNEL-007, evidence-gated backend choice). Narrower widths keep their handwritten NEON (not measured, not swept). The 0.90× rows below are the handwritten measurement that motivated the change. See the [Apple M2 NEON investigation](../benchmarks/investigations/apple-m2-neon-losses.md).
 - **K10 `arith_checked` — neon wins 1.42×, and is FLAT across overflow density.** The three `checked_add` rows at 0 / 0.1% / 50% overflow are within 0.4% of each other — the direct measurement of ADR-014's branch-free-accumulation claim (cost does not scale with overflow count).
 - **K10 `arith_saturating` — neon wins 1.65×** via native `vqadd` versus the autovectorized compare-and-clamp.
 
