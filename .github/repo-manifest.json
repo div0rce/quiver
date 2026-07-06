@@ -111,6 +111,7 @@
     "docs/benchmarks/running.md",
     "docs/benchmarks/hardware-coverage-plan.md",
     "docs/style/documentation-style-guide.md",
+    "docs/benchmarks/investigations/apple-m2-neon-losses.md",
     "docs/benchmarks/investigations/representation-study/README.md",
     "docs/benchmarks/investigations/representation-study/question.md",
     "docs/benchmarks/investigations/representation-study/method.md",

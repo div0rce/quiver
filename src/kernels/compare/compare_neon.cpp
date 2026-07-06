@@ -7,7 +7,10 @@
 // total orders); floats use native ordered compares (vclt/vcle/vcgt/vcge: NaN lanes false)
 // with kNe as post-pack inversion of eq — !(a==b) is exactly C++ `!=` NaN semantics.
 // Groups are 8 elements (16 for 8-bit): one vector for 8/16-bit lanes, two for 32-bit,
-// four for 64-bit. Validity ANDs at byte granularity; selvec forms feed predicate bytes
+// four for 64-bit. The 64-bit BITMAP forms instead delegate to the autovectorized scalar
+// reference (measured faster than the handwritten pack on Apple M2; the 64-bit-lane pack needs a
+// horizontal reduce per group). Selvec and narrower widths keep the handwritten NEON below.
+// Validity ANDs at byte granularity; selvec forms feed predicate bytes
 // into the kCompactLut32 index-store core; scratch stays inside the n-element capacity
 // region (REQ-MEM-008). Tails are scalar and byte-assembled exactly like the reference
 // (ADR-015). Bit-identical to compare_scalar_impl.h (REQ-KERNEL-002).
@@ -492,20 +495,30 @@ std::int64_t emit_selvec_neon(std::int64_t n, const Pred& pred, const Validity& 
 #define QUIVER_K1_DEFINE(T)                                                                        \
   std::int64_t k1_compare_bitmap(CompareOp op, const T* in, std::int64_t n, T comparand,           \
                                  const std::uint8_t* validity, std::uint8_t* out) noexcept {       \
-    return emit_bitmap_neon<T>(n, CmpRhs<T>{op, in, comparand, cmp_broadcast(comparand)},          \
-                               OneValidity{validity}, out);                                        \
+    if constexpr (sizeof(T) == 8) /* 64-bit bitmap: autovec scalar wins (see header) */            \
+      return scalar_impl::compare_bitmap(op, in, n, comparand, validity, out);                     \
+    else                                                                                           \
+      return emit_bitmap_neon<T>(n, CmpRhs<T>{op, in, comparand, cmp_broadcast(comparand)},        \
+                                 OneValidity{validity}, out);                                      \
   }                                                                                                \
   std::int64_t k1_compare_bitmap2(CompareOp op, const T* a, const T* b, std::int64_t n,            \
                                   const std::uint8_t* a_validity, const std::uint8_t* b_validity,  \
                                   std::uint8_t* out) noexcept {                                    \
-    return emit_bitmap_neon<T>(n, CmpBatch<T>{op, a, b}, TwoValidity{a_validity, b_validity},      \
-                               out);                                                               \
+    if constexpr (sizeof(T) == 8)                                                                  \
+      return scalar_impl::compare_bitmap2(op, a, b, n, a_validity, b_validity, out);               \
+    else                                                                                           \
+      return emit_bitmap_neon<T>(n, CmpBatch<T>{op, a, b}, TwoValidity{a_validity, b_validity},    \
+                                 out);                                                             \
   }                                                                                                \
   std::int64_t k1_compare_between_bitmap(const T* in, std::int64_t n, T lo, T hi,                  \
                                          const std::uint8_t* validity,                             \
                                          std::uint8_t* out) noexcept {                             \
-    return emit_bitmap_neon<T>(n, CmpBetween<T>{in, lo, hi, cmp_broadcast(lo), cmp_broadcast(hi)}, \
-                               OneValidity{validity}, out);                                        \
+    if constexpr (sizeof(T) == 8)                                                                  \
+      return scalar_impl::compare_between_bitmap(in, n, lo, hi, validity, out);                    \
+    else                                                                                           \
+      return emit_bitmap_neon<T>(n,                                                                \
+                                 CmpBetween<T>{in, lo, hi, cmp_broadcast(lo), cmp_broadcast(hi)},  \
+                                 OneValidity{validity}, out);                                      \
   }                                                                                                \
   std::int64_t k1_compare_selvec(CompareOp op, const T* in, std::int64_t n, T comparand,           \
                                  const std::uint8_t* validity, std::uint32_t* out) noexcept {      \

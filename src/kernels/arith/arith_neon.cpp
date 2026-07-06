@@ -1,6 +1,8 @@
-// K9 arith — NEON backend (PRD 08 §5 K9): direct SIMD add/sub/mul per lane width (all
-// native and modular on NEON except the 64-bit multiply, which decomposes into umull/umlal
-// 32x32 partials exactly as in K7); floats native. Exact aliasing out == a/b is safe (loads
+// K9 arith — NEON backend (PRD 08 §5 K9): direct SIMD add/sub/mul per lane width for the
+// 1/2/4-byte widths (all native and modular on NEON; floats native). The 8-byte widths
+// (i64/u64/f64) delegate to the autovectorized scalar reference: pure elementwise 64-bit
+// arithmetic is bandwidth-bound and the compiler's autovectorized loop measured faster than the
+// handwritten one on Apple M2 (see the family page). Exact aliasing out == a/b is safe (loads
 // complete before the store per block). Tails scalar (ADR-015). Bit-identical to
 // arith_scalar_impl.h (REQ-KERNEL-002).
 // Module: MOD-K9-ARITH | REQs: REQ-K9-001, REQ-SIMD-001..003/-007 | ADR-003
@@ -16,16 +18,6 @@ QUIVER_BEGIN_NAMESPACE
 namespace detail::neon {
 
 namespace {
-
-QUIVER_FORCE_INLINE uint64x2_t ar_mul64_lo(uint64x2_t a, uint64x2_t b) noexcept {
-  const uint32x2_t a_lo = vmovn_u64(a);
-  const uint32x2_t b_lo = vmovn_u64(b);
-  const uint32x2_t a_hi = vshrn_n_u64(a, 32);
-  const uint32x2_t b_hi = vshrn_n_u64(b, 32);
-  uint64x2_t cross = vmull_u32(a_lo, b_hi);
-  cross = vmlal_u32(cross, a_hi, b_lo);
-  return vaddq_u64(vmull_u32(a_lo, b_lo), vshlq_n_u64(cross, 32));
-}
 
 // One 128-bit block of the op at T's width, on the raw byte image (wrapping is modular, so
 // signedness does not change the bits; floats use their own loads below).
@@ -62,18 +54,9 @@ QUIVER_FORCE_INLINE uint8x16_t apply_op_int(ArithOp op, uint8x16_t a, uint8x16_t
     case ArithOp::kMul:
       return vreinterpretq_u8_u32(vmulq_u32(x, y));
     }
-  } else {
-    const uint64x2_t x = vreinterpretq_u64_u8(a);
-    const uint64x2_t y = vreinterpretq_u64_u8(b);
-    switch (op) {
-    case ArithOp::kAdd:
-      return vreinterpretq_u8_u64(vaddq_u64(x, y));
-    case ArithOp::kSub:
-      return vreinterpretq_u8_u64(vsubq_u64(x, y));
-    case ArithOp::kMul:
-      return vreinterpretq_u8_u64(ar_mul64_lo(x, y));
-    }
   }
+  // 8-byte integers are delegated to the autovectorized scalar reference (measured win, see
+  // k9_arith below), so no 64-bit block-op path exists here.
   return a;  // unreachable for in-contract op values
 }
 
@@ -178,10 +161,16 @@ struct ar_ScalarRhs {
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K9_DEFINE(T)                                                                        \
   void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {             \
-    arith_impl<T>(op, a, ar_BatchRhs<T>{b}, n, out);                                               \
+    if constexpr (sizeof(T) == 8) /* 8-byte elementwise is bandwidth-bound; autovec scalar wins */ \
+      scalar_impl::arith(op, a, b, n, out);                                                        \
+    else                                                                                           \
+      arith_impl<T>(op, a, ar_BatchRhs<T>{b}, n, out);                                             \
   }                                                                                                \
   void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {         \
-    arith_impl<T>(op, a, ar_ScalarRhs<T>{b}, n, out);                                              \
+    if constexpr (sizeof(T) == 8)                                                                  \
+      scalar_impl::arith_scalar_rhs(op, a, b, n, out);                                             \
+    else                                                                                           \
+      arith_impl<T>(op, a, ar_ScalarRhs<T>{b}, n, out);                                            \
   }
 
 QUIVER_K9_DEFINE(std::int8_t)
