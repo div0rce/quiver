@@ -49,13 +49,14 @@ For w in [1,7], each 8-value block:
 3. Apply the wrapping frame-of-reference add and narrow or widen to the output type, storing 8
    values per iteration.
 
-The candidate is behind a compile-time seam, `QUIVER_K8_SUBBYTE_VECTOR` (default 0), which mirrors
-the existing `QUIVER_K7_HASH_VECTOR` evidence-gate. With the default, production dispatch is
-unchanged: sub-byte widths delegate to the scalar reference. Building with the flag routes sub-byte
-widths to the candidate, which is how the full existing test suite can exercise it. The candidate is
-also exposed as `detail::neon::unpack_subbyte_candidate` (see `unpack_neon_candidate.h`) so a
-dedicated test calls it directly, giving CI correctness coverage on the arm64 runner without changing
-what production runs.
+The path is behind a compile-time seam, `QUIVER_K8_SUBBYTE_VECTOR`, which mirrors the existing
+`QUIVER_K7_HASH_VECTOR` evidence-gate. It landed with default 0 (production unchanged, sub-byte
+delegating to the scalar reference) while the measurement was pending; after the promotion the
+default is 1 (production dispatch runs the vectorized path) and building with
+`-DQUIVER_K8_SUBBYTE_VECTOR=0` reverts sub-byte to the scalar reference, which keeps both variants
+compiled and A/B-comparable. The path is also exposed as `detail::neon::unpack_subbyte_candidate`
+(see `unpack_neon_candidate.h`) so a dedicated test calls it directly, giving CI correctness
+coverage on the arm64 runner independent of the seam's default.
 
 ## Correctness proof and tests
 
