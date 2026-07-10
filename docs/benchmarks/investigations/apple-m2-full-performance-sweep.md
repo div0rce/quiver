@@ -5,8 +5,9 @@ committed Apple M2 ledger, every one-sided (unknown) shape was explained, the pa
 claims were proven at the assembly level rather than asserted, and a per-family assembly audit
 mapped where real optimization headroom exists. One optimization candidate (sub-byte NEON unpack)
 was identified as high value and is pursued as an experimental candidate (see the
-[sub-byte unpack investigation](apple-m2-subbyte-unpack-neon.md)); it is not wired to production
-dispatch until it is proven correct and measured on a quiet machine. No benchmark data was invented,
+[sub-byte unpack investigation](apple-m2-subbyte-unpack-neon.md)); it landed off production dispatch
+pending a quiet-machine measurement, and has since been measured (6.9x to 11.0x over the scalar
+gather, CV under 0.9%) and promoted to the shipped default. No benchmark data was invented,
 no losing result was deleted, and the CV and noise policy was not touched.
 
 This sweep is Apple M2 only (REQ-LEDGER, R-06: one registered machine). No claim here generalizes to
@@ -232,7 +233,7 @@ a dispatch-table change.
 | take (K5) | gather latency-bound | already fully delegates to scalar (no gather hw); parity is code-identity | keep (delegation), optimal |
 | reduce (K6) | latency / compute-bound | sum wins up to 7.9x; dense min/max is a deferred candidate | keep NEON |
 | hash (K7) | compute-bound (64-bit mul port) | neon is the GPR chain; parity is code-identity | keep (settled) |
-| unpack (K8) | mixed; sub-byte compute-bound | byte-aligned widths win 12x to 42x; sub-byte and w=24 delegate to scalar (about 1.09x) and are the primary optimization candidate | keep scalar for sub-byte until the candidate is proven and measured quiet |
+| unpack (K8) | mixed; sub-byte compute-bound | byte-aligned widths win 12x to 42x; sub-byte and w=24 delegated to scalar (about 1.09x) and were the primary optimization candidate | sub-byte since vectorized, measured 6.9x to 11.0x on a quiet machine, and promoted to the shipped default; w=24 stays on scalar |
 | arith (K9) | memory-bound | 8-byte settled by PR #27 (delegates); narrow widths keep NEON | keep |
 | arith_guarded (K10) | mixed | checked and saturating add/sub win 1.42x to 1.65x; all multiplies delegate (REQ-K10-003) | keep |
 
@@ -244,14 +245,14 @@ Proven (no code change): mask/and, take/dict_decode, and hash are at their roofl
 code-identical to the scalar path; the proofs are above. select is store-port bound and already wins.
 These are documented as optimal, not left as open questions.
 
-Relative-only, pursued now (measurement deferred to a quiet machine): sub-byte NEON unpack. The
-committed ledger shows byte-aligned widths reach 12x to 42x through vectorization while sub-byte and
-irregular widths (w = 1, 4, 7, 24) delegate to the scalar gather and sit at about 1.09x. The
-mechanism (replace a per-value serial bit gather with a vectorized widen that streams toward the same
-output-write roofline the byte-aligned path already hits) is near-certain in direction. This is a
-recorded follow-up (gate M6, unpack API notes), not a rejected option. It is implemented as an
-experimental candidate behind an internal seam and is not wired to production dispatch until it is
-proven correct and measured on a quiet machine. See the
+Pursued and since resolved: sub-byte NEON unpack. The committed ledger showed byte-aligned widths
+reach 12x to 42x through vectorization while sub-byte and irregular widths (w = 1, 4, 7, 24)
+delegated to the scalar gather and sat at about 1.09x. The mechanism (replace a per-value serial bit
+gather with a vectorized widen) was a recorded follow-up (gate M6, unpack API notes). It was
+implemented as an experimental candidate behind an internal seam, off production dispatch; after the
+machine quieted, the paired ledger measurement showed 6.9x to 11.0x over the scalar gather (every CV
+under 0.9%, controls matching the committed history) and the path was promoted to the shipped
+default (REQ-KERNEL-007). w=24 stays on the scalar reference. See the
 [sub-byte unpack investigation](apple-m2-subbyte-unpack-neon.md).
 
 Deferred and unmeasured (mechanism identified, not implemented here): each of these is a plausible
