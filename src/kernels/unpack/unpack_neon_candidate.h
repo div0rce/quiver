@@ -1,13 +1,11 @@
-// K8 unpack — sub-byte NEON candidate (EXPERIMENTAL, not on production dispatch).
+// K8 unpack — sub-byte NEON vectorizer (SHIPPED default on aarch64).
 //
-// This declares the vectorized sub-byte unpacker that is being evaluated as a replacement for the
-// scalar per-value bit gather on widths 1..7. It is NOT wired into production dispatch: the
-// `k8_unpack` backend still delegates sub-byte widths to the scalar reference unless the
-// translation unit is compiled with -DQUIVER_K8_SUBBYTE_VECTOR=1 (the documented
-// coverage-and-evaluation mechanism, mirroring QUIVER_K7_HASH_VECTOR). The function is exposed here
-// so the differential and guard-page tests can exercise it directly on aarch64, giving CI
-// correctness coverage of the candidate without changing what production runs. Ship to dispatch
-// only after a quiet-machine ledger measurement (REQ-KERNEL-007). See
+// This declares the vectorized sub-byte unpacker that replaced the scalar per-value bit gather on
+// widths 1..7. It is the production path by default (QUIVER_K8_SUBBYTE_VECTOR=1), promoted after a
+// quiet Apple M2 measurement showed 6.5x to 10.5x over scalar at CV under 1% (REQ-KERNEL-007).
+// Building with -DQUIVER_K8_SUBBYTE_VECTOR=0 reverts sub-byte to the scalar reference (fallback and
+// A/B coverage, mirroring QUIVER_K7_HASH_VECTOR). The function is also exposed here so the
+// differential and guard-page tests exercise it directly on aarch64. See
 // docs/benchmarks/investigations/apple-m2-subbyte-unpack-neon.md.
 //
 // SECURITY CONTRACT (REQ-K8-002 / REQ-SEC-004): identical to the reference. For integer width w,

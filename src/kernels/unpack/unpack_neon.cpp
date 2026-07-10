@@ -2,12 +2,13 @@
 // AVX2 backend: byte-aligned widths w ∈ {8, 16, 32} widen with vmovl chains, and
 // w == 8*sizeof(Out) is a straight copy + FOR add; sub-byte and irregular widths route
 // through the scalar reference's per-value bit gather (bit-identical by definition).
-// The sub-byte (w in [1,7]) TBL/ushl expansion is an EXPERIMENTAL candidate that is NOT on
-// production dispatch: the default build still delegates sub-byte widths to the scalar reference.
-// Building with -DQUIVER_K8_SUBBYTE_VECTOR=1 routes sub-byte widths to the candidate (the
-// documented evaluation mechanism, mirroring QUIVER_K7_HASH_VECTOR); the candidate is also exposed
-// via unpack_neon_candidate.h for direct differential/guard-page testing. Ship to dispatch only
-// with a quiet-machine ledger measurement (see the sub-byte unpack investigation page).
+// The sub-byte (w in [1,7]) ushl expansion is the SHIPPED default (QUIVER_K8_SUBBYTE_VECTOR=1): it
+// vectorizes 8 values per iteration and measured 6.5x to 10.5x faster than the scalar gather on a
+// quiet Apple M2 (u32, CV under 1%), so it is on production dispatch. Building with
+// -DQUIVER_K8_SUBBYTE_VECTOR=0 reverts sub-byte to the scalar reference (the documented fallback
+// and coverage mechanism, mirroring QUIVER_K7_HASH_VECTOR); the vector path is also exposed via
+// unpack_neon_candidate.h for direct differential/guard-page testing. See the sub-byte unpack
+// investigation page for the measurement and correctness proof.
 // SECURITY: every specialized block reads exactly its own bytes inside the ceil(n*w/8)
 // bound (REQ-K8-002/REQ-SEC-004); tails are scalar (ADR-015). For integer w, 8 values occupy
 // exactly w bytes and re-align to a byte boundary, which is what makes the sub-byte vector loop
@@ -23,10 +24,11 @@
 #include <cstring>
 #include <type_traits>
 
-// Evidence-gated technique switch (REQ-KERNEL-007): default 0 keeps sub-byte on the scalar
-// reference (production). Set to 1 to route sub-byte widths to the NEON candidate for evaluation.
+// Evidence-gated technique switch (REQ-KERNEL-007): default 1 ships the vectorized sub-byte path
+// (measured 6.5x-10.5x over scalar on a quiet Apple M2). Build with -DQUIVER_K8_SUBBYTE_VECTOR=0 to
+// revert sub-byte to the scalar reference (fallback and A/B coverage).
 #ifndef QUIVER_K8_SUBBYTE_VECTOR
-#define QUIVER_K8_SUBBYTE_VECTOR 0
+#define QUIVER_K8_SUBBYTE_VECTOR 1
 #endif
 
 QUIVER_BEGIN_NAMESPACE
@@ -189,12 +191,12 @@ void unpack_impl(const std::uint8_t* packed, std::int64_t n, int bit_width, Out 
     break;
   }
 #if QUIVER_K8_SUBBYTE_VECTOR
-  if (bit_width >= 1 && bit_width <= 7) {  // experimental: route sub-byte to the NEON candidate
+  if (bit_width >= 1 && bit_width <= 7) {  // shipped default: vectorized sub-byte unpack
     unpack_subbyte_core<Out>(packed, n, bit_width, base, out);
     return;
   }
 #endif
-  scalar_impl::unpack<Out>(packed, n, bit_width, base, out);  // generic gather path (production)
+  scalar_impl::unpack<Out>(packed, n, bit_width, base, out);  // generic path (w=0, irregular w)
 }
 
 }  // namespace

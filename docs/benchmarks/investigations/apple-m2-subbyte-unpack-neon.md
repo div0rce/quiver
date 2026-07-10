@@ -1,9 +1,12 @@
 # Investigation: sub-byte NEON unpack candidate (Apple M2)
 
-Status: experimental candidate landed, NOT on production dispatch. Correctness and the no-over-read
-bound are proven; a wall-clock measurement is deferred to a quiet machine, so production still uses
-the scalar reference for sub-byte widths. This page records why the candidate exists, how it stays in
-bounds, how it is tested, and what must happen before it can ship to dispatch.
+Status: closed, PROMOTED. The candidate landed first as an experimental path off production dispatch
+(correctness and the no-over-read bound proven, measurement deferred); a subsequent quiet-machine
+ledger measurement showed it beats the scalar gather by 6.9x to 11.0x with every CV under 0.9%, so
+`QUIVER_K8_SUBBYTE_VECTOR` now defaults to 1 and production dispatch runs the vectorized sub-byte
+path (REQ-KERNEL-007). Building with `-DQUIVER_K8_SUBBYTE_VECTOR=0` reverts to the scalar reference.
+This page records why the path exists, how it stays in bounds, how it is tested, and the measurement
+that promoted it.
 
 Apple M2 only (R-06, one registered machine). No claim here generalizes to another microarchitecture.
 
@@ -46,13 +49,14 @@ For w in [1,7], each 8-value block:
 3. Apply the wrapping frame-of-reference add and narrow or widen to the output type, storing 8
    values per iteration.
 
-The candidate is behind a compile-time seam, `QUIVER_K8_SUBBYTE_VECTOR` (default 0), which mirrors
-the existing `QUIVER_K7_HASH_VECTOR` evidence-gate. With the default, production dispatch is
-unchanged: sub-byte widths delegate to the scalar reference. Building with the flag routes sub-byte
-widths to the candidate, which is how the full existing test suite can exercise it. The candidate is
-also exposed as `detail::neon::unpack_subbyte_candidate` (see `unpack_neon_candidate.h`) so a
-dedicated test calls it directly, giving CI correctness coverage on the arm64 runner without changing
-what production runs.
+The path is behind a compile-time seam, `QUIVER_K8_SUBBYTE_VECTOR`, which mirrors the existing
+`QUIVER_K7_HASH_VECTOR` evidence-gate. It landed with default 0 (production unchanged, sub-byte
+delegating to the scalar reference) while the measurement was pending; after the promotion the
+default is 1 (production dispatch runs the vectorized path) and building with
+`-DQUIVER_K8_SUBBYTE_VECTOR=0` reverts sub-byte to the scalar reference, which keeps both variants
+compiled and A/B-comparable. The path is also exposed as `detail::neon::unpack_subbyte_candidate`
+(see `unpack_neon_candidate.h`) so a dedicated test calls it directly, giving CI correctness
+coverage on the arm64 runner independent of the seam's default.
 
 ## Correctness proof and tests
 
@@ -89,34 +93,52 @@ throughput, which is unmeasured (see below).
 
 ## Measurements
 
-Deferred. This sweep ran while the machine was under heavy concurrent load (load average 6 to 9, a
-second compute-heavy application resident), which the CV policy is designed to reject, and the local
-release toolchain was additionally blocked mid-session by an Xcode license gate. A wall-clock
-number taken under that state would be noise, and publishing or dispatching on it would violate the
-methodology. No exploratory number is claimed. The direction is motivated only by the committed
-ledger: the analogous vectorization of the byte-aligned widths achieves 12x to 42x over the scalar
-path, so vectorizing sub-byte widths is expected to help; that expectation is not a measurement and
-does not gate dispatch.
+At candidate time: deferred. The sweep ran while the machine was under heavy concurrent load (load
+average 6 to 9), which the CV policy is designed to reject, and the local release toolchain was
+additionally blocked mid-session by an Xcode license gate; no exploratory number was claimed.
+
+Promotion measurement (machine quieted, load about 1.3 to 2.5; ledger runner, fresh process per
+repetition, 10 repetitions, 1 s windows; u32, n=65536; committed run dirs
+`20260710-220d2e0236b8` and `-b`):
+
+| width | scalar gather (autovec) | vectorized (neon) | speedup | worst CV |
+|---|---|---|---|---|
+| w=1 | 67100 ns | 6118 ns | 10.97x | 0.43% |
+| w=4 | 67117 ns | 9687 ns | 6.93x | 0.70% |
+| w=7 | 108450 ns | 12997 ns | 8.34x | 0.53% |
+| w=8 (control, unchanged path) | 66500 ns | 5475 ns | 12.15x | 0.29% |
+| w=16 (control, unchanged path) | 121011 ns | 6543 ns | 18.49x | 0.83% |
+
+Why this measurement is trustworthy: the w=8 and w=16 controls are code-untouched by the flag and
+reproduce the committed v0.4 numbers (12.83x / 19.87x) within a few percent, so the session is
+comparable to the historical ledger; a flag=0 build in the same session also reproduced the
+historical scalar-delegation numbers. One methodological trap was caught and corrected before any
+number was trusted: the first flag=1 comparison build was silently configured without `-O3`
+(a hand-rolled cmake invocation that clobbered `CMAKE_CXX_FLAGS_RELEASE`), and the byte-identical
+w=8 control exposed it immediately by "regressing" 43x. Controls that cannot legitimately change are
+what make an A/B build comparison falsifiable.
 
 ## Dispatch decision
 
-Production dispatch is unchanged: sub-byte widths delegate to the scalar reference
-(`QUIVER_K8_SUBBYTE_VECTOR` defaults to 0). The candidate ships compiled and CI-tested but off the
-production path. It may be promoted to dispatch only after a quiet-machine ledger measurement shows it
-reliably beats the scalar path with the methodology satisfied (REQ-KERNEL-007, the same evidence gate
-every backend choice uses). If a quiet-machine measurement shows it ties or loses, it stays an
-investigation or is removed; it will not be shipped on a loaded-machine number.
+PROMOTED. `QUIVER_K8_SUBBYTE_VECTOR` defaults to 1: production dispatch on aarch64 runs the
+vectorized sub-byte path for w in [1,7]. The measurement above satisfies the evidence gate
+(REQ-KERNEL-007): a reliable win, well beyond noise, on the registered machine in a quiet state,
+with the full correctness suite passing at the flipped default (212/212, including the exhaustive
+width differential through real dispatch). Building with `-DQUIVER_K8_SUBBYTE_VECTOR=0` reverts
+sub-byte to the scalar reference (the fallback and A/B coverage mechanism, mirroring
+`QUIVER_K7_HASH_VECTOR`).
 
 ## Remaining risks and next steps
 
-- Performance is unmeasured; the current byte-assembly load is a first cut. The likely next
-  optimization is per-width specialization (compile-time w) so the load and shifts inline to fixed
-  forms, which is the standard fast bit-unpack shape. That work should come with the quiet-machine
-  measurement, not before it.
-- The candidate covers w in [1,7] only. Irregular widths such as 24 (multiple bytes per value) are a
-  structurally different path and remain on the scalar reference.
-- Coverage is one machine (R-06). A promotion decision needs the registered Apple M2 in a quiet
-  state, and ideally the second and third microarchitectures the coverage plan calls for.
+- The runtime-w byte-assembly load is a first cut. Per-width specialization (compile-time w) so the
+  load and shifts inline to fixed forms could raise the win further; it is an evidence-gated
+  follow-up, and the measured 6.9x to 11.0x already clears the promotion bar without it.
+- The path covers w in [1,7] only. Irregular widths such as 24 (multiple bytes per value) are a
+  structurally different shape and remain on the scalar reference (measured near-parity there).
+- Coverage is one machine (R-06): the promotion evidence is Apple M2 only. The seam makes the
+  decision per-build revisitable when the second and third microarchitectures the coverage plan
+  calls for are registered. The AVX2/AVX-512 sub-byte paths still delegate to scalar; vectorizing
+  them is the analogous x86 follow-up and is decided by their own ledger, not this page.
 
 ## Traceability
 
