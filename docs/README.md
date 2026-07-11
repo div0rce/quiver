@@ -1,14 +1,34 @@
-# Quiver documentation
+# Quiver
 
-This is the documentation home for Quiver, a small C++23 library of fast
-analytical building blocks. If you are new here, start with the [project README](https://github.com/div0rce/quiver#readme) for
-what Quiver is and how to try it, then the [status report](releases/final-implementation-report.md)
-for exactly where the project stands. The directories below hold everything else: how to build and
-vendor it, the API reference, the architecture, the benchmark record, and the full engineering
-history. New writing here follows the [documentation style guide](style/documentation-style-guide.md).
+Dependency-free C++23 analytical kernels with runtime SIMD dispatch. Compare, filter, gather,
+reduce, hash, and unpack columnar data through one portable API; Quiver selects scalar, AVX2,
+AVX-512, or NEON at run time, and every performance claim traces to a committed, reproducible
+benchmark entry.
 
-Documentation is a co-deliverable of the product: every directory below has a stated purpose and an
-owning module, and documentation changes ship in the same change as the behavior they describe.
+**Five-minute path:**
+
+1. [Install](guides/vendoring.md) — two-file drop-in, `FetchContent`, or the CMake package.
+2. [Quickstart](guides/getting-started.md) — first compile-and-run.
+3. [Recipes](guides/recipes.md) — filter, pipeline, ISA control, nulls; complete tested programs.
+4. [API reference](api/core.md) — the contracts, one page per operation family.
+5. [Performance](benchmarks/README.md) — what is measured, on what, and
+   [what it costs](benchmarks/investigations/apple-m2-full-performance-sweep.md); one machine so
+   far, stated plainly ([compatibility](compatibility.md) keeps compiles / tested / measured
+   distinct).
+
+Contributions do not require reading any specification for docs, examples, packaging, or hardware
+benchmark submissions — see [contributing](contributing.md), Lane A.
+
+---
+
+## How these docs are organized
+
+Everything below this line is the engineering archive: binding specifications, decision records,
+per-module architecture, and the full project history. Users rarely need it; contributors to
+kernel internals do. New writing follows the
+[documentation style guide](style/documentation-style-guide.md), and documentation is a
+co-deliverable: every directory has a stated purpose and an owning module, and documentation
+changes ship in the same change as the behavior they describe.
 
 ## Directory map (REQ-DOC-001, REQ-REPO-012)
 

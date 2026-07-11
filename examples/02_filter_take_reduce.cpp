@@ -7,6 +7,7 @@
 
 #include "quiver/quiver.h"
 
+// --8<-- [start:pipeline]
 int main() {
   const std::vector<std::int32_t> in = {5, 1, 9, 3, 7, 2, 8, 4, 6, 0};
   const auto n = static_cast<std::int64_t>(in.size());
@@ -30,3 +31,4 @@ int main() {
               static_cast<long long>(sum));
   return 0;
 }
+// --8<-- [end:pipeline]
