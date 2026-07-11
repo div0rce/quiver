@@ -1,0 +1,252 @@
+[
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-c-bm-filter-bitmap-neon-i64-n-4096-sel-1-pat-uniform-4096-1-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=4096/sel=1/pat=uniform/4096/1/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 1,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-10T23:45:41+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1485.431461524537,
+        "min": 1481.3205933008583,
+        "ci95_lo": 1483.5854639567558,
+        "ci95_hi": 1517.651747612446,
+        "cv": 0.06649797446290617
+      },
+      "values_per_s": {
+        "median": 2757384300.4476786,
+        "min": 2425694159.607666,
+        "ci95_lo": 2714811658.0472784,
+        "ci95_hi": 2760881446.1137834,
+        "cv": 0.0387147745510362
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-c-bm-filter-bitmap-neon-i64-n-4096-sel-99-pat-clustered-4096-99-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=4096/sel=99/pat=clustered/4096/99/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 99,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-10T23:45:41+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1385.7655278009968,
+        "min": 1380.519530363791,
+        "ci95_lo": 1382.5027793836598,
+        "ci95_hi": 1447.5737102984913,
+        "cv": 0.07984905867523893
+      },
+      "values_per_s": {
+        "median": 2955779172.323018,
+        "min": 2529058325.2223516,
+        "ci95_lo": 2833940397.405978,
+        "ci95_hi": 2962739240.222209,
+        "cv": 0.050023022384431536
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-c-bm-filter-bitmap-autovec-i64-n-4096-sel-10-pat-uniform-4096-10-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=4096/sel=10/pat=uniform/4096/10/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 10,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-10T23:45:41+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2478.2217238626918,
+        "min": 2435.1280667824462,
+        "ci95_lo": 2451.162045716497,
+        "ci95_hi": 2628.4327599032076,
+        "cv": 0.16136374760117142
+      },
+      "values_per_s": {
+        "median": 1652818439.0061111,
+        "min": 1301550575.72396,
+        "ci95_lo": 1561563102.6385722,
+        "ci95_hi": 1671074779.3941984,
+        "cv": 0.07340648116548962
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-c-bm-filter-bitmap-autovec-i64-n-4096-sel-90-pat-uniform-4096-90-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=4096/sel=90/pat=uniform/4096/90/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 90,
+      "pat": "uniform"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-10T23:45:41+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2487.944394190113,
+        "min": 2451.6086550445866,
+        "ci95_lo": 2462.3043720432515,
+        "ci95_hi": 2538.3828420642994,
+        "cv": 0.10410663740321126
+      },
+      "values_per_s": {
+        "median": 1646472334.2366295,
+        "min": 1476011562.5742972,
+        "ci95_lo": 1619546231.9653115,
+        "ci95_hi": 1663488259.4740698,
+        "cv": 0.03516105941113488
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-c-bm-filter-bitmap-autovec-i64-n-4096-sel-99-pat-clustered-4096-99-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=4096/sel=99/pat=clustered/4096/99/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 99,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-10T23:45:41+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 2490.465389899744,
+        "min": 2437.25958656249,
+        "ci95_lo": 2455.3760503371914,
+        "ci95_hi": 2611.8405066233677,
+        "cv": 0.09204494391657077
+      },
+      "values_per_s": {
+        "median": 1644680333.2111595,
+        "min": 1422073644.634503,
+        "ci95_lo": 1570758840.8459523,
+        "ci95_hi": 1668286629.2394052,
+        "cv": 0.048678432246302944
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  }
+]
