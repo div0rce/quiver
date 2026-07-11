@@ -1,0 +1,19 @@
+name: First-contribution offer
+description: You want to contribute but are not sure where to start.
+labels: ["good first issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome. The fastest useful contributions need no C++: running the quickstart on a fresh
+        machine and reporting what broke, testing an install path (vcpkg/Conan/FetchContent/
+        amalgamation), or running the benchmark suite on hardware we have not measured (see the
+        "Hardware benchmark submission" template). Lane A in CONTRIBUTING.md has the full list —
+        no specification reading required.
+  - type: textarea
+    id: interest
+    attributes:
+      label: What are you interested in?
+      description: Docs, packaging, benchmarks on your hardware, examples, or kernel work — and roughly what environment you have (OS, compiler, CPU).
+    validations:
+      required: true

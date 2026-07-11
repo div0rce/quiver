@@ -1,0 +1,42 @@
+name: Hardware benchmark submission
+description: Offer to run the benchmark suite on a machine Quiver has not measured yet (the most valuable contribution).
+labels: ["hardware", "ledger"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you — independent hardware evidence is exactly what the performance record needs.
+        The one registered machine so far is an Apple M2; x86 (AVX2 / native AVX-512) and
+        additional Arm machines matter most. The flow is: register a machine manifest, run the
+        ledger runner, open a PR with the generated submission. This issue coordinates that; see
+        CONTRIBUTING.md ("Submitting a hardware benchmark") for the commands.
+  - type: input
+    id: cpu
+    attributes:
+      label: CPU
+      placeholder: "AMD Ryzen 9 7950X (Zen 4, AVX-512)"
+    validations:
+      required: true
+  - type: input
+    id: os-compiler
+    attributes:
+      label: OS and compiler
+      placeholder: "Ubuntu 24.04, clang 19"
+    validations:
+      required: true
+  - type: textarea
+    id: conditions
+    attributes:
+      label: Machine conditions
+      description: Cooling (desktop/laptop/fanless), whether you can quiesce it for the run, frequency-governor control.
+    validations:
+      required: false
+  - type: checkboxes
+    id: expectations
+    attributes:
+      label: Ground rules
+      options:
+        - label: I understand noisy entries are auto-excluded by the CV policy and the exclusions stay in the public record.
+          required: true
+        - label: The submission PR will contain only runner-generated files (no hand-edited numbers).
+          required: true

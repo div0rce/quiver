@@ -1,0 +1,40 @@
+name: Integration report / request
+description: You integrated Quiver under another system (Arrow, a scan engine, a dataframe layer) or want help doing so.
+labels: ["integration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Both directions are welcome: a report that an integration works (or fails) is adoption
+        evidence and can be listed in ADOPTERS.md; a request gets you integration help. Quiver
+        stays dependency-free, so integrations live in downstream repositories, not in this one.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Which is this?
+      options:
+        - Report — I integrated Quiver into something
+        - Request — I want help integrating Quiver
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: The integration
+      description: What sits above Quiver (Arrow buffers, Parquet decode, a custom columnar layout), which operations you use, and a repo link if public.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Quiver version
+      placeholder: "v0.7.0 / FetchContent @ SHA / amalgamation"
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence (for reports)
+      description: Anything verifiable — a repo, a CI run, correctness comparison, timings. Verifiable use goes to ADOPTERS.md; private anecdotes do not.
+    validations:
+      required: false

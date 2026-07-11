@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -167,6 +168,45 @@ def main() -> int:
             if m.group(1) not in committed_ids:
                 err(f"REQ-LEDGER-015: {doc.relative_to(ROOT)} references entry_id "
                     f"'{m.group(1)}' which exists in no committed entries.json")
+
+    # --- Release-status coherence (REQ-REL-001): the version strings humans keep forgetting to
+    # --- synchronize must agree. Single source of truth: include/quiver/detail/config.h.
+    cfg = (ROOT / "include/quiver/detail/config.h").read_text(errors="replace")
+    ver_parts = {k: m.group(1) for k in ("MAJOR", "MINOR", "PATCH")
+                 if (m := re.search(rf"#define QUIVER_VERSION_{k} (\d+)", cfg))}
+    if len(ver_parts) != 3:
+        err("REQ-REL-001: cannot parse QUIVER_VERSION_* from config.h")
+    else:
+        ver = f"{ver_parts['MAJOR']}.{ver_parts['MINOR']}.{ver_parts['PATCH']}"
+        changelog = (ROOT / "CHANGELOG.md").read_text(errors="replace")
+        m = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
+        if not m or m.group(1) != ver:
+            err(f"REQ-REL-001: CHANGELOG latest release is "
+                f"'{m.group(1) if m else '?'}' but config.h says {ver}")
+        readme = (ROOT / "README.md").read_text(errors="replace")
+        m = re.search(r"Current release: \[v(\d+\.\d+\.\d+)\]", readme)
+        if not m or m.group(1) != ver:
+            err(f"REQ-REL-001: README 'Current release' is "
+                f"'v{m.group(1) if m else '?'}' but config.h says {ver}")
+        vcpkg = json.loads((ROOT / "cmake/packaging/vcpkg/vcpkg.json").read_text())
+        if vcpkg.get("version") != ver:
+            err(f"REQ-REL-001: vcpkg.json version '{vcpkg.get('version')}' != config.h {ver}")
+        conan = (ROOT / "cmake/packaging/conan/conanfile.py").read_text(errors="replace")
+        m = re.search(r'version = "(\d+\.\d+\.\d+)"', conan)
+        if not m or m.group(1) != ver:
+            err(f"REQ-REL-001: conanfile.py version "
+                f"'{m.group(1) if m else '?'}' != config.h {ver}")
+        # Latest reachable tag, when tags are available (CI shallow checkouts may lack them).
+        try:
+            tag = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--abbrev=0"],
+                                 capture_output=True, text=True, timeout=10)
+            if tag.returncode == 0:
+                latest = tag.stdout.strip().lstrip("v")
+                if latest != ver:
+                    err(f"REQ-REL-001: latest git tag v{latest} != config.h {ver} "
+                        f"(run the post-release bump)")
+        except (OSError, subprocess.TimeoutExpired):
+            pass  # no git or no tags: the file-level checks above still hold
 
     if errors:
         print("repo-lint: FAIL", file=sys.stderr)

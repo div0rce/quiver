@@ -1,12 +1,65 @@
 # Quiver
 
+Dependency-free C++23 analytical kernels with runtime SIMD dispatch. Compare, filter, gather,
+reduce, hash, and unpack columnar data through one portable API. Quiver selects scalar, AVX2,
+AVX-512, or NEON at run time.
+
 [![CI](https://github.com/div0rce/quiver/actions/workflows/ci.yml/badge.svg)](https://github.com/div0rce/quiver/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/tag/div0rce/quiver?label=release&sort=semver)](https://github.com/div0rce/quiver/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 ![C++23](https://img.shields.io/badge/C%2B%2B-23-blue.svg)
-![CMake 3.28+](https://img.shields.io/badge/CMake-3.28%2B-blue.svg)
-[![Release](https://img.shields.io/github/v/tag/div0rce/quiver?label=release&sort=semver)](https://github.com/div0rce/quiver/tags)
 
-**Quiver is a small C++23 library of fast analytical building blocks used inside database-style engines.**
+[**Documentation**](https://div0rce.github.io/quiver/) ·
+[**Install**](docs/guides/vendoring.md) ·
+[**Benchmarks**](ledger/README.md) ·
+[**Latest release**](https://github.com/div0rce/quiver/releases/latest)
+
+## Thirty seconds, two files, one command
+
+Grab `quiver.h` + `quiver.cpp` from the [latest release](https://github.com/div0rce/quiver/releases/latest)
+(or generate them: `python3 tools/amalgamate/amalgamate.py --out-dir .`), then:
+
+```cpp
+// example.cpp
+#include "quiver.h"
+#include <cstdint>
+#include <cstdio>
+
+int main() {
+  const std::int64_t values[] = {5, 1, 9, 3, 7, 2};   // a tiny column
+  std::uint8_t bits[1] = {0};                          // selection bitmap, 1 bit per row
+  std::int64_t kept[6];
+
+  // Which rows are > 4?
+  quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{values, 6},
+                         std::int64_t{4}, quiver::BitmapView{nullptr}, bits);
+  // Keep those rows, packed together.
+  const std::int64_t matched =
+      quiver::filter(quiver::BatchView<std::int64_t>{values, 6}, quiver::BitmapView{bits}, kept);
+  // Sum what survived (null-aware; no nulls in this toy).
+  const std::int64_t sum = quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{kept, matched},
+                                                   quiver::BitmapView{nullptr});
+
+  std::printf("matched=%lld\nsum=%lld\n", (long long)matched, (long long)sum);
+}
+```
+
+```sh
+c++ -std=c++23 -O3 example.cpp quiver.cpp -o example
+./example
+```
+
+Expected output:
+
+```
+matched=3
+sum=21
+```
+
+No dependencies, no configuration, no framework. The same two files compile on x86 and Arm; the
+right SIMD backend is picked at run time. More complete programs live in [`examples/`](examples/),
+and the [vendoring guide](docs/guides/vendoring.md) covers `find_package`, `FetchContent`, and the
+drop-in.
 
 ## Everyone rebuilds this. Nobody enjoys it.
 
@@ -19,17 +72,7 @@ then the AVX2 one, then the AVX-512 one, then the Arm NEON one, chase the off-by
 loop, discover the results differ across machines, and quietly give up on ever measuring it
 honestly.
 
-Quiver does that layer once, carefully, per CPU, and hides it behind one plain call. You write
-`compare` or `filter` or `hash`. Quiver runs the right code for the machine underneath. No
-dependencies. No runtime. No framework to adopt.
-
-```mermaid
-flowchart LR
-  A["Column buffers<br/>(values + validity bits)"] --> Q["Quiver operations<br/>compare, filter, mask,<br/>gather, reduce, hash,<br/>unpack, checked arithmetic"]
-  Q --> R["Results<br/>filtered rows,<br/>hashes, reductions,<br/>decoded columns"]
-```
-
-One call. Quiver detects the CPU and picks the fastest version it supports, at run time:
+Quiver does that layer once, carefully, per CPU, and hides it behind one plain call:
 
 ```mermaid
 flowchart TD
@@ -39,14 +82,6 @@ flowchart TD
   D -->|x86| A5[AVX-512]
   D -->|Arm| N[NEON]
 ```
-
-## At a glance
-
-- **10 operation groups** covering the common analytical primitives.
-- **4 CPU tiers**: scalar, AVX2, NEON, AVX-512.
-- **3 ways to consume it**: an installed CMake package, a source subproject, or a single-file drop-in.
-- **Current release: v0.6.0.** Feature-complete for its planned surface.
-- **Zero dependencies.** C++23, builds with CMake 3.28 or newer.
 
 ## The ten building blocks
 
@@ -63,107 +98,86 @@ flowchart TD
 | arithmetic | Add, subtract, multiply columns with defined wrap-around |
 | guarded arithmetic | The same, but reporting overflow or saturating instead of wrapping |
 
-## What works today
-
-All ten operations run on scalar, AVX2, and NEON, natively and tested. The AVX-512 versions are
-written and their correctness is checked in CI on Intel's CPU emulator (SDE), because there is no
-AVX-512 hardware to run on yet. A few operations reuse the AVX2 version on AVX-512 machines where a
-separate one would not be faster; those choices are documented.
-
 Integer and hash results are identical across CPUs. Floating-point sums follow one documented
 reassociation policy, so a result is reproducible for a given version, CPU, and build.
 
-## Try it in 30 seconds
+## Measured evidence (one machine, stated plainly)
 
-```sh
-git clone https://github.com/div0rce/quiver && cd quiver
-cmake --preset dev
-cmake --build --preset dev
-ctest --preset dev
-```
+From the committed, reproducible benchmark ledger — Apple M2, dispatched backend versus the
+autovectorized scalar baseline, both shipped code:
 
-Compare a column, then keep the values that passed:
+| Operation | Speedup |
+|---|---|
+| select: bitmap → indices | **5.0–7.4×** |
+| sub-byte bit-unpack (w=1..7) | **6.9–11.0×** |
+| float sum / float min | **4.0–7.9×** |
+| checked / saturating arithmetic | **1.4–1.7×** |
+| filter selected values | **1.6–1.8×** |
+| narrow compare (i8/i16/i32) | **1.1–2.9×** |
+| 64-bit compare bitmap, 8-byte arith, integer min | parity, on purpose¹ |
 
-```cpp
-#include "quiver/quiver.h"
-#include <cstdint>
-#include <cstdio>
+¹ Where the compiler's autovectorized code measured faster than handwritten NEON, Quiver routes to
+it and says so — the losing measurements stay published.
 
-int main() {
-  const int v[] = {5, 1, 9, 3, 7};
-  std::uint8_t bits[1] = {0};                 // one bit per element
-  int out[5];
+**Apple M2 only. These are not universal cross-CPU claims.** One machine is registered so far; the
+ledger methodology (fresh process per repetition, CV gate, no unverifiable numbers) and every entry
+behind the table are in [`ledger/`](ledger/README.md). Registering an x86 machine is the single
+most valuable contribution — see [contributing](CONTRIBUTING.md).
 
-  quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<int>{v, 5}, 4,
-                         quiver::BitmapView{nullptr}, bits);            // which are > 4?
-  const auto kept = quiver::filter(quiver::BatchView<int>{v, 5}, quiver::BitmapView{bits}, out);
+## Support matrix
 
-  std::printf("kept %lld values\n", (long long)kept);                  // kept 3 values: 5 9 7
-}
-```
+Three different claims, kept distinct: *compiles*, *correctness-tested*, and *performance-measured*.
 
-More programs in [`examples/`](examples/). Adding Quiver to your build (CMake package,
-`FetchContent`, or the single-file drop-in) is in the [vendoring guide](docs/guides/vendoring.md).
+| Platform | Scalar | AVX2 | AVX-512 | NEON | Performance evidence |
+|---|---|---|---|---|---|
+| Linux x86-64 | tested | tested | tested (Intel SDE emulator) | — | pending native machines |
+| macOS ARM64 | tested | — | — | tested | **Apple M2 ledger** |
+| Linux ARM64 | tested | — | — | tested | pending |
+| Windows x86-64 | tier-2² | tier-2² | tier-2² | — | pending |
 
-## When to reach for Quiver
+² MSVC builds and passes the amalgamation suite in CI with documented exclusions; tier-1 promises
+are made only for GCC/Clang.
 
-- You are building a query engine, columnar store, or dataframe layer and want vetted, fast
-  primitives without hand-writing SIMD for four instruction sets.
-- You want a tiny dependency-free piece you can vendor, down to two files dropped into your build.
-- You need the same integer and hash results on x86 and Arm.
-- You want a real, tested codebase to learn portable SIMD, runtime dispatch, and columnar kernels from.
+## Why Quiver (and when not)
 
-## When not to
+| Need | Quiver | Full engine (DuckDB, ClickHouse) | General SIMD library |
+|---|---|---|---|
+| Analytical kernels, ready made | yes | yes (internal) | you implement them |
+| SQL / planner / storage | no, by design | yes | no |
+| Runtime ISA dispatch | yes | usually internal | varies |
+| Dependency-free two-file drop-in | yes | no | varies |
+| Public reproducible benchmark ledger | yes | rarely standalone | usually no |
 
-- You need a database or a query engine. Quiver has no SQL, planner, scheduler, storage, or
-  networking, and it will not grow them.
-- You need GPU, distributed, or streaming execution.
-- You want a general vector-math abstraction. Quiver is a fixed, closed set of analytical
-  operations, not a SIMD toolkit.
+Already on DuckDB, Arrow, Velox, or ClickHouse? You probably do not need Quiver — they live one
+layer up. Building your own engine, store, or dataframe layer and want only the fast primitives?
+That is the gap. No performance comparison against those systems is claimed anywhere: they were
+not measured.
 
-## Why not just use DuckDB, Arrow, Velox, or ClickHouse?
+**Not for you if** you need a database, GPU/distributed/streaming execution, or a general
+vector-math toolkit. Quiver is a fixed, closed set of analytical operations.
 
-Because they live one layer up. DuckDB and ClickHouse are engines you run. Arrow and Velox are
-frameworks you build on. Quiver is the small layer under all of them: the individual operations,
-with no engine, no format lock-in, and nothing to pull in. Already on one of those? You probably do
-not need Quiver. Building your own thing and want only the fast primitives? That is the gap. Quiver
-also publishes an honest, reproducible measurement record for these operations, which none of them
-ships as a standalone artifact.
+## Status
 
-## Current benchmark evidence
-
-Quiver ships a measurement harness and a versioned results record (a "ledger") built for
-reproducibility: a fresh process per run, shuffled repetitions, confidence intervals, and a hard
-rule that noisy or unverifiable runs are not published.
-
-Right now there is real data from exactly **one** registered machine, an Apple M2 (a secondary,
-lower-priority platform with no hardware performance counters). That evidence is real, but it is one
-CPU. Broad cross-CPU speed claims are **not** made here, and nothing is invented to fill the gap.
-
-## What is still pending
-
-- **The benchmark story is not finished until more CPUs are registered.** Cross-CPU conclusions and
-  the AVX-512 numbers wait on registered x86 and additional Arm hardware. The plan is in
-  [docs/benchmarks/hardware-coverage-plan.md](docs/benchmarks/hardware-coverage-plan.md).
-- **v0.6.0 has no attached download yet.** The release automation exists and is validated, but it
-  correctly refuses to publish while one nightly sanitizer job (a from-source instrumented
-  standard-library build) is broken. Until it is fixed, build the single-file drop-in locally with
-  `python3 tools/amalgamate/amalgamate.py --out-dir <dir>`.
-
-## Road to v1.0
-
-The public API is frozen and audited: the headers, the reference docs, and the spec all agree.
-What stands between here and 1.0 is evidence, not features. Register a few more benchmark machines,
-fill in the cross-CPU record, fix the one broken nightly job so releases can attach files, and run
-the release checks on more than one machine. None of it changes the code you would call.
+- **Current release: [v0.7.0](https://github.com/div0rce/quiver/releases/latest).** All ten
+  operation groups on scalar + AVX2 + NEON natively; AVX-512 correctness-verified under Intel SDE.
+  The public API is frozen and audited.
+- **The release pipeline is live**: a tag runs the full gate plus the nightly suite (differential
+  cross product, 4.5 h fuzz, MSan/LSan) and publishes the two-file drop-in with checksums and
+  build provenance.
+- **Road to v1.0 is evidence, not features**: register more benchmark machines (x86 AVX2/AVX-512,
+  more Arm), fill the cross-CPU record, run the release regression gates on ≥2 machines. The plan:
+  [hardware coverage](docs/benchmarks/hardware-coverage-plan.md).
 
 ## Documentation and background
 
-- [Documentation home](docs/README.md) and the [status report](docs/releases/final-implementation-report.md)
-- [Design Charter](docs/design/DESIGN_CHARTER.md) (what Quiver is and is not) and the
-  [Engineering PRD](docs/prd/README.md) (the full engineering specification)
-- [Architecture Decision Records](docs/adr/README.md), the [performance ledger](ledger/README.md),
-  and [contributing](CONTRIBUTING.md)
+- [Documentation site](https://div0rce.github.io/quiver/) — install, quickstart, API reference,
+  performance record
+- [Performance ledger](ledger/README.md) and the [benchmark methodology](docs/benchmarks/methodology.md)
+- [Contributing](CONTRIBUTING.md) — including the two highest-value contributions: hardware
+  benchmark submissions and package-manager ports
+- Project internals: [Design Charter](docs/design/DESIGN_CHARTER.md) ·
+  [Engineering PRD](docs/prd/README.md) · [ADRs](docs/adr/README.md) ·
+  [status report](docs/releases/final-implementation-report.md)
 
 ## License
 
