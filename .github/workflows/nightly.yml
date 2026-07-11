@@ -99,8 +99,14 @@ jobs:
         env:
           CC: clang-19
           CXX: clang++-19
-          CXXFLAGS: "-stdlib=libc++ -I/opt/msan-libcxx/include/c++/v1"
-          LDFLAGS: "-stdlib=libc++ -L/opt/msan-libcxx/lib -Wl,-rpath,/opt/msan-libcxx/lib -lc++abi"
+          # -fsanitize=memory must be in the GLOBAL flags, not only the per-target flags that
+          # sanitizers.cmake adds after project(): the instrumented libc++abi.so references the
+          # MSan runtime (__msan_init etc.), so CMake's compiler probe -- which links against it
+          # via these env flags but runs before any per-target flag exists -- otherwise fails with
+          # undefined __msan_* symbols. MSan is whole-program by definition, so the global flag is
+          # also the semantically correct placement (R-19 fix).
+          CXXFLAGS: "-fsanitize=memory -stdlib=libc++ -I/opt/msan-libcxx/include/c++/v1"
+          LDFLAGS: "-fsanitize=memory -stdlib=libc++ -L/opt/msan-libcxx/lib -Wl,-rpath,/opt/msan-libcxx/lib -lc++abi"
         run: |
           set -eu
           sudo apt-get update -q && sudo apt-get install -y -q clang-19 || true
