@@ -2,7 +2,9 @@
 // assert-macro behavior.
 // Covers: REQ-CORE-001..003, REQ-API-001/-004/-005, REQ-CORE-002 triviality (PRD 05 §3)
 #include <cstdint>
+#include <span>
 #include <type_traits>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -16,8 +18,8 @@ using quiver::CodeType;
 using quiver::Element;
 using quiver::IntElement;
 using quiver::Isa;
+using quiver::MinMaxSummary;
 using quiver::SelVec;
-using quiver::Sma;
 using quiver::SumType;
 
 // --- REQ-API-004: exactly the ten element types -------------------------------------------
@@ -36,7 +38,8 @@ static_assert(std::is_trivially_copyable_v<BatchView<std::int32_t>> &&
               std::is_standard_layout_v<BatchView<std::int32_t>>);
 static_assert(std::is_trivially_copyable_v<BitmapView> && std::is_standard_layout_v<BitmapView>);
 static_assert(std::is_trivially_copyable_v<SelVec> && std::is_standard_layout_v<SelVec>);
-static_assert(std::is_trivially_copyable_v<Sma<double>> && std::is_standard_layout_v<Sma<double>>);
+static_assert(std::is_trivially_copyable_v<MinMaxSummary<double>> &&
+              std::is_standard_layout_v<MinMaxSummary<double>>);
 static_assert(std::is_aggregate_v<BatchView<float>> && std::is_aggregate_v<SelVec>);
 
 // Documented layout: 16 bytes on LP64 (PRD 05 §3 invariant).
@@ -92,6 +95,36 @@ TEST(Core, AssertMacroIsNoopWhenDisabled) {
   QUIVER_ASSERT(false, "must not fire when disabled");
   SUCCEED();
 #endif
+}
+
+// --- Convenience helpers (PRD 04 §3.6, ADR-027) --------------------------------------------
+
+TEST(Core, ConvenienceHelpersAreZeroCostSpellings) {
+  // all_valid is the named BitmapView{nullptr}.
+  static_assert(quiver::all_valid.bits == nullptr);
+
+  // bitmap_bytes is the ceil(n/8) every caller otherwise rewrites.
+  static_assert(quiver::bitmap_bytes(0) == 0);
+  static_assert(quiver::bitmap_bytes(1) == 1);
+  static_assert(quiver::bitmap_bytes(8) == 1);
+  static_assert(quiver::bitmap_bytes(9) == 2);
+  static_assert(quiver::bitmap_bytes(65536) == 8192);
+
+  // batch_view / selection_view build the exact views from any contiguous range.
+  const std::vector<std::int32_t> v = {1, 2, 3};
+  const auto bv = quiver::batch_view(v);
+  static_assert(std::is_same_v<decltype(bv), const BatchView<std::int32_t>>);
+  EXPECT_EQ(bv.data, v.data());
+  EXPECT_EQ(bv.len, 3);
+
+  const std::vector<std::uint32_t> idx = {0, 2};
+  const SelVec sv = quiver::selection_view(idx);
+  EXPECT_EQ(sv.idx, idx.data());
+  EXPECT_EQ(sv.len, 2);
+
+  // std::span and C-arrays work through the same range concept.
+  const std::int64_t arr[4] = {4, 3, 2, 1};
+  EXPECT_EQ(quiver::batch_view(std::span{arr}).len, 4);
 }
 
 }  // namespace

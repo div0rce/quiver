@@ -38,4 +38,19 @@ void dict_decode(BatchView<T> dict, const C* codes, std::int64_t n, SelVec sel, 
   detail::k5_dict_decode(dict.data, dict.len, codes, n, detail::nonnull_sel(sel.idx), sel.len, out);
 }
 
+// --- Convenience layer (PRD 04 §3.6, ADR-027): spelling only — forwards to `take` above;
+// --- nothing allocates and no kernel behavior changes.
+
+// Range-in / span-out form: gathers `indices.size()` values; the output span's capacity is
+// checked (assertion builds) and the WRITTEN subspan is returned. The in-bounds requirement on
+// every index is unchanged (debug-asserted full scan, UB in release — ADR-025).
+template <BatchRange R, IndexRange RI, Element T>
+  requires std::same_as<std::remove_cv_t<std::ranges::range_value_t<R>>, T>
+std::span<T> take(const R& values, const RI& indices, std::span<T> out) noexcept {
+  QUIVER_ASSERT(out.size() >= std::ranges::size(indices),
+                "take: out capacity must be >= indices.size() [REQ-MEM-008]");
+  take(batch_view(values), selection_view(indices), out.data());
+  return out.first(std::ranges::size(indices));
+}
+
 QUIVER_END_NAMESPACE

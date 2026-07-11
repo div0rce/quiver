@@ -5,19 +5,22 @@
 #include <bit>
 #include <cstdint>
 #include <limits>
+#include <span>
 #include <vector>
 
 #include <gtest/gtest.h>
 
+#include "quiver/compare.h"
 #include "quiver/reduce.h"
+#include "quiver/take.h"
 #include "tests/testkit/reference.h"
 
 namespace {
 
 using quiver::BatchView;
 using quiver::BitmapView;
+using quiver::MinMaxSummary;
 using quiver::SelVec;
-using quiver::Sma;
 
 TEST(Reduce, ParticipationIsSelectedAndValid) {  // REQ-K6-001
   const std::int32_t v[] = {5, 1, 9, 2, 7};
@@ -31,8 +34,8 @@ TEST(Reduce, ParticipationIsSelectedAndValid) {  // REQ-K6-001
   EXPECT_EQ(
       quiver::reduce_sum_wrap(BatchView<std::int32_t>{v, 5}, BitmapView{validity}, SelVec{sel, 3}),
       8);
-  const Sma<std::int32_t> sma =
-      quiver::compute_sma(BatchView<std::int32_t>{v, 5}, BitmapView{validity}, SelVec{sel, 3});
+  const MinMaxSummary<std::int32_t> sma =
+      quiver::compute_min_max(BatchView<std::int32_t>{v, 5}, BitmapView{validity}, SelVec{sel, 3});
   EXPECT_EQ(sma.min, 1);
   EXPECT_EQ(sma.max, 7);
   EXPECT_EQ(sma.null_count, 1);  // the selected-but-invalid position
@@ -118,6 +121,63 @@ TEST(Reduce, CountValidDelegation) {       // API-K6-005
   const std::uint32_t sel[] = {3, 4, 5};
   EXPECT_EQ(quiver::reduce_count_valid(BitmapView{validity}, 6, SelVec{sel, 3}), 2);
   EXPECT_EQ(quiver::reduce_count_valid(BitmapView{nullptr}, 6, SelVec{sel, 3}), 3);
+}
+
+// --- Convenience layer (PRD 04 §3.6, ADR-027): forwards must agree exactly with the
+// --- buffer-oriented primitives, and the review's target pipeline must compile as written.
+
+TEST(Reduce, ConvenienceFormsAgreeWithPrimitives) {
+  const std::vector<std::int32_t> v = {5, 1, 9, 3, 7, 2};
+  const auto bv = quiver::batch_view(v);
+
+  // Validity defaults + range forms == explicit all-valid primitives.
+  EXPECT_EQ(quiver::reduce_min(bv), quiver::reduce_min(bv, quiver::BitmapView{nullptr}));
+  EXPECT_EQ(quiver::reduce_max(v), quiver::reduce_max(bv, quiver::BitmapView{nullptr}));
+  EXPECT_EQ(quiver::reduce_sum_wrap(v), quiver::reduce_sum_wrap(bv, quiver::BitmapView{nullptr}));
+  const auto mm = quiver::compute_min_max(v);
+  EXPECT_EQ(mm.min, 1);
+  EXPECT_EQ(mm.max, 9);
+  EXPECT_EQ(mm.null_count, 0);
+
+  // CheckedSum: value + named flag agree with the pointer-out primitive.
+  quiver::SumType<std::int32_t> raw = 0;
+  const bool overflowed = quiver::reduce_sum_checked(bv, quiver::all_valid, &raw);
+  const auto cs = quiver::sum_checked(v);
+  EXPECT_EQ(cs.overflowed, overflowed);
+  EXPECT_EQ(cs.value, raw);
+  EXPECT_FALSE(cs.overflowed);
+  EXPECT_EQ(cs.value, 27);
+}
+
+TEST(Reduce, TargetPipelineCompilesAsReviewed) {
+  // The ergonomics-review target syntax, verbatim shape: storage is explicit, results carry
+  // their counts, and no BitmapView{nullptr} or manual size bookkeeping appears anywhere.
+  const std::vector<std::int32_t> values = {5, 1, 9, 3, 7, 2, 8, 4, 6, 0};
+
+  std::vector<std::uint32_t> selection_storage(values.size());
+  const auto selected =
+      quiver::compare_selvec(quiver::CompareOp::kGe, values, 5, std::span{selection_storage});
+  EXPECT_EQ(selected.size(), 5u);  // 5, 9, 7, 8, 6
+
+  std::vector<std::int32_t> picked_storage(selected.size());
+  const auto picked = quiver::take(values, selected, std::span{picked_storage});
+  EXPECT_EQ(picked.size(), selected.size());
+
+  const auto total = quiver::reduce_sum_wrap(picked);
+  EXPECT_EQ(total, 5 + 9 + 7 + 8 + 6);
+
+  // Deprecated names still compile and forward (removed at v1.0).
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+  const quiver::Sma<std::int32_t> old_name =
+      quiver::compute_sma(quiver::batch_view(values), quiver::all_valid);
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+  EXPECT_EQ(old_name.min, 0);
+  EXPECT_EQ(old_name.max, 9);
 }
 
 }  // namespace

@@ -6,6 +6,14 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- **Convenience surface** (ADR-027, PRD 04 §3.6) — zero-cost spellings over the unchanged
+  primitives, from the external API-ergonomics review: `all_valid` (the named
+  `BitmapView{nullptr}`), `bitmap_bytes(n)`, `batch_view(range)`/`selection_view(range)` view
+  builders, `validity` defaults and no-validity overloads across compare/reduce, range-in /
+  span-out overloads for `compare_bitmap`/`compare_selvec`/`take` that check output capacity
+  (assertion builds) and return the **written subspan**, and `CheckedSum<T>` + `sum_checked`
+  replacing the pointer-out-parameter pattern. Nothing allocates; no kernel behavior changes.
+
 - Narrow-width compare coverage (i8/i16/i32) with a pre-registered hypothesis, confirmed: the
   handwritten NEON pack wins 2.8×/1.6×/1.1× respectively (monotone width gradient; i64 stays
   delegated at parity), so the narrow widths keep their handwritten paths on measured evidence
@@ -14,6 +22,10 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ### Changed
 
+- **Breaking (0.x rules, REQ-API-009): `Sma<T>` → `MinMaxSummary<T>`, `compute_sma` →
+  `compute_min_max`** (ADR-027). The old name read as "simple moving average", which the
+  operation never was — it is the fused single-pass min/max/null-count summary. `[[deprecated]]`
+  aliases keep old code compiling through 0.x and are removed at v1.0.
 - On aarch64, **integer dense min/max/SMA delegates to the autovectorized scalar reference**: the
   measured handwritten single-accumulator chain lost 0.26×–0.27× (integer min is
   associative-exact, so the compiler builds a multi-accumulator loop), and the delegated path

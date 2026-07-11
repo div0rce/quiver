@@ -13,7 +13,7 @@
 QUIVER_BEGIN_NAMESPACE
 
 template <Element T>
-T reduce_min(BatchView<T> in, BitmapView validity) noexcept {
+T reduce_min(BatchView<T> in, BitmapView validity = all_valid) noexcept {
   QUIVER_ASSERT(in.len >= 0 && in.len <= kMaxBatchLen,
                 "reduce_min: 0 <= n <= kMaxBatchLen [REQ-API-005]");
   return detail::k6_reduce_min(in.data, in.len, validity.bits, nullptr, 0);
@@ -28,7 +28,7 @@ T reduce_min(BatchView<T> in, BitmapView validity, SelVec sel) noexcept {
 }
 
 template <Element T>
-T reduce_max(BatchView<T> in, BitmapView validity) noexcept {
+T reduce_max(BatchView<T> in, BitmapView validity = all_valid) noexcept {
   QUIVER_ASSERT(in.len >= 0 && in.len <= kMaxBatchLen,
                 "reduce_max: 0 <= n <= kMaxBatchLen [REQ-API-005]");
   return detail::k6_reduce_max(in.data, in.len, validity.bits, nullptr, 0);
@@ -43,7 +43,7 @@ T reduce_max(BatchView<T> in, BitmapView validity, SelVec sel) noexcept {
 }
 
 template <Element T>
-SumType<T> reduce_sum_wrap(BatchView<T> in, BitmapView validity) noexcept {
+SumType<T> reduce_sum_wrap(BatchView<T> in, BitmapView validity = all_valid) noexcept {
   QUIVER_ASSERT(in.len >= 0 && in.len <= kMaxBatchLen,
                 "reduce_sum_wrap: 0 <= n <= kMaxBatchLen [REQ-API-005]");
   return detail::k6_reduce_sum_wrap(in.data, in.len, validity.bits, nullptr, 0);
@@ -75,20 +75,33 @@ bool reduce_sum_checked(BatchView<T> in, BitmapView validity, SelVec sel,
                                        sel.len, out_sum);
 }
 
-// One pass: min + max + null_count (selected-but-invalid positions) (API-K6-004).
+// One pass: min + max + null_count (selected-but-invalid positions) (API-K6-004). Renamed from
+// compute_sma in 0.8 (ADR-027): "SMA" read as "simple moving average", which this never was.
 template <Element T>
-Sma<T> compute_sma(BatchView<T> in, BitmapView validity) noexcept {
+MinMaxSummary<T> compute_min_max(BatchView<T> in, BitmapView validity = all_valid) noexcept {
   QUIVER_ASSERT(in.len >= 0 && in.len <= kMaxBatchLen,
-                "compute_sma: 0 <= n <= kMaxBatchLen [REQ-API-005]");
+                "compute_min_max: 0 <= n <= kMaxBatchLen [REQ-API-005]");
   return detail::k6_compute_sma(in.data, in.len, validity.bits, nullptr, 0);
 }
 
 template <Element T>
-Sma<T> compute_sma(BatchView<T> in, BitmapView validity, SelVec sel) noexcept {
+MinMaxSummary<T> compute_min_max(BatchView<T> in, BitmapView validity, SelVec sel) noexcept {
   QUIVER_ASSERT(sel.idx != nullptr || sel.len == 0,
-                "compute_sma: sel.idx must be non-null when sel.len > 0 [REQ-API-008]");
+                "compute_min_max: sel.idx must be non-null when sel.len > 0 [REQ-API-008]");
   return detail::k6_compute_sma(in.data, in.len, validity.bits, detail::nonnull_sel(sel.idx),
                                 sel.len);
+}
+
+template <Element T>
+[[deprecated("renamed to compute_min_max in 0.8; compute_sma is removed at v1.0")]]
+MinMaxSummary<T> compute_sma(BatchView<T> in, BitmapView validity) noexcept {
+  return compute_min_max(in, validity);
+}
+
+template <Element T>
+[[deprecated("renamed to compute_min_max in 0.8; compute_sma is removed at v1.0")]]
+MinMaxSummary<T> compute_sma(BatchView<T> in, BitmapView validity, SelVec sel) noexcept {
+  return compute_min_max(in, validity, sel);
 }
 
 // Public-API delegation to K4 (API-K6-005; the documented cross-family exception, PRD 02 §6):
@@ -111,6 +124,58 @@ inline std::int64_t reduce_count_valid(BitmapView validity, std::int64_t n, SelV
   }
   (void)n;
   return count;
+}
+
+// --- Convenience layer (PRD 04 §3.6, ADR-027): spelling only — every form below forwards to
+// --- the buffer-oriented primitives above; nothing allocates and no kernel behavior changes.
+
+// Checked sum as a value instead of the pointer-out-parameter (harder to misuse: the flag is
+// named, and the value travels with it).
+template <IntElement T>
+struct CheckedSum {
+  SumType<T> value;  // the wrapped value when overflowed is true (API-K6-003)
+  bool overflowed;
+};
+
+template <IntElement T>
+CheckedSum<T> sum_checked(BatchView<T> in, BitmapView validity = all_valid) noexcept {
+  CheckedSum<T> r{};
+  r.overflowed = reduce_sum_checked(in, validity, &r.value);
+  return r;
+}
+
+template <IntElement T>
+CheckedSum<T> sum_checked(BatchView<T> in, BitmapView validity, SelVec sel) noexcept {
+  CheckedSum<T> r{};
+  r.overflowed = reduce_sum_checked(in, validity, sel, &r.value);
+  return r;
+}
+
+// Range forms: any contiguous range of Element values (vector, span, array) is a batch.
+template <BatchRange R>
+auto reduce_min(const R& in, BitmapView validity = all_valid) noexcept {
+  return reduce_min(batch_view(in), validity);
+}
+
+template <BatchRange R>
+auto reduce_max(const R& in, BitmapView validity = all_valid) noexcept {
+  return reduce_max(batch_view(in), validity);
+}
+
+template <BatchRange R>
+auto reduce_sum_wrap(const R& in, BitmapView validity = all_valid) noexcept {
+  return reduce_sum_wrap(batch_view(in), validity);
+}
+
+template <BatchRange R>
+auto compute_min_max(const R& in, BitmapView validity = all_valid) noexcept {
+  return compute_min_max(batch_view(in), validity);
+}
+
+template <BatchRange R>
+  requires IntElement<std::remove_cv_t<std::ranges::range_value_t<R>>>
+auto sum_checked(const R& in, BitmapView validity = all_valid) noexcept {
+  return sum_checked(batch_view(in), validity);
 }
 
 QUIVER_END_NAMESPACE

@@ -80,6 +80,7 @@ Also resolved from the charter's explicit deferrals: K10 overflow-report granula
 | ADR-024 | Release and branching strategy | [19 §3](19-release-plan.md) | Accepted |
 | ADR-025 | Selection-vector semantics and enforcement | [08 §6](08-kernel-design.md) | Accepted |
 | ADR-026 | Bit-packing layout (LSB-first, Parquet-compatible) | [08 K8](08-kernel-design.md) | Accepted |
+| ADR-027 | Convenience surface + MinMaxSummary rename (0.8 amendment) | [04 §3.6](04-public-api.md) | Accepted |
 
 Materialized as standalone files at M0 (REQ-DOC-004).
 

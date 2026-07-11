@@ -2,7 +2,7 @@
 
 **Purpose.** The shared vocabulary (Charter Surface B) and build-configuration macros every other module uses; contracts have one home. Spec: PRD [05 §3](../prd/05-internal-architecture.md).
 
-**Responsibilities.** `quiver/core.h`: the ten-type `Element` concept family, `CompareOp`/`MaskOp`/`ArithOp`/`Isa` enums (frozen values — dispatch indexes by `Isa`), the non-owning views `BatchView<T>`/`BitmapView`/`SelVec`/`Sma<T>`, `SumType<T>`, `kMaxBatchLen`. `quiver/detail/config.h`: version macros (single source of truth — CMake parses them), namespace macros (ABI epoch `v1`, ADR-007), `QUIVER_ASSERT` (ADR-017), `QUIVER_FORCE_INLINE`/`QUIVER_RESTRICT`/`QUIVER_ASSUME`.
+**Responsibilities.** `quiver/core.h`: the ten-type `Element` concept family, `CompareOp`/`MaskOp`/`ArithOp`/`Isa` enums (frozen values — dispatch indexes by `Isa`), the non-owning views `BatchView<T>`/`BitmapView`/`SelVec`/`MinMaxSummary<T>`, `SumType<T>`, `kMaxBatchLen`. `quiver/detail/config.h`: version macros (single source of truth — CMake parses them), namespace macros (ABI epoch `v1`, ADR-007), `QUIVER_ASSERT` (ADR-017), `QUIVER_FORCE_INLINE`/`QUIVER_RESTRICT`/`QUIVER_ASSUME`.
 
 **Non-responsibilities.** No behavior, no kernels, no detection, no dispatch, no allocation helpers.
 

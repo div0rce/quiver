@@ -37,7 +37,7 @@ Quiver is a dependency-free C++23 library of ten vectorized analytical kernel fa
 | Concern | Decision | ADR | Chapter |
 |---|---|---|---|
 | Library form | Compiled static library + generated single-pair amalgamation (`quiver.h`/`quiver.cpp`); header-only rejected | ADR-002 | [03](03-build-system.md) |
-| Public API style | Concrete per-type symbols behind a thin constrained-template façade; first-party view structs (`BatchView<T>`, `BitmapView`, `SelVec`, `Sma<T>`); no `std::span` in public signatures | ADR-006 | [04](04-public-api.md) |
+| Public API style | Concrete per-type symbols behind a thin constrained-template façade; first-party view structs (`BatchView<T>`, `BitmapView`, `SelVec`, `MinMaxSummary<T>`); `std::span`/range forms only in the 0.8 convenience overlay (ADR-027), never in the primitives | ADR-006 | [04](04-public-api.md) |
 | ABI | `namespace quiver { inline namespace v1 { … } }` | ADR-007 | [04](04-public-api.md) |
 | Per-ISA code | One translation unit per (family × ISA); ISA code enabled by target-attribute macro regions, not global flags — identical mechanism in normal and amalgamated builds | ADR-003 | [09](09-simd-architecture.md) |
 | Dispatch | Lazy per-entry resolution through `std::atomic` function pointers; benign-race idempotent init; `QUIVER_ISA` env override + programmatic override; optional eager `warmup()`; compile-time pinning via `QUIVER_PIN_ISA` (REQ-DISP-013) | ADR-004 | [07](07-runtime-dispatch.md) |

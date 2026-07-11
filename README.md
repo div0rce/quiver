@@ -24,21 +24,22 @@ Grab `quiver.h` + `quiver.cpp` from the [latest release](https://github.com/div0
 #include "quiver.h"
 #include <cstdint>
 #include <cstdio>
+#include <span>
+#include <vector>
 
 int main() {
-  const std::int64_t values[] = {5, 1, 9, 3, 7, 2};   // a tiny column
-  std::uint8_t bits[1] = {0};                          // selection bitmap, 1 bit per row
-  std::int64_t kept[6];
+  const std::vector<std::int64_t> values = {5, 1, 9, 3, 7, 2};   // a tiny column
 
-  // Which rows are > 4?
-  quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<std::int64_t>{values, 6},
-                         std::int64_t{4}, quiver::BitmapView{nullptr}, bits);
-  // Keep those rows, packed together.
-  const std::int64_t matched =
-      quiver::filter(quiver::BatchView<std::int64_t>{values, 6}, quiver::BitmapView{bits}, kept);
-  // Sum what survived (null-aware; no nulls in this toy).
-  const std::int64_t sum = quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{kept, matched},
-                                                   quiver::BitmapView{nullptr});
+  // Which rows are > 4? (no validity argument needed when all rows are valid)
+  std::vector<std::uint8_t> bits(quiver::bitmap_bytes(values.size()));
+  const std::int64_t matched = quiver::compare_bitmap(
+      quiver::CompareOp::kGt, quiver::batch_view(values), std::int64_t{4}, bits.data());
+
+  // Keep those rows, packed together, then sum what survived.
+  std::vector<std::int64_t> kept(values.size());
+  const std::int64_t count = quiver::filter(quiver::batch_view(values),
+                                            quiver::BitmapView{bits.data()}, kept.data());
+  const auto sum = quiver::reduce_sum_wrap(std::span{kept}.first((size_t)count));
 
   std::printf("matched=%lld\nsum=%lld\n", (long long)matched, (long long)sum);
 }

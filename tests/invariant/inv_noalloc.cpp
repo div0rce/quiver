@@ -86,7 +86,7 @@ TEST(InvNoAlloc, KernelCallsNeverAllocate) {
                out.data());
   (void)quiver::reduce_sum_wrap(quiver::BatchView<std::int64_t>{v.data(), n},
                                 quiver::BitmapView{bits.data()});
-  (void)quiver::compute_sma(quiver::BatchView<std::int64_t>{v.data(), n},
+  (void)quiver::compute_min_max(quiver::BatchView<std::int64_t>{v.data(), n},
                             quiver::BitmapView{bits.data()});
   const std::int64_t after = g_allocs.load();
   EXPECT_EQ(after, before) << "a kernel call allocated (REQ-MEM-003)";

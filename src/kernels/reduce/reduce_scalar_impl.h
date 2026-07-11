@@ -3,7 +3,7 @@
 // Semantics (PRD 04 §5 K6, PRD 08 §3/§5 K6): an element participates iff selected ∧ valid
 // (sel == nullptr means no selection; validity == nullptr means all-valid). Empty
 // participation yields identities: min = numeric_limits<T>::max(), max = lowest(), sums = 0,
-// Sma = {max(), lowest(), null_count}. Integer sums accumulate wrapping in SumType<T>
+// MinMaxSummary = {max(), lowest(), null_count}. Integer sums accumulate wrapping in SumType<T>
 // (unsigned-internal idiom, REQ-STD-008). FLOAT SUMS ARE STRICT SEQUENTIAL LEFT FOLDS in
 // participation order — the scalar backend IS the charter's strict-order recourse
 // (ADR-013 as amended: scalar A=1; Charter §7.4). Float min/max propagate NaN as the
@@ -193,9 +193,9 @@ bool reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validit
 }
 
 template <class T>
-Sma<T> compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,
-                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {
-  Sma<T> sma{std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest(), 0};
+MinMaxSummary<T> compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,
+                             const std::uint32_t* sel, std::int64_t sel_len) noexcept {
+  MinMaxSummary<T> sma{std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest(), 0};
   bool saw_nan = false;
   for_each_participant(n, validity, sel, sel_len, [&](std::int64_t i, bool valid) {
     if (!valid) {

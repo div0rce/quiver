@@ -78,6 +78,7 @@
     "docs/requirements.txt",
     "docs/README.md",
     "docs/adr/README.md",
+    "docs/adr/ADR-027-convenience-surface.md",
     "docs/architecture/module-map.md",
     "docs/guides/building.md",
     "docs/releases/gates/M0.md",
@@ -333,5 +334,5 @@
     "docs/testing",
     "docs/releases"
   ],
-  "adr_count": 26
+  "adr_count": 27
 }

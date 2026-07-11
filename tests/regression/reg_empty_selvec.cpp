@@ -67,7 +67,7 @@ TEST(RegEmptySelvec, ReductionsYieldIdentities) {
     std::int64_t sum = -1;
     EXPECT_FALSE(quiver::reduce_sum_checked(in, val, kEmptySel, &sum));
     EXPECT_EQ(sum, 0);
-    const quiver::Sma<std::int32_t> sma = quiver::compute_sma(in, val, kEmptySel);
+    const quiver::MinMaxSummary<std::int32_t> sma = quiver::compute_min_max(in, val, kEmptySel);
     EXPECT_EQ(sma.min, std::numeric_limits<std::int32_t>::max());
     EXPECT_EQ(sma.max, std::numeric_limits<std::int32_t>::lowest());
     EXPECT_EQ(sma.null_count, 0);

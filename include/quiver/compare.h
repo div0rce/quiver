@@ -66,4 +66,55 @@ std::int64_t compare_between_selvec(BatchView<T> in, T lo, T hi, BitmapView vali
   return detail::k1_compare_between_selvec(in.data, in.len, lo, hi, validity.bits, out_idx);
 }
 
+// --- Convenience layer (PRD 04 §3.6, ADR-027): spelling only — every form below forwards to
+// --- the primitives above; nothing allocates and no kernel behavior changes.
+
+// No-validity forms ("all rows valid" without writing BitmapView{nullptr}).
+template <Element T>
+std::int64_t compare_bitmap(CompareOp op, BatchView<T> in, T comparand,
+                            std::uint8_t* out_bits) noexcept {
+  return compare_bitmap(op, in, comparand, all_valid, out_bits);
+}
+
+template <Element T>
+std::int64_t compare_selvec(CompareOp op, BatchView<T> in, T comparand,
+                            std::uint32_t* out_idx) noexcept {
+  return compare_selvec(op, in, comparand, all_valid, out_idx);
+}
+
+template <Element T>
+std::int64_t compare_between_bitmap(BatchView<T> in, T lo, T hi, std::uint8_t* out_bits) noexcept {
+  return compare_between_bitmap(in, lo, hi, all_valid, out_bits);
+}
+
+template <Element T>
+std::int64_t compare_between_selvec(BatchView<T> in, T lo, T hi, std::uint32_t* out_idx) noexcept {
+  return compare_between_selvec(in, lo, hi, all_valid, out_idx);
+}
+
+// Range-in / span-out forms: the input is any contiguous range of Element values, the output
+// span's capacity is checked (assertion builds, REQ-MEM-008), and the WRITTEN subspan is
+// returned — the result and its count travel together.
+template <BatchRange R, class T = std::remove_cv_t<std::ranges::range_value_t<R>>>
+std::span<std::uint32_t>
+compare_selvec(CompareOp op, const R& in, std::type_identity_t<T> comparand,
+               std::span<std::uint32_t> out_idx, BitmapView validity = all_valid) noexcept {
+  QUIVER_ASSERT(out_idx.size() >= std::ranges::size(in),
+                "compare_selvec: out_idx capacity must be >= n [REQ-MEM-008]");
+  const std::int64_t count =
+      compare_selvec(op, batch_view(in), comparand, validity, out_idx.data());
+  return out_idx.first(static_cast<std::size_t>(count));
+}
+
+template <BatchRange R, class T = std::remove_cv_t<std::ranges::range_value_t<R>>>
+std::span<std::uint8_t> compare_bitmap(CompareOp op, const R& in, std::type_identity_t<T> comparand,
+                                       std::span<std::uint8_t> out_bits,
+                                       BitmapView validity = all_valid) noexcept {
+  const auto need = bitmap_bytes(static_cast<std::int64_t>(std::ranges::size(in)));
+  QUIVER_ASSERT(out_bits.size() >= need,
+                "compare_bitmap: out_bits capacity must be >= bitmap_bytes(n) [REQ-MEM-008]");
+  (void)compare_bitmap(op, batch_view(in), comparand, validity, out_bits.data());
+  return out_bits.first(need);
+}
+
 QUIVER_END_NAMESPACE
