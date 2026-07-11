@@ -294,11 +294,15 @@ improvement whose net benefit is either input-distribution dependent or below th
 floor, so none can be honestly measured under the present load. They are recorded for a quiet-machine
 follow-up.
 
-- reduce dense min/max: give it four independent accumulators, mirroring dense_sum, to break the
-  single-accumulator serial dependency chain (the same ILP move that earns sum its 7.9x). Bit-exact
-  for integer min/max and safe for float here because the existing NaN and signed-zero rescues
-  normalize the fold. Not benchmarked today, so it needs an added min/max benchmark on a quiet
-  machine. Not combined with the unpack change.
+- reduce dense min/max: the audit's diagnosis (single-accumulator serial chain) has since been
+  measured and resolved. A pre-registered min benchmark showed the handwritten integer chain
+  LOSING 0.26x to 0.27x dense (i64 and i32) because the autovectorizer reassociates
+  associative-exact integer min into a multi-accumulator loop; integer dense min/max/SMA now
+  delegates to the scalar reference (parity confirmed, a ~3.8x user gain), while floats keep the
+  handwritten path and win 4.0x over the strict baseline the compiler is stuck with (NaN
+  semantics). The four-accumulator handwritten rework became moot for integers (delegation
+  reaches the same multi-accumulator code) and is unnecessary for floats (already winning). See
+  [reduce.md](../../api/reduce.md).
 - mask all/any/none: replace the byte-at-a-time scalar delegation with a NEON `vandq` or `vorrq`
   reduce plus coarse-grained early exit. Large potential win on no-early-exit inputs (the common
   null-free fast path), roughly neutral on inputs that exit in the first bytes. Net benefit is
@@ -326,9 +330,11 @@ follow-up.
   remain. The gate experiment's conclusion stands for the loaded-machine condition it tested.
 - Coverage gaps: narrow-width compare has since been added to the registered grid and measured
   (run `20260710-db12f445f699`: NEON wins at every narrow width, i8 2.8x to i32 1.1x, so the
-  handwritten paths stay dispatched on evidence). reduce min/max remains outside the registered
-  benchmark grid (recorded follow-up). The sub-byte unpack candidate has since been validated and
-  promoted (see its investigation).
+  handwritten paths stay dispatched on evidence). Dense min has also been added and measured,
+  which flipped a real loss (integer min 0.26x to 0.27x) into a delegation with confirmed parity
+  while floats keep a 4.0x win (see the candidate list above and reduce.md). The sub-byte unpack
+  candidate has since been validated and promoted (see its investigation). mask all/any/none
+  remains the one unmeasured follow-up (needs new benchmark shapes).
 
 ## Honesty statement
 
