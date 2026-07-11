@@ -3,7 +3,7 @@ message: "If you use Quiver in research, please cite it as below."
 title: "Quiver: dependency-free C++23 analytical kernels with runtime SIMD dispatch"
 type: software
 authors:
-  - family-names: "nasr"
+  - family-names: "Moustafa Nasr"
     alias: "div0rce"
 repository-code: "https://github.com/div0rce/quiver"
 url: "https://div0rce.github.io/quiver/"
