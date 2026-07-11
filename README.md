@@ -93,7 +93,7 @@ flowchart TD
 | select | Convert between the two ways to represent a selection (bitmask and index list) |
 | mask | Combine, invert, and count validity or selection bitmasks |
 | take / dict decode | Gather values at given indices, including dictionary-encoded columns |
-| reduce | Sum, min, max, and moving average over a column, honoring nulls |
+| reduce | Sum, min, max, and a fused min/max/null-count summary over a column, honoring nulls |
 | hash | Hash a batch of keys with a fixed, cross-platform hash |
 | unpack | Expand bit-packed integers back to full width |
 | arithmetic | Add, subtract, multiply columns with defined wrap-around |
