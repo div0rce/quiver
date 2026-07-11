@@ -34,7 +34,7 @@ QUIVER_FORCE_INLINE __m256i apply_op256(MaskOp op, __m256i a, __m256i b) noexcep
 
 void k4_mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
                      std::uint8_t* out) noexcept {
-  const std::int64_t bytes = bitmap_bytes(n);
+  const std::int64_t bytes = bitmap_byte_count(n);
   std::int64_t i = 0;
   for (; i + 32 <= bytes; i += 32) {
     const __m256i va = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(a + i));
@@ -48,7 +48,7 @@ void k4_mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, st
 }
 
 void k4_mask_not(const std::uint8_t* a, std::int64_t n, std::uint8_t* out) noexcept {
-  const std::int64_t bytes = bitmap_bytes(n);
+  const std::int64_t bytes = bitmap_byte_count(n);
   const __m256i ones = _mm256_set1_epi8(static_cast<char>(0xFF));
   std::int64_t i = 0;
   for (; i + 32 <= bytes; i += 32) {

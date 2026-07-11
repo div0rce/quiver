@@ -39,7 +39,7 @@ QUIVER_FORCE_INLINE uint8x16_t apply_op128(MaskOp op, uint8x16_t a, uint8x16_t b
 
 void k4_mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
                      std::uint8_t* out) noexcept {
-  const std::int64_t bytes = bitmap_bytes(n);
+  const std::int64_t bytes = bitmap_byte_count(n);
   std::int64_t i = 0;
   for (; i + 64 <= bytes; i += 64) {  // 4 independent 128-bit ops per iteration
     vst1q_u8(out + i, apply_op128(op, vld1q_u8(a + i), vld1q_u8(b + i)));
@@ -57,7 +57,7 @@ void k4_mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, st
 }
 
 void k4_mask_not(const std::uint8_t* a, std::int64_t n, std::uint8_t* out) noexcept {
-  const std::int64_t bytes = bitmap_bytes(n);
+  const std::int64_t bytes = bitmap_byte_count(n);
   std::int64_t i = 0;
   for (; i + 64 <= bytes; i += 64) {
     vst1q_u8(out + i, vmvnq_u8(vld1q_u8(a + i)));
