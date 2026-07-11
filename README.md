@@ -58,8 +58,9 @@ sum=21
 
 No dependencies, no configuration, no framework. The same two files compile on x86 and Arm; the
 right SIMD backend is picked at run time. More complete programs live in [`examples/`](examples/),
-and the [vendoring guide](docs/guides/vendoring.md) covers `find_package`, `FetchContent`, and the
-drop-in.
+a full zero-copy integration beneath Apache Arrow (20M rows, verified against `arrow::compute`)
+lives in [`quiver-arrow-example`](https://github.com/div0rce/quiver-arrow-example), and the
+[vendoring guide](docs/guides/vendoring.md) covers `find_package`, `FetchContent`, and the drop-in.
 
 ## Everyone rebuilds this. Nobody enjoys it.
 
