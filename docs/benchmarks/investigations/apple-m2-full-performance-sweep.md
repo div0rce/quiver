@@ -303,10 +303,12 @@ follow-up.
   semantics). The four-accumulator handwritten rework became moot for integers (delegation
   reaches the same multi-accumulator code) and is unnecessary for floats (already winning). See
   [reduce.md](../../api/reduce.md).
-- mask all/any/none: replace the byte-at-a-time scalar delegation with a NEON `vandq` or `vorrq`
-  reduce plus coarse-grained early exit. Large potential win on no-early-exit inputs (the common
-  null-free fast path), roughly neutral on inputs that exit in the first bytes. Net benefit is
-  input-distribution dependent and unmeasured.
+- mask all/any/none: since measured and resolved exactly as sketched. A pre-registered benchmark
+  confirmed the per-byte early-exit loop does not autovectorize (~3.2 GB/s on the all-valid
+  no-early-exit class, both variants identical) and the NEON 64-byte-block rework with a
+  block-granular early exit reaches read bandwidth: 30x to 32x on exit=none with the exit=first
+  class unchanged at ~1.7 ns -- both prongs of the pre-registered rule, so the vectorized queries
+  ship (see [mask.md](../../api/mask.md)).
 - filter i8 bitmap: a precomputed high-nibble control table would shave a few vector-ALU ops per
   group. Only helps if the i8 loop is ALU-bound rather than TBL- or load/store-bound; i8 filter is
   not in the ledger. Low confidence.
@@ -333,8 +335,10 @@ follow-up.
   handwritten paths stay dispatched on evidence). Dense min has also been added and measured,
   which flipped a real loss (integer min 0.26x to 0.27x) into a delegation with confirmed parity
   while floats keep a 4.0x win (see the candidate list above and reduce.md). The sub-byte unpack
-  candidate has since been validated and promoted (see its investigation). mask all/any/none
-  remains the one unmeasured follow-up (needs new benchmark shapes).
+  candidate has since been validated and promoted (see its investigation). mask all/any/none has
+  since been measured and its vectorized form promoted (30x to 32x on the no-early-exit class,
+  zero early-exit regression; mask.md has the verdict). No recorded follow-up remains unmeasured
+  on this machine.
 
 ## Honesty statement
 
