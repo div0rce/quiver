@@ -33,13 +33,14 @@ guards against scope creep back toward one.
 
 - **M0–M8: complete and shipped.** v0.1.0–v0.6.0 tagged; each milestone has a PASS gate record
   under `docs/releases/gates/` and its required CI gate set green on the release SHA. The v0.6.0
-  release workflow (`release.yml`) is implemented and statically validated (actionlint); on the
-  tag it runs the gate + nightly and, per REQ-CI-009's design, **correctly withholds the draft
-  because the nightly precondition is unmet** — the MSan-instrumented-libc++ nightly leg has been
-  broken since it was added at M3 (risk **R-19**), which fails the aggregate nightly. So the
-  publish path (amalgamation pair + source archive + `SHA256SUMS` + attestation + draft) is
-  **not yet live-verified**; fixing the nightly MSan infra (R-19) unblocks a real v0.6.0 release.
-  The amalgamation itself builds and passes `quiver_amalgamate_verify` on tier-1.
+  tag itself has no artifacts and that hold is permanent (its tag predates the R-19 fix) — its
+  notes document this. **Post-M10 update (v0.7.0):** the MSan nightly leg was repaired (R-19
+  resolved), the v0.7.0 tag ran the full gate + nightly green end to end, and `release.yml`
+  published the draft artifacts — the publish path (amalgamation pair + source archive +
+  `SHA256SUMS` + attestation + draft) is **live-verified**. v0.7.0 also closed the Apple M2
+  performance story: evidence-gated delegations (parity-verified on the full grid), the promoted
+  sub-byte NEON unpacker (6.9×–11.0×), and the complete 53-shape paired benchmark grid with zero
+  unknowns (see the [v0.7.0 notes](v0.7.0.md)).
 - **M9: partial / deferred.** The representation study is pre-registered (question, method,
   decision rule) with a one-ISA indicative slice (apple-m2/NEON); the ≥3-ISA/≥5-µarch
   entry-referenced data and the workshop paper are hardware/external-blocked (gate M9).
@@ -59,16 +60,16 @@ guards against scope creep back toward one.
 - **R-18 — two tier-2 MSVC test gaps** surfaced by the first MSVC CI (no-`__int128` checked-sum
   fallback; Windows guard-page test harness) — excluded on the MSVC leg with cited reasons, not
   amalgamation-related.
-- **R-19 — the nightly suite has never fully passed.** The MSan-instrumented-libc++ leg (added at
-  M3) fails at Quiver's `project()` compiler check — the from-source libc++ toolchain is
-  non-functional (fails ~2 min on every nightly since 2026-07-03; all *other* nightly legs —
-  differential ×3, fuzz, LeakSanitizer, coverage, -Rpass — pass). Undocumented until `release.yml`
-  (which runs the nightly per REQ-CI-009) surfaced it. This is why the v0.6.0 publish is withheld.
-  Concrete follow-up (not this session's scope — fragile CI-only infra): repair the MSan libc++
-  build/install so the nightly goes green, then `release.yml` completes and the publish path is
-  live-verified.
-- **Version constant** stays at `0.1.0` by the deliberate tag-driven scheme; the pre-1.0
-  constant-vs-tag relationship is a proposed REQ-REL-001 clarification (gate M8 §8).
+- **R-19 — RESOLVED at v0.7.0.** The MSan-instrumented-libc++ nightly leg (added at M3) had
+  failed at Quiver's `project()` compiler check on every nightly since 2026-07-03, withholding
+  the v0.6.0 publish. Root cause: the job's env flags linked the instrumented `libc++abi.so`
+  during CMake's compiler probe without `-fsanitize=memory` (the flag arrived per-target only
+  after `project()`), so the probe was missing the MSan runtime. Fixed by moving the flag into
+  the job's global env (#32); the nightly is green end to end and the v0.7.0 release run
+  live-verified the publish path (see the risk register row).
+- **Version constant** reconciled at v0.7.0: the post-release bump step (release plan item 8) was
+  executed for the first time — `config.h` (and the vcpkg/Conan skeletons) now carry `0.7.0`
+  (#34); earlier tags shipped with the constant at `0.1.0` (gate M8 §8 documents that drift).
 
 ## What a downstream can do today
 

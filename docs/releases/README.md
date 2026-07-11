@@ -13,9 +13,12 @@ flowchart TD
   T["Tag vX.Y.Z"] --> CI["Run the full test gate<br/>+ the nightly suite"]
   CI --> OK{"All green?"}
   OK -->|yes| PUB["Build the single-file drop-in<br/>+ checksums + provenance,<br/>open a draft release"]
-  OK -->|no| HOLD["Hold: no artifacts published<br/>(this is where v0.6.0 sits today,<br/>one nightly job is broken)"]
+  OK -->|no| HOLD["Hold: no artifacts published<br/>(where v0.6.0 sits permanently:<br/>its tag predates the R-19 fix)"]
   PUB --> MAN["A maintainer reviews<br/>and publishes by hand"]
 ```
+
+The publish path is live-verified as of v0.7.0: its tag ran the nightly green end to end (the MSan
+leg fixed under R-19) and `release.yml` attached the drop-in pair, checksums, and provenance.
 
 Release notes follow a fixed template; gate records under `gates/` are the auditable trail of every
 release checklist. Start of the trail: [gates/M0.md](gates/M0.md). Owner: maintainer.
@@ -23,5 +26,5 @@ release checklist. Start of the trail: [gates/M0.md](gates/M0.md). Owner: mainta
 ## Traceability
 
 Release-note template: REQ-DOC-010. Gate records: REQ-MS-002. The tag-driven flow above is the
-`release.yml` workflow (REQ-CI-009); the "hold" branch is why v0.6.0 has no attached files yet
-(risk R-19).
+`release.yml` workflow (REQ-CI-009); the "hold" branch is why v0.6.0 has no attached files
+(risk R-19, resolved at v0.7.0; the v0.6.0 hold itself is permanent, its tag predates the fix).
