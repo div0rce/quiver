@@ -4,6 +4,28 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Added
+
+- Narrow-width compare coverage (i8/i16/i32) with a pre-registered hypothesis, confirmed: the
+  handwritten NEON pack wins 2.8×/1.6×/1.1× respectively (monotone width gradient; i64 stays
+  delegated at parity), so the narrow widths keep their handwritten paths on measured evidence
+  (#35).
+- Dense-min benchmark coverage (i64/i32/f64, nulls axis), pre-registered (#35).
+
+### Changed
+
+- On aarch64, **integer dense min/max/SMA delegates to the autovectorized scalar reference**: the
+  measured handwritten single-accumulator chain lost 0.26×–0.27× (integer min is
+  associative-exact, so the compiler builds a multi-accumulator loop), and the delegated path
+  confirms parity — a ~3.8× user-visible gain on dense integer min. Floats keep the handwritten
+  path (measured 4.0× win; the compiler cannot reassociate float min/max past NaN semantics)
+  (#35).
+
+### Fixed
+
+- R-19 closed in the risk register and status docs after the v0.7.0 release run live-verified the
+  publish path.
+
 ## [0.7.0] — 2026-07-11
 
 ### Added
