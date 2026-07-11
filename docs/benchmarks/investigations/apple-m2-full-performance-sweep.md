@@ -307,12 +307,12 @@ follow-up.
   group. Only helps if the i8 loop is ALU-bound rather than TBL- or load/store-bound; i8 filter is
   not in the ledger. Low confidence.
 - compare narrow-width and selvec: a vertical lane counter would remove one across-lane reduce per
-  group, but it is only correct without extra work for the non-inverting, all-valid operations, and
-  narrow-width compare is not benchmarked. The higher-value open item here is a measurement, not a
-  code change: narrow-width handwritten NEON compare has never been benchmarked on M2, and the i64
-  delegation does not transfer to narrow widths (their pack is far cheaper per element), so narrow
-  NEON plausibly wins and should stay non-delegated. Adding narrow-width coverage is legitimate
-  future work.
+  group, but it is only correct without extra work for the non-inverting, all-valid operations.
+  The measurement half of this item has since been done (run `20260710-db12f445f699`,
+  pre-registered hypothesis): narrow-width handwritten NEON wins with a clean monotone gradient,
+  i8 2.8x, i16 1.6x, i32 1.1x, i64 parity via delegation, flat across selectivity, so the narrow
+  widths stay non-delegated on measured evidence (see [compare.md](../../api/compare.md)). The
+  vertical-counter micro-optimization itself remains unimplemented (low confidence, as above).
 - arith_guarded narrow widening-multiply: recorded follow-up on the family page; not pursued here.
 
 ## Remaining losses, ties, and unknowns
@@ -324,9 +324,11 @@ follow-up.
 - Unknowns: all 19 were noise rejections of the opposite variant, explained above, and all have
   since been recovered by the quiet-machine grid completion (the update section above): 0 unknown
   remain. The gate experiment's conclusion stands for the loaded-machine condition it tested.
-- Coverage gaps that remain (they need new benchmark shapes, not a rerun): narrow-width compare
-  (i8/i16/i32) and reduce min/max are not in the registered benchmark grid. The sub-byte unpack
-  candidate has since been validated and promoted (see its investigation).
+- Coverage gaps: narrow-width compare has since been added to the registered grid and measured
+  (run `20260710-db12f445f699`: NEON wins at every narrow width, i8 2.8x to i32 1.1x, so the
+  handwritten paths stay dispatched on evidence). reduce min/max remains outside the registered
+  benchmark grid (recorded follow-up). The sub-byte unpack candidate has since been validated and
+  promoted (see its investigation).
 
 ## Honesty statement
 
