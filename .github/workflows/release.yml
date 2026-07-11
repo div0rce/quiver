@@ -44,10 +44,20 @@ jobs:
             -o "dist/quiver-${tag}-src.tar.gz" "${tag}"
           (cd dist && sha256sum quiver.h quiver.cpp "quiver-${tag}-src.tar.gz" > SHA256SUMS)
           cat dist/SHA256SUMS
+      - name: SBOM (SPDX over the release source tree)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist/quiver-sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Add the SBOM to the checksums
+        run: (cd dist && sha256sum quiver-sbom.spdx.json >> SHA256SUMS && cat SHA256SUMS)
       - name: Attest build provenance (REQ-SEC-006)
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
-          subject-path: "dist/quiver.h,dist/quiver.cpp,dist/quiver-*-src.tar.gz"
+          subject-path: "dist/quiver.h,dist/quiver.cpp,dist/quiver-*-src.tar.gz,dist/quiver-sbom.spdx.json"
       - name: Draft release from the notes template
         env:
           GH_TOKEN: ${{ github.token }}
@@ -56,4 +66,5 @@ jobs:
           tag="${GITHUB_REF_NAME}"
           sed "s/{{VERSION}}/${tag}/g" .github/release-notes-template.md > dist/notes.md
           gh release create "${tag}" --draft --title "Quiver ${tag}" --notes-file dist/notes.md \
-            dist/quiver.h dist/quiver.cpp "dist/quiver-${tag}-src.tar.gz" dist/SHA256SUMS
+            dist/quiver.h dist/quiver.cpp "dist/quiver-${tag}-src.tar.gz" dist/SHA256SUMS \
+            dist/quiver-sbom.spdx.json

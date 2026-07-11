@@ -27,8 +27,7 @@ worth more than any code change. The flow:
 
 ```sh
 cmake --preset bench && cmake --build --preset bench -j
-python3 ledger/runner/quiver_ledger.py run --machine <your-machine-id> \
-  --out submission/
+python3 ledger/runner/quiver_ledger.py community-run --machine <your-machine-id>
 ```
 
 Open a PR containing only the generated `submission/` directory (manifest, entries, rejected-noisy

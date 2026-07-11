@@ -20,10 +20,12 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
 import pathlib
 import random
 import re
+import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -232,6 +234,40 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 1 if problems else 0
 
 
+def cmd_community_run(args: argparse.Namespace) -> int:
+    """One-command community submission (the REQ-LEDGER-012 funnel): a normal `run` into a
+    self-contained submission directory, plus the provenance sidecars a reviewer needs — the
+    exact command, the git state, and checksums over every produced file. The contributor
+    opens a PR containing only this directory (CONTRIBUTING.md, Lane A)."""
+    out_dir = pathlib.Path(args.output)
+    args.out = str(out_dir)
+    rc = cmd_run(args)
+    if rc != 0:
+        return rc
+    (out_dir / "commands.txt").write_text(
+        "python3 ledger/runner/quiver_ledger.py community-run "
+        f"--machine {args.machine} --output {args.output}"
+        + (f" --filter '{args.filter}'" if args.filter else "")
+        + (f" --reps {args.reps}" if args.reps != DEFAULT_REPS else "")
+        + (f" --min-time {args.min_time}" if args.min_time != DEFAULT_MIN_TIME else "")
+        + "\n")
+    git_status = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain=v1", "-b"],
+                                capture_output=True, text=True, timeout=30)
+    git_sha = subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"],
+                             capture_output=True, text=True, timeout=30)
+    (out_dir / "git-status.txt").write_text(
+        f"commit: {git_sha.stdout.strip()}\n{git_status.stdout}")
+    sums = []
+    for f in sorted(out_dir.rglob("*")):
+        if f.is_file() and f.name != "checksums.txt":
+            digest = hashlib.sha256(f.read_bytes()).hexdigest()
+            sums.append(f"{digest}  {f.relative_to(out_dir)}")
+    (out_dir / "checksums.txt").write_text("\n".join(sums) + "\n")
+    print(f"submission bundle ready: {out_dir} ({len(sums)} files checksummed)")
+    print("next: open a PR containing only this directory (CONTRIBUTING.md, Lane A)")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(prog="quiver_ledger.py", description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -245,6 +281,20 @@ def main() -> int:
     run.add_argument("--out", default="")
     run.add_argument("--allow-deviations", action="store_true")
     run.set_defaults(fn=cmd_run)
+    community = sub.add_parser(
+        "community-run",
+        help="a ledger run packaged as a self-contained submission directory "
+             "(entries + manifest + raw + commands.txt + git-status.txt + checksums.txt)")
+    community.add_argument("--machine", required=True)
+    community.add_argument("--filter", default="", help="regex over REQ-BENCH-002 names")
+    community.add_argument("--build-dir", default=str(REPO / "build" / "bench"))
+    community.add_argument("--reps", type=int, default=DEFAULT_REPS)
+    community.add_argument("--min-time", default=DEFAULT_MIN_TIME)
+    community.add_argument("--seed", type=int, default=20260703)
+    community.add_argument("--output", default="submission",
+                           help="submission directory (default: submission/)")
+    community.add_argument("--allow-deviations", action="store_true")
+    community.set_defaults(fn=cmd_community_run)
     val = sub.add_parser("validate", help="validate committed results against QLS-1")
     val.add_argument("--require-results", action="store_true")
     val.set_defaults(fn=cmd_validate)
