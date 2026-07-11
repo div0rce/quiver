@@ -8,7 +8,7 @@
 // Version — single source of truth; CMake parses these macros (test: version introspection
 // matches the CMake project version, PRD 18 M1 acceptance).
 #define QUIVER_VERSION_MAJOR 0
-#define QUIVER_VERSION_MINOR 1
+#define QUIVER_VERSION_MINOR 7
 #define QUIVER_VERSION_PATCH 0
 
 // One namespace-opening style everywhere (REQ-STD-006; ABI epoch per ADR-007).
