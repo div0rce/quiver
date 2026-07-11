@@ -3,10 +3,15 @@
 // (random-access dominated; the NEON backend's selected float sum is therefore the strict
 // sequential fold — documented per-backend policy, ADR-013).
 //
-// min/max: native vector min/max (compare+bsl for 64-bit lanes) plus the same two exactness
-// rescues as the AVX2 backend: any valid NaN forces the canonical qNaN return (PRD 08 §3.3),
-// and a folded result equal to 0.0 triggers a rescan for the first participating zero (±0.0
-// is the only bit-visible float tie). Integers are total orders — lane order is irrelevant.
+// min/max: FLOATS use native vector min/max plus the same two exactness rescues as the AVX2
+// backend: any valid NaN forces the canonical qNaN return (PRD 08 §3.3), and a folded result
+// equal to 0.0 triggers a rescan for the first participating zero (±0.0 is the only bit-visible
+// float tie). The explicit float path beats the strict-order baseline 4.0x on Apple M2 (the
+// compiler cannot reassociate float min/max past NaN semantics). INTEGER dense min/max/SMA
+// instead delegates to the autovectorized scalar reference (REQ-KERNEL-007): integer min is
+// associative-exact, the compiler reassociates it into a multi-accumulator loop, and that loop
+// beat the handwritten single-accumulator chain 3.7-3.9x (ledger 20260710-2339ddc1554b /
+// -e98f97623a54; docs/api/reduce.md has the verdict). Lane order is irrelevant either way.
 //
 // Integer sums: the PRD's staged pairwise-widening technique — per 128-bit vector,
 // vpaddlq chains widen to 64-bit lanes exactly (no intermediate can overflow), then a
@@ -478,28 +483,46 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
 // --- (sel != nullptr) delegate to the scalar core — see file comment. -----------------------
 
 // NOLINTBEGIN(bugprone-macro-parentheses): T/S expand to type names inside declarators.
+// INTEGER dense min/max/SMA delegates to the autovectorized scalar reference (REQ-KERNEL-007):
+// integer min is associative-exact, so the compiler reassociates it into a multi-accumulator
+// vector loop that beat the handwritten single-accumulator chain 3.7-3.9x on Apple M2 (ledger
+// run 20260710-2339ddc1554b: i64 0.27x dense / 0.67x masked; i32 0.26x). Floats stay on the
+// handwritten path: the compiler cannot reassociate float min/max past NaN semantics, and the
+// explicit f64 path measured a 4.0x WIN over that strict baseline. See docs/api/reduce.md.
 #define QUIVER_K6_MINMAX_SMA_DEFINE(T)                                                             \
   T k6_reduce_min(const T* in, std::int64_t n, const std::uint8_t* validity,                       \
                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {                       \
-    if (sel != nullptr) {                                                                          \
+    if constexpr (std::is_integral_v<T>) {                                                         \
       return scalar_impl::reduce_min<T>(in, n, validity, sel, sel_len);                            \
+    } else {                                                                                       \
+      if (sel != nullptr) {                                                                        \
+        return scalar_impl::reduce_min<T>(in, n, validity, sel, sel_len);                          \
+      }                                                                                            \
+      return dense_minmax<T, true, false>(in, n, validity).min;                                    \
     }                                                                                              \
-    return dense_minmax<T, true, false>(in, n, validity).min;                                      \
   }                                                                                                \
   T k6_reduce_max(const T* in, std::int64_t n, const std::uint8_t* validity,                       \
                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {                       \
-    if (sel != nullptr) {                                                                          \
+    if constexpr (std::is_integral_v<T>) {                                                         \
       return scalar_impl::reduce_max<T>(in, n, validity, sel, sel_len);                            \
+    } else {                                                                                       \
+      if (sel != nullptr) {                                                                        \
+        return scalar_impl::reduce_max<T>(in, n, validity, sel, sel_len);                          \
+      }                                                                                            \
+      return dense_minmax<T, false, true>(in, n, validity).max;                                    \
     }                                                                                              \
-    return dense_minmax<T, false, true>(in, n, validity).max;                                      \
   }                                                                                                \
   Sma<T> k6_compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,                 \
                         const std::uint32_t* sel, std::int64_t sel_len) noexcept {                 \
-    if (sel != nullptr) {                                                                          \
+    if constexpr (std::is_integral_v<T>) {                                                         \
       return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                           \
+    } else {                                                                                       \
+      if (sel != nullptr) {                                                                        \
+        return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                         \
+      }                                                                                            \
+      const MinMax<T> mm = dense_minmax<T, true, true>(in, n, validity);                           \
+      return Sma<T>{mm.min, mm.max, n - valid_count(validity, n)};                                 \
     }                                                                                              \
-    const MinMax<T> mm = dense_minmax<T, true, true>(in, n, validity);                             \
-    return Sma<T>{mm.min, mm.max, n - valid_count(validity, n)};                                   \
   }
 
 #define QUIVER_K6_INT_DEFINE(T, S)                                                                 \

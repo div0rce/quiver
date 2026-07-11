@@ -1,0 +1,51 @@
+[
+  {
+    "entry_id": "apple-m2-20260710-2199290ef169-b-bm-reduce-min-autovec-i64-n-65536-nulls-50-65536-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/min/autovec/i64/n=65536/nulls=50/65536/50",
+    "family": "reduce",
+    "api": "min",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "nulls": 50
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "2199290ef169",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-11T01:47:48+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 104855.06808594872,
+        "min": 95733.1574117888,
+        "ci95_lo": 99649.19815631202,
+        "ci95_hi": 111886.87220640692,
+        "cv": 0.06155596050912782
+      },
+      "values_per_s": {
+        "median": 625179803.6174787,
+        "min": 576803944.9444283,
+        "ci95_lo": 585755963.5930518,
+        "ci95_hi": 658686475.4213941,
+        "cv": 0.06232084490467916
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  }
+]

@@ -4,6 +4,7 @@
 // reassociation win at M4+. Axes: null density × selection × batch.
 // Module: MOD-BENCH / MOD-K6 | REQs: REQ-BENCH-002..004; ADR-013 evidence
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -65,6 +66,46 @@ void bm_sum_i64(benchmark::State& state) {
   }
   quiver::bench::validate_or_abort("BM_reduce", static_cast<std::uint64_t>(got) == want,
                                    "sum vs independent recompute");
+
+  g_pmu.start();
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(run());
+  }
+  attach_pmu(state, g_pmu.stop_and_read(), n);
+}
+
+// Dense min (K6 reduce_min). Hypothesis (REQ-BENCH-003, pre-registered before any measurement):
+// the handwritten NEON dense min/max keeps a SINGLE vector accumulator (a latency-bound serial
+// chain: i64 = cmgt+bif per block, f64 = fmax), unlike dense_sum's four. Min/max is associative
+// and exact under any association, so the autovectorizer CAN reassociate integer min reductions
+// without fast-math — the explicit path may therefore TIE or LOSE at i64 despite vectorizing;
+// f64 depends on whether the compiler can prove the fmin NaN semantics. Decision rule: a loss
+// routes to the scalar reference per REQ-KERNEL-007 (as compare-i64/arith-8-byte did), and
+// separately motivates the recorded multi-accumulator rework; a win/tie keeps the current path.
+// Result is exact either way, so validation is a plain independent recompute.
+template <class T>
+void bm_min_t(benchmark::State& state) {
+  const auto n = static_cast<std::int64_t>(state.range(0));
+  const int null_pct = static_cast<int>(state.range(1));
+  quiver::bench::Rng rng(kSeed);
+  std::vector<T> v(static_cast<std::size_t>(n));
+  quiver::bench::fill_uniform(rng, v.data(), n);
+  std::vector<std::uint8_t> validity(static_cast<std::size_t>((n + 7) / 8));
+  quiver::bench::fill_bitmap_uniform(rng, validity.data(), n, 100 - null_pct);
+  const std::uint8_t* vd = null_pct == 0 ? nullptr : validity.data();
+
+  const auto run = [&]() {
+    return quiver::reduce_min(quiver::BatchView<T>{v.data(), n}, quiver::BitmapView{vd});
+  };
+  const T got = run();
+  T want = std::numeric_limits<T>::max();
+  for (std::int64_t i = 0; i < n; ++i) {
+    const bool ok = vd == nullptr || ((vd[static_cast<std::size_t>(i) >> 3] >> (i & 7)) & 1u);
+    if (ok && v[static_cast<std::size_t>(i)] < want) {
+      want = v[static_cast<std::size_t>(i)];
+    }
+  }
+  quiver::bench::validate_or_abort("BM_reduce_min", got == want, "min vs independent recompute");
 
   g_pmu.start();
   for (auto _ : state) {
@@ -157,6 +198,23 @@ void register_benchmarks() {
                                                            "n=" + std::to_string(n) + "/nulls=0"),
                                  bm_sum_f64<false>)
         ->Args({n});
+    for (const int null_pct : {0, 50}) {
+      benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "min", variant, "i64",
+                                                             "n=" + std::to_string(n) + "/nulls=" +
+                                                                 std::to_string(null_pct)),
+                                   bm_min_t<std::int64_t>)
+          ->Args({n, null_pct});
+    }
+    // i32 probes whether the single-accumulator latency chain loses at narrow widths too (the
+    // chain is 1 native vmin per vector there vs 2 ops for 64-bit lanes, but still A=1 serial).
+    benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "min", variant, "i32",
+                                                           "n=" + std::to_string(n) + "/nulls=0"),
+                                 bm_min_t<std::int32_t>)
+        ->Args({n, 0});
+    benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "min", variant, "f64",
+                                                           "n=" + std::to_string(n) + "/nulls=0"),
+                                 bm_min_t<double>)
+        ->Args({n, 0});
   }
 #if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
   // Equal-ISA autovec baseline variants (ADR-011): registered only where the explicit AVX2
