@@ -49,14 +49,13 @@ validation:
   unrecognized_links: warn
   anchors: info
 
+# User-facing sections first; the engineering archive lives under "Project internals".
 nav:
-  - Home: README.md
-  - Guides:
-      - Getting started: guides/getting-started.md
-      - Building: guides/building.md
-      - Vendoring: guides/vendoring.md
-      - Disputing a ledger number: guides/disputes.md
-      - Documentation style guide: style/documentation-style-guide.md
+  - Overview: README.md
+  - Install:
+      - Vendoring (all consumption paths): guides/vendoring.md
+      - Building from source: guides/building.md
+  - Quickstart: guides/getting-started.md
   - API reference:
       - Core types: api/core.md
       - Dispatch: api/dispatch.md
@@ -69,60 +68,64 @@ nav:
       - K7 hash: api/hash.md
       - K8 unpack: api/unpack.md
       - K9 / K10 arith: api/arith.md
-  - Architecture:
-      - Module map: architecture/module-map.md
-      - Core (MOD-CORE): architecture/core.md
-      - Dispatch (MOD-DISPATCH): architecture/dispatch.md
-      - Overview: architecture/README.md
-  - Benchmarks:
+  - Performance:
+      - The ledger, in brief: benchmarks/README.md
       - Methodology (QLM-1): benchmarks/methodology.md
       - Running benchmarks: benchmarks/running.md
-      - Hardware coverage plan (R-06): benchmarks/hardware-coverage-plan.md
-      - Overview: benchmarks/README.md
-  - Testing:
-      - Testkit: testing/testkit.md
-      - Differential fuzzing: testing/fuzzing.md
-      - Overview: testing/README.md
-  - Internals:
-      - CPU detection: internals/cpu-detection.md
-      - Dispatch state machine: internals/dispatch-state-machine.md
-      - Kernel common (MOD-KCOMMON): internals/kernel-common.md
-      - Coding standards: internals/coding-standards.md
-  - Investigations:
-      - K5 gather vs scalar (AVX2): investigations/k5-gather-avx2.md
-      - K7 NEON hash vs GPR chain: investigations/k7-neon-hash.md
-      - Apple M2 NEON losses: benchmarks/investigations/apple-m2-neon-losses.md
-      - Apple M2 full performance sweep: benchmarks/investigations/apple-m2-full-performance-sweep.md
-      - Apple M2 sub-byte unpack candidate: benchmarks/investigations/apple-m2-subbyte-unpack-neon.md
-      - Representation study:
-          - Overview: benchmarks/investigations/representation-study/README.md
-          - Question: benchmarks/investigations/representation-study/question.md
-          - Method: benchmarks/investigations/representation-study/method.md
-          - Data: benchmarks/investigations/representation-study/entries.md
-          - Analysis: benchmarks/investigations/representation-study/analysis.md
-          - Conclusion: benchmarks/investigations/representation-study/conclusion.md
-  - ADRs: adr/README.md
-  - Specifications:
-      - Design Charter: design/DESIGN_CHARTER.md
-      - Engineering PRD: prd/README.md
+      - Hardware coverage plan: benchmarks/hardware-coverage-plan.md
+      - Disputing a number: guides/disputes.md
+      - Investigations:
+          - Apple M2 full performance sweep: benchmarks/investigations/apple-m2-full-performance-sweep.md
+          - Apple M2 NEON losses: benchmarks/investigations/apple-m2-neon-losses.md
+          - Apple M2 sub-byte unpack: benchmarks/investigations/apple-m2-subbyte-unpack-neon.md
+          - K5 gather vs scalar (AVX2): investigations/k5-gather-avx2.md
+          - K7 NEON hash vs GPR chain: investigations/k7-neon-hash.md
+          - Representation study:
+              - Overview: benchmarks/investigations/representation-study/README.md
+              - Question: benchmarks/investigations/representation-study/question.md
+              - Method: benchmarks/investigations/representation-study/method.md
+              - Data: benchmarks/investigations/representation-study/entries.md
+              - Analysis: benchmarks/investigations/representation-study/analysis.md
+              - Conclusion: benchmarks/investigations/representation-study/conclusion.md
   - Releases:
       - Overview: releases/README.md
-      - Gate M0: releases/gates/M0.md
-      - Gate M1: releases/gates/M1.md
-      - Gate M2: releases/gates/M2.md
-      - Gate M3: releases/gates/M3.md
-      - Gate M4: releases/gates/M4.md
-      - Gate M5: releases/gates/M5.md
-      - Gate M6: releases/gates/M6.md
-      - Gate M7: releases/gates/M7.md
-      - Gate M8: releases/gates/M8.md
-      - Gate M9: releases/gates/M9.md
-      - Gate M10: releases/gates/M10.md
-      - Final implementation report: releases/final-implementation-report.md
-      - v0.1.0: releases/v0.1.0.md
-      - v0.2.0: releases/v0.2.0.md
-      - v0.3.0: releases/v0.3.0.md
-      - v0.4.0: releases/v0.4.0.md
-      - v0.5.0: releases/v0.5.0.md
+      - v0.7.0 (current): releases/v0.7.0.md
       - v0.6.0: releases/v0.6.0.md
-      - v0.7.0: releases/v0.7.0.md
+      - v0.5.0: releases/v0.5.0.md
+      - v0.4.0: releases/v0.4.0.md
+      - v0.3.0: releases/v0.3.0.md
+      - v0.2.0: releases/v0.2.0.md
+      - v0.1.0: releases/v0.1.0.md
+  - Project internals:
+      - Status report: releases/final-implementation-report.md
+      - Architecture:
+          - Module map: architecture/module-map.md
+          - Core (MOD-CORE): architecture/core.md
+          - Dispatch (MOD-DISPATCH): architecture/dispatch.md
+          - Overview: architecture/README.md
+      - Internals:
+          - CPU detection: internals/cpu-detection.md
+          - Dispatch state machine: internals/dispatch-state-machine.md
+          - Kernel common (MOD-KCOMMON): internals/kernel-common.md
+          - Coding standards: internals/coding-standards.md
+      - Testing:
+          - Testkit: testing/testkit.md
+          - Differential fuzzing: testing/fuzzing.md
+          - Overview: testing/README.md
+      - Specifications:
+          - Design Charter: design/DESIGN_CHARTER.md
+          - Engineering PRD: prd/README.md
+          - ADRs: adr/README.md
+      - Milestone gates:
+          - Gate M0: releases/gates/M0.md
+          - Gate M1: releases/gates/M1.md
+          - Gate M2: releases/gates/M2.md
+          - Gate M3: releases/gates/M3.md
+          - Gate M4: releases/gates/M4.md
+          - Gate M5: releases/gates/M5.md
+          - Gate M6: releases/gates/M6.md
+          - Gate M7: releases/gates/M7.md
+          - Gate M8: releases/gates/M8.md
+          - Gate M9: releases/gates/M9.md
+          - Gate M10: releases/gates/M10.md
+      - Documentation style guide: style/documentation-style-guide.md

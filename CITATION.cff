@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use Quiver in research, please cite it as below."
+title: "Quiver: dependency-free C++23 analytical kernels with runtime SIMD dispatch"
+type: software
+authors:
+  - family-names: "nasr"
+    alias: "div0rce"
+repository-code: "https://github.com/div0rce/quiver"
+url: "https://div0rce.github.io/quiver/"
+license: Apache-2.0
+version: 0.7.0
+date-released: 2026-07-11
+keywords:
+  - simd
+  - vectorized-execution
+  - analytical-kernels
+  - columnar
+  - avx2
+  - avx512
+  - neon
+  - cpp23
+abstract: >-
+  A dependency-free C++23 library of ten vectorized analytical kernel families (compare, filter,
+  selection conversion, mask algebra, take/dictionary decode, reduce, hash, bit-unpack, arithmetic,
+  guarded arithmetic) behind runtime scalar/AVX2/AVX-512/NEON dispatch, with a reproducible
+  cross-ISA performance ledger whose methodology deletes noisy results instead of publishing them.
