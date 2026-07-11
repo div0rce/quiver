@@ -6,6 +6,7 @@
 
 #include "quiver/quiver.h"
 
+// --8<-- [start:override]
 namespace {
 const char* isa_name(quiver::Isa isa) {
   switch (isa) {
@@ -46,3 +47,4 @@ int main() {
               base == scalar_count ? "yes" : "NO");
   return base == scalar_count ? 0 : 1;
 }
+// --8<-- [end:override]

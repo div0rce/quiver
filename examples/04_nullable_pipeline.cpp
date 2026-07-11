@@ -7,6 +7,7 @@
 
 #include "quiver/quiver.h"
 
+// --8<-- [start:nullable]
 namespace {
 // Pack a bool-per-element vector into an LSB-first validity bitmap.
 std::vector<std::uint8_t> pack(const std::vector<int>& flags) {
@@ -47,3 +48,4 @@ int main() {
               static_cast<long long>(matched));
   return 0;
 }
+// --8<-- [end:nullable]

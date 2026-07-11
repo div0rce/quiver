@@ -22,6 +22,17 @@ theme:
   palette:
     - scheme: default
       primary: black
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+    - scheme: slate
+      primary: black
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition
@@ -56,6 +67,7 @@ nav:
       - Vendoring (all consumption paths): guides/vendoring.md
       - Building from source: guides/building.md
   - Quickstart: guides/getting-started.md
+  - Recipes: guides/recipes.md
   - API reference:
       - Core types: api/core.md
       - Dispatch: api/dispatch.md
@@ -87,6 +99,8 @@ nav:
               - Data: benchmarks/investigations/representation-study/entries.md
               - Analysis: benchmarks/investigations/representation-study/analysis.md
               - Conclusion: benchmarks/investigations/representation-study/conclusion.md
+  - Compatibility: compatibility.md
+  - Contributing: contributing.md
   - Releases:
       - Overview: releases/README.md
       - v0.7.0 (current): releases/v0.7.0.md

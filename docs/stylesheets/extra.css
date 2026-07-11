@@ -1,0 +1,16 @@
+/* Restrained site styling: black, off-white, one accent. Matches the repository's
+   social-preview brand direction; no decoration beyond contrast and rhythm. */
+:root {
+  --md-primary-fg-color: #0d0d0d;
+  --md-accent-fg-color: #2563eb; /* the one accent */
+}
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #0d0d0d;
+  --md-code-bg-color: #161616;
+}
+.md-typeset table:not([class]) {
+  font-size: 0.72rem; /* evidence tables are dense; keep them scannable */
+}
+.md-typeset h1 {
+  font-weight: 700;
+}
