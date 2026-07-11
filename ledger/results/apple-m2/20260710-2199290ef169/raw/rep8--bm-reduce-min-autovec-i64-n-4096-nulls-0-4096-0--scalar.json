@@ -1,0 +1,58 @@
+{
+  "context": {
+    "date": "2026-07-10T21:43:20-04:00",
+    "host_name": "mous-2.local",
+    "executable": "/Users/nasr/repos/quiver/build/bench/bin/quiver_bench_reduce",
+    "num_cpus": 8,
+    "mhz_per_cpu": 24,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 0
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 131072,
+        "num_sharing": 0
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 4194304,
+        "num_sharing": 1
+      }
+    ],
+    "load_avg": [3.51807,9.09033,6.35547],
+    "library_version": "v0.6.0-9-g2326ab15",
+    "library_build_type": "release",
+    "json_schema_version": 1,
+    "compiler": "Apple LLVM 21.0.0 (clang-2100.1.1.101)",
+    "cxx_flags": " [Release]",
+    "git_dirty": "clean",
+    "git_sha": "2326ab15d0cb",
+    "lto": "off",
+    "pmu": "unavailable",
+    "quiver_version": "0.7.0"
+  },
+  "benchmarks": [
+    {
+      "name": "BM_reduce/min/autovec/i64/n=4096/nulls=0/4096/0",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_reduce/min/autovec/i64/n=4096/nulls=0/4096/0",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 231107,
+      "real_time": 6.0468022555157074e+02,
+      "cpu_time": 6.0468094865149021e+02,
+      "time_unit": "ns",
+      "items_per_second": 6.7738201594321165e+09
+    }
+  ]
+}
