@@ -205,6 +205,12 @@ void register_benchmarks() {
                                    bm_min_t<std::int64_t>)
           ->Args({n, null_pct});
     }
+    // i32 probes whether the single-accumulator latency chain loses at narrow widths too (the
+    // chain is 1 native vmin per vector there vs 2 ops for 64-bit lanes, but still A=1 serial).
+    benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "min", variant, "i32",
+                                                           "n=" + std::to_string(n) + "/nulls=0"),
+                                 bm_min_t<std::int32_t>)
+        ->Args({n, 0});
     benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "min", variant, "f64",
                                                            "n=" + std::to_string(n) + "/nulls=0"),
                                  bm_min_t<double>)
