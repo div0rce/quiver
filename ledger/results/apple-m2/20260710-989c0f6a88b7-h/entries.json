@@ -1,0 +1,243 @@
+[
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-h-bm-reduce-sum-wrap-neon-i64-n-65536-nulls-0-65536-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/neon/i64/n=65536/nulls=0/65536/0",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "nulls": 0
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-11T00:02:52+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 5719.440709805274,
+        "min": 5700.637291057079,
+        "ci95_lo": 5707.092178623168,
+        "ci95_hi": 5730.878919510408,
+        "cv": 0.0022113785945075595
+      },
+      "values_per_s": {
+        "median": 11458768812.2877,
+        "min": 11424748944.276777,
+        "ci95_lo": 11437163682.393917,
+        "ci95_hi": 11483562770.701439,
+        "cv": 0.0022042238823224156
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-h-bm-reduce-sum-wrap-neon-i64-n-65536-nulls-10-65536-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/neon/i64/n=65536/nulls=10/65536/10",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "nulls": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-11T00:02:52+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 12518.682923175216,
+        "min": 12503.307166830526,
+        "ci95_lo": 12510.85694090763,
+        "ci95_hi": 12609.815476534808,
+        "cv": 0.006993177965827976
+      },
+      "values_per_s": {
+        "median": 5235092108.159564,
+        "min": 5141659897.492094,
+        "ci95_lo": 5197952238.321505,
+        "ci95_hi": 5238321035.703051,
+        "cv": 0.006845733481367976
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-h-bm-reduce-sum-wrap-neon-i64-n-65536-nulls-50-65536-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/neon/i64/n=65536/nulls=50/65536/50",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "nulls": 50
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-11T00:02:52+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 12567.393132223993,
+        "min": 12512.466771361158,
+        "ci95_lo": 12527.511495629056,
+        "ci95_hi": 12581.676731432723,
+        "cv": 0.0022346188325637864
+      },
+      "values_per_s": {
+        "median": 5214928993.742325,
+        "min": 5207141210.821059,
+        "ci95_lo": 5208849156.297211,
+        "ci95_hi": 5231474995.108002,
+        "cv": 0.0022245102520613556
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-h-bm-reduce-sum-wrap-autovec-i64-n-65536-nulls-0-65536-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/autovec/i64/n=65536/nulls=0/65536/0",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "nulls": 0
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-11T00:02:52+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 5715.50739467377,
+        "min": 5702.429090070103,
+        "ci95_lo": 5707.3491231742,
+        "ci95_hi": 5723.591636854619,
+        "cv": 0.0018182831992989792
+      },
+      "values_per_s": {
+        "median": 11466351659.43369,
+        "min": 11427541783.913729,
+        "ci95_lo": 11450606504.585941,
+        "ci95_hi": 11482981146.659956,
+        "cv": 0.0017979685465830703
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-h-bm-reduce-sum-wrap-autovec-i64-n-65536-nulls-10-65536-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/autovec/i64/n=65536/nulls=10/65536/10",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "nulls": 10
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-11T00:02:52+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 17624.91078499372,
+        "min": 17394.097555617507,
+        "ci95_lo": 17405.654725744254,
+        "ci95_hi": 19104.04181166284,
+        "cv": 0.04494969008477809
+      },
+      "values_per_s": {
+        "median": 3718641392.8815117,
+        "min": 3392132148.1641297,
+        "ci95_lo": 3430557435.0305963,
+        "ci95_hi": 3765213829.2120442,
+        "cv": 0.0436006376785263
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": "cv=0.0449 in the 3-5% band: published with noisy flag per REQ-LEDGER-005"
+  }
+]

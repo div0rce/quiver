@@ -164,6 +164,40 @@ The paired shapes in these same families point one direction: where both sides c
 filter, select, and reduce all show large handwritten-NEON wins (1.65x to 7.9x). The unknowns are a
 coverage gap on a noisy machine, not evidence of a hidden loss.
 
+### Update: grid completed (runs `20260710-989c0f6a88b7` .. `-j`)
+
+After the machine quieted, the full registered grid for these four families was re-measured as
+paired same-session runs: 53 shapes, every published entry passing the CV policy (variants the gate
+excluded were rerun in follow-up chunks; one streaming straggler needed a 4 s window). Every former
+unknown is now a measured pair, and the prediction above held; there was no hidden loss:
+
+- compare i64 bitmap: parity (1.00x to 1.01x) at ALL 15 shapes. This is the wall-clock confirmation,
+  at every shape, that the PR #27 delegation runs at exactly the autovec speed (for example
+  n=65536/sel=50: `qle:apple-m2-20260710-989c0f6a88b7-b-bm-compare-bitmap-gt-neon-i64-n-65536-sel-50-65536-50`
+  vs `qle:apple-m2-20260710-989c0f6a88b7-b-bm-compare-bitmap-gt-autovec-i64-n-65536-sel-50-65536-50`).
+- filter i64 bitmap: handwritten NEON wins at all 20 shapes, 1.60x to 1.81x, flat across
+  selectivity and pattern (the branchless-TBL design claim, now measured on the full grid).
+- select bitmap_to_selvec: wins at all 10 shapes, 5.0x to 7.4x.
+- reduce sum_wrap: f64 7.7x to 7.8x (the ADR-013 reassociation-policy gap); i64 with nulls wins
+  1.37x to 8.39x; dense i64 (nulls=0) is parity at both sizes
+  (`qle:apple-m2-20260710-989c0f6a88b7-h-bm-reduce-sum-wrap-neon-i64-n-65536-nulls-0-65536-0`
+  vs `qle:apple-m2-20260710-989c0f6a88b7-h-bm-reduce-sum-wrap-autovec-i64-n-65536-nulls-0-65536-0`)
+  -- a new honest finding: the autovectorizer handles a dense integer sum; the NEON win is the
+  null-masked path. The i64 nulls=50 ratio grows from 2.02x at n=4096 to 8.39x at n=65536
+  (`qle:apple-m2-20260710-989c0f6a88b7-h-bm-reduce-sum-wrap-neon-i64-n-65536-nulls-50-65536-50` vs
+  `qle:apple-m2-20260710-989c0f6a88b7-j-bm-reduce-sum-wrap-autovec-i64-n-65536-nulls-50-65536-50`),
+  consistent with the scalar path's data-dependent validity branches: at n=4096 the predictor can
+  learn the repeating mask across benchmark iterations, at n=65536 it cannot. The branchless NEON
+  path is immune to the pattern.
+
+With this update the four re-measured families stand at 36 wins and 17 parity across all 53
+registered shapes, with 0 unknown and 0 suspicious. Repo-wide that makes 47 wins and 25 parity
+across 76 currently-paired shapes; the 5 historical loss rows are preserved (3 compare + 2 arith,
+all fallback-routed by PR #27, with the compare delegation now parity-verified at every shape and
+the arith delegation covered by the byte-identical-codegen proof); the 2 suspicious near-parity
+rows (mask/and at 1M, take at 256 KiB) remain as recorded, at their rooflines. There is no shape
+where production dispatch is slower than the measured baseline.
+
 ## Losses (all routed to fallback by PR #27)
 
 All five losses are the two shapes already resolved by PR #27: the 64-bit compare bitmap pack and
@@ -287,10 +321,12 @@ follow-up.
 - Ties: mask, take, and hash are at their roofline or code-identical to scalar; kept as-is. The two
   suspicious near-parity rows would be confirmed by a quiet-machine rerun but the dispatch decision
   does not depend on the exact number.
-- Unknowns: all 19 are noise rejections of the opposite variant, explained above. Recovering them
-  needs a quiet machine; the gate experiment shows longer windows do not help under the current load.
-- Coverage gaps worth a future quiet run: narrow-width compare (i8/i16/i32), reduce min/max, and the
-  sub-byte unpack candidate validation.
+- Unknowns: all 19 were noise rejections of the opposite variant, explained above, and all have
+  since been recovered by the quiet-machine grid completion (the update section above): 0 unknown
+  remain. The gate experiment's conclusion stands for the loaded-machine condition it tested.
+- Coverage gaps that remain (they need new benchmark shapes, not a rerun): narrow-width compare
+  (i8/i16/i32) and reduce min/max are not in the registered benchmark grid. The sub-byte unpack
+  candidate has since been validated and promoted (see its investigation).
 
 ## Honesty statement
 

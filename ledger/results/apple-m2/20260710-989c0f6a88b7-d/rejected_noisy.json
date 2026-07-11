@@ -1,0 +1,102 @@
+[
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-d-bm-filter-bitmap-neon-i64-n-65536-sel-90-pat-clustered-65536-90-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/neon/i64/n=65536/sel=90/pat=clustered/65536/90/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "neon",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 90,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-10T23:50:04+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 25154.063046518895,
+        "min": 25101.66643013171,
+        "ci95_lo": 25115.921342500234,
+        "ci95_hi": 25486.162307202958,
+        "cv": 0.06296216380853532
+      },
+      "values_per_s": {
+        "median": 2605380681.129591,
+        "min": 2369942194.726878,
+        "ci95_lo": 2572076690.3223505,
+        "ci95_hi": 2609312329.003195,
+        "cv": 0.028866345063329565
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "apple-m2-20260710-989c0f6a88b7-d-bm-filter-bitmap-autovec-i64-n-65536-sel-90-pat-clustered-65536-90-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec/i64/n=65536/sel=90/pat=clustered/65536/90/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 90,
+      "pat": "clustered"
+    },
+    "machine_id": "apple-m2-mba",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.1.0",
+    "git_commit": "989c0f6a88b7",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-10T23:50:04+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 41046.644405313404,
+        "min": 40384.183214664525,
+        "ci95_lo": 40470.65590410756,
+        "ci95_hi": 41401.31268264994,
+        "cv": 0.19352999777696794
+      },
+      "values_per_s": {
+        "median": 1596622691.705596,
+        "min": 1358261513.5251951,
+        "ci95_lo": 1582979350.3165646,
+        "ci95_hi": 1619334617.599182,
+        "cv": 0.049993610296507056
+      }
+    },
+    "metrics": [
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": null,
+    "flags": [
+      "no_pmu",
+      "noisy",
+      "secondary_platform"
+    ],
+    "notes": ""
+  }
+]
