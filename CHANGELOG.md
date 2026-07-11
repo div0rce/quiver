@@ -4,6 +4,46 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-07-11
+
+### Added
+
+- **Vectorized sub-byte NEON unpack** (bit widths 1–7): promoted to production dispatch on
+  quiet-machine ledger evidence — 6.9×–11.0× over the scalar gather (u32, every CV under 0.9%),
+  with the exact `⌈n·w/8⌉` read bound preserved (REQ-K8-002). Landed first as an experimental
+  candidate off dispatch with exhaustive differential, boundary-length, randomized-sweep, and
+  guard-page coverage; promoted per the evidence gate (REQ-KERNEL-007). Building with
+  `-DQUIVER_K8_SUBBYTE_VECTOR=0` reverts sub-byte widths to the scalar reference (#29, #30).
+- **Complete Apple M2 paired benchmark grid** for compare/filter/select/reduce: 53 shapes measured
+  neon-vs-autovec on a quiet machine, zero unknowns remain. New findings recorded honestly:
+  compare i64 bitmap is parity at all 15 shapes (the delegation verification), filter wins
+  1.60×–1.81× at all 20, select wins 5.0×–7.4× at all 10, dense i64 sum is parity while the
+  null-masked path wins up to 8.39× (#31); the unpack promotion measurement (#30).
+- **Investigations** (Apple M2): NEON losses and dispatch routing (#27), the full performance
+  sweep with per-family roofline/parity proofs (#28), and the sub-byte unpack record (#29, #30).
+- **M9 (partial): pre-registered bitmap-vs-selvec representation study** — question, method, and
+  the available-slice analysis with an open conclusion; completion is hardware-blocked (#21).
+- **M10 (partial): API-freeze audit** (clean) and the final implementation report; v1.0
+  certification stays deferred under R-06 (#22).
+
+### Changed
+
+- On aarch64, the 64-bit compare `bitmap` forms and the 8-byte elementwise `arith` paths delegate
+  to the autovectorized scalar reference — the committed ledger showed the handwritten NEON losing
+  (0.69× / 0.90×), the delegated codegen is byte-identical to the measured baseline, and the full
+  grid now confirms parity at every registered shape (#27, #31). Results are bit-identical;
+  narrower widths and `selvec` keep their handwritten NEON.
+- Documentation overhaul: plain-language rewrite with diagrams across the docs tree (#25, #26);
+  public repo status aligned with v0.6.0 and the deferred v1.0 (#24).
+
+### Fixed
+
+- **Nightly MSan leg (closes the R-19 release hold):** `-fsanitize=memory` now sits in the MSan
+  job's global `CXXFLAGS`/`LDFLAGS`, so CMake's compiler probe links the MSan runtime that the
+  instrumented `libc++abi.so` references; the leg had failed at `project()` since it was added.
+  With the nightly green, `release.yml` can publish artifacts (R-19's exit criterion). The hold
+  itself and the corrected artifact claims were documented in #23.
+
 ## [0.6.0] — 2026-07-05
 
 ### Added
