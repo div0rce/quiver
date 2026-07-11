@@ -51,14 +51,33 @@ enum class Isa       : std::uint8_t { kScalar = 0, kNeon = 1, kAvx2 = 2, kAvx512
 template <Element T> struct BatchView { const T* data; std::int64_t len; };
 struct BitmapView { const std::uint8_t* bits; };   // LSB-first, 1 = valid/selected (Charter §6.2)
 struct SelVec     { const std::uint32_t* idx; std::int64_t len; };
-template <Element T> struct Sma { T min; T max; std::int64_t null_count; };
+template <Element T> struct MinMaxSummary { T min; T max; std::int64_t null_count; };
+template <Element T> using Sma [[deprecated]] = MinMaxSummary<T>;  // removed at v1.0 (ADR-027)
 
 template <Element T> using SumType =
   /* int64_t for signed ints, uint64_t for unsigned ints, T for float/double */;
 }} // namespace
 ```
 
-Contracts: all four structs are trivially copyable non-owning views (pass by value); `BatchView` requires `data != nullptr` when `len > 0`; `BitmapView` must cover ≥ *n* bits of the operation it accompanies, tail bits beyond *n* ignored on input; `SelVec` for selection semantics requires strictly increasing in-range indices (ADR-025) — `take` relaxes this per API-K5-001. `Sma` field semantics: identity values when no valid element participates (`min = numeric_limits<T>::max()`, `max = lowest()`, documented in [08 §3](08-kernel-design.md)). **Tests:** static-assert suite `test_core.cpp` (triviality, sizes, concept accept/reject). **Benchmarks:** none (no behavior).
+Contracts: all four structs are trivially copyable non-owning views (pass by value); `BatchView` requires `data != nullptr` when `len > 0`; `BitmapView` must cover ≥ *n* bits of the operation it accompanies, tail bits beyond *n* ignored on input; `SelVec` for selection semantics requires strictly increasing in-range indices (ADR-025) — `take` relaxes this per API-K5-001. `MinMaxSummary` field semantics: identity values when no valid element participates (`min = numeric_limits<T>::max()`, `max = lowest()`, documented in [08 §3](08-kernel-design.md)); renamed from `Sma` at 0.8 (ADR-027) with a deprecated alias through 0.x. **Tests:** static-assert suite `test_core.cpp` (triviality, sizes, concept accept/reject). **Benchmarks:** none (no behavior).
+
+### 3.6 Convenience surface (ADR-027; added at 0.8) — API-CORE-002
+
+Zero-cost spellings over the unchanged primitives: every form forwards, nothing allocates, no kernel behavior changes.
+
+```cpp
+inline constexpr BitmapView all_valid{nullptr};              // the named BitmapView{nullptr}
+constexpr std::size_t bitmap_bytes(std::int64_t n) noexcept; // ceil(n/8)
+
+template <class R> concept BatchRange = /* contiguous+sized range of Element */;
+template <class R> concept IndexRange = /* contiguous+sized range of uint32_t */;
+template <BatchRange R> constexpr auto   batch_view(const R&) noexcept;      // -> BatchView<T>
+template <IndexRange R> constexpr SelVec selection_view(const R&) noexcept;
+
+template <IntElement T> struct CheckedSum { SumType<T> value; bool overflowed; };
+```
+
+Per-family conveniences (specified with their families, same contracts as the primitive they forward to): `validity` parameters default to `all_valid` where trailing; no-validity overloads for the K1 single-input forms; range-in/span-out overloads for `compare_bitmap`/`compare_selvec` (K1) and `take` (K5) that debug-assert the output span's capacity (REQ-MEM-008) and return the **written subspan**; range forms of the K6 reductions; `sum_checked` returning `CheckedSum<T>` over the API-K6-003 primitive. Public headers gain `<span>`/`<ranges>`. **Tests:** `test_core.cpp` (helpers), `test_reduce.cpp` (forwarding equivalence + the reviewed target pipeline), `test_compare.cpp`/`test_take.cpp` coverage via the pipeline. **Benchmarks:** none (pure forwarding).
 
 ## 4. Surface C — dispatch and introspection (`quiver/dispatch.h`)
 
@@ -170,16 +189,16 @@ quiver::dict_decode(quiver::BatchView<int64_t>{dict, dlen}, codes, n,
 | API-K6-001 | `template<Element T> T reduce_min(BatchView<T> in, BitmapView validity) noexcept;` + overload `(…, SelVec sel)`; same shape for `reduce_max` |
 | API-K6-002 | `template<Element T> SumType<T> reduce_sum_wrap(BatchView<T> in, BitmapView validity) noexcept;` + `(…, SelVec sel)` overload |
 | API-K6-003 | `template<IntElement T> bool reduce_sum_checked(BatchView<T> in, BitmapView validity, SumType<T>* out_sum) noexcept;` + `SelVec` overload — → true iff the mathematical sum is unrepresentable in `SumType<T>` (`*out_sum` then holds the wrapped value) |
-| API-K6-004 | `template<Element T> Sma<T> compute_sma(BatchView<T> in, BitmapView validity) noexcept;` + overload `(…, SelVec sel)` (participation = selected ∧ valid; `null_count` counts selected-but-invalid positions) |
+| API-K6-004 | `template<Element T> MinMaxSummary<T> compute_min_max(BatchView<T> in, BitmapView validity = all_valid) noexcept;` + overload `(…, SelVec sel)` (participation = selected ∧ valid; `null_count` counts selected-but-invalid positions). Renamed from `compute_sma` at 0.8 (ADR-027); deprecated forwarders kept through 0.x |
 | API-K6-005 | `std::int64_t reduce_count_valid(BitmapView validity, std::int64_t n) noexcept;` — defined as `validity.bits ? mask_popcount(validity, n) : n` (public-API delegation to K4, [02 §6](02-repository-architecture.md)) — + overload `(BitmapView validity, std::int64_t n, SelVec sel)` counting selected ∧ valid (`sel.len` when validity is null) |
 
-**Purpose:** single-pass reductions with optional validity and selection; SMA = min+max+null_count in one pass (Charter K6). **Semantics:** an element participates iff selected ∧ valid. Empty participation → identities: `min = numeric_limits<T>::max()`, `max = lowest()`, sums = 0, `Sma = {max_ident, lowest_ident, null_count}`. Integer sums accumulate in `SumType<T>` (64-bit): narrow types cannot overflow within `kMaxBatchLen` (proof: 2³¹ × 2³¹ < 2⁶³), so `reduce_sum_checked` for them always returns false; for 64-bit inputs the check is exact (128-bit accumulation, scalar-class speed permitted and ledgered — [08 §K6](08-kernel-design.md)). Floats: accumulate in `T` under the fixed blocked-accumulator policy of ADR-013 — bit-identical per (version, ISA), documented divergence from strict left-fold, strict-order recourse = the scalar reference (Charter §7.4); min/max propagate NaN (any participating NaN → NaN result); `-0.0`/`+0.0` ordering may return either zero. **Tests/benchmarks:** matrix rows K6 incl. NaN/±0 cases and identity cases; `bench_reduce.cpp` (null-density × selectivity axes; ADR-013 accumulator-count evidence).
+**Purpose:** single-pass reductions with optional validity and selection; SMA = min+max+null_count in one pass (Charter K6). **Semantics:** an element participates iff selected ∧ valid. Empty participation → identities: `min = numeric_limits<T>::max()`, `max = lowest()`, sums = 0, `MinMaxSummary = {max_ident, lowest_ident, null_count}`. Integer sums accumulate in `SumType<T>` (64-bit): narrow types cannot overflow within `kMaxBatchLen` (proof: 2³¹ × 2³¹ < 2⁶³), so `reduce_sum_checked` for them always returns false; for 64-bit inputs the check is exact (128-bit accumulation, scalar-class speed permitted and ledgered — [08 §K6](08-kernel-design.md)). Floats: accumulate in `T` under the fixed blocked-accumulator policy of ADR-013 — bit-identical per (version, ISA), documented divergence from strict left-fold, strict-order recourse = the scalar reference (Charter §7.4); min/max propagate NaN (any participating NaN → NaN result); `-0.0`/`+0.0` ordering may return either zero. **Tests/benchmarks:** matrix rows K6 incl. NaN/±0 cases and identity cases; `bench_reduce.cpp` (null-density × selectivity axes; ADR-013 accumulator-count evidence).
 
 ```cpp
 // minimal: sum with nulls          // edge: empty selection -> identities
 auto s   = quiver::reduce_sum_wrap(quiver::BatchView<int32_t>{v, n}, {valid});
-auto sma = quiver::compute_sma(quiver::BatchView<double>{d, n}, {valid},
-                               quiver::SelVec{idx, 0});   // sma.min == +max, sma.max == lowest
+auto mm  = quiver::compute_min_max(quiver::BatchView<double>{d, n}, {valid},
+                                   quiver::SelVec{idx, 0});  // mm.min == +max, mm.max == lowest
 ```
 
 ### K7 — hash (`quiver/hash.h`)

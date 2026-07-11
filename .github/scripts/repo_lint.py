@@ -80,7 +80,7 @@ def main() -> int:
     # --- Include-graph lint (REQ-REPO-005/-006/-009; layering per PRD 02 §6) -----------------
     std_headers = {
         "algorithm", "array", "atomic", "bit", "cassert", "concepts", "cstddef", "cstdint",
-        "cstdio", "cstdlib", "cstring", "limits", "memory", "new", "numeric", "span",
+        "cstdio", "cstdlib", "cstring", "limits", "memory", "new", "numeric", "ranges", "span",
         "string", "string_view", "thread", "type_traits", "utility", "vector",
     }
     os_headers_by_file = {
@@ -197,16 +197,19 @@ def main() -> int:
             err(f"REQ-REL-001: conanfile.py version "
                 f"'{m.group(1) if m else '?'}' != config.h {ver}")
         # Latest reachable tag, when tags are available (CI shallow checkouts may lack them).
+        # config.h AHEAD of the tag is the legal release-prep state (the tag lands after the
+        # release PR merges); the tag being AHEAD of config.h means the post-release bump was
+        # forgotten — the drift this check exists to catch.
         try:
             tag = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--abbrev=0"],
                                  capture_output=True, text=True, timeout=10)
             if tag.returncode == 0:
                 latest = tag.stdout.strip().lstrip("v")
-                if latest != ver:
-                    err(f"REQ-REL-001: latest git tag v{latest} != config.h {ver} "
+                if tuple(map(int, latest.split("."))) > tuple(map(int, ver.split("."))):
+                    err(f"REQ-REL-001: latest git tag v{latest} is ahead of config.h {ver} "
                         f"(run the post-release bump)")
-        except (OSError, subprocess.TimeoutExpired):
-            pass  # no git or no tags: the file-level checks above still hold
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            pass  # no git, no tags, or unparseable: the file-level checks above still hold
 
     if errors:
         print("repo-lint: FAIL", file=sys.stderr)

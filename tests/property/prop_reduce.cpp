@@ -48,8 +48,8 @@ TEST(PropReduce, CompositionIdentities) {
         ASSERT_LE(mn, v[idx[static_cast<std::size_t>(j)]]);
         ASSERT_GE(mx, v[idx[static_cast<std::size_t>(j)]]);
       }
-      const quiver::Sma<std::int64_t> sma =
-          quiver::compute_sma(in, quiver::BitmapView{nullptr}, sel);
+      const quiver::MinMaxSummary<std::int64_t> sma =
+          quiver::compute_min_max(in, quiver::BitmapView{nullptr}, sel);
       EXPECT_EQ(sma.min, mn);
       EXPECT_EQ(sma.max, mx);
       EXPECT_EQ(sma.null_count, 0);

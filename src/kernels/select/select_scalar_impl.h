@@ -27,7 +27,7 @@ inline std::int64_t bitmap_to_selvec(const std::uint8_t* selection, std::int64_t
 
 inline void selvec_to_bitmap(const std::uint32_t* sel, std::int64_t sel_len, std::int64_t n,
                              std::uint8_t* out) noexcept {
-  std::memset(out, 0, static_cast<std::size_t>(bitmap_bytes(n)));
+  std::memset(out, 0, static_cast<std::size_t>(bitmap_byte_count(n)));
   for (std::int64_t j = 0; j < sel_len; ++j) {
     const std::uint32_t i = sel[j];
     out[i >> 3] = static_cast<std::uint8_t>(out[i >> 3] | (1u << (i & 7)));

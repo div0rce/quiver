@@ -512,8 +512,8 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
       return dense_minmax<T, false, true>(in, n, validity).max;                                    \
     }                                                                                              \
   }                                                                                                \
-  Sma<T> k6_compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,                 \
-                        const std::uint32_t* sel, std::int64_t sel_len) noexcept {                 \
+  MinMaxSummary<T> k6_compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,       \
+                                  const std::uint32_t* sel, std::int64_t sel_len) noexcept {       \
     if constexpr (std::is_integral_v<T>) {                                                         \
       return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                           \
     } else {                                                                                       \
@@ -521,7 +521,7 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
         return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                         \
       }                                                                                            \
       const MinMax<T> mm = dense_minmax<T, true, true>(in, n, validity);                           \
-      return Sma<T>{mm.min, mm.max, n - valid_count(validity, n)};                                 \
+      return MinMaxSummary<T>{mm.min, mm.max, n - valid_count(validity, n)};                       \
     }                                                                                              \
   }
 

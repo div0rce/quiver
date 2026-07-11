@@ -36,7 +36,7 @@ QUIVER_FORCE_INLINE __m512i apply_op512(MaskOp op, __m512i a, __m512i b) noexcep
 
 void k4_mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
                      std::uint8_t* out) noexcept {
-  const std::int64_t bytes = bitmap_bytes(n);
+  const std::int64_t bytes = bitmap_byte_count(n);
   std::int64_t i = 0;
   for (; i + 64 <= bytes; i += 64) {
     const __m512i va = _mm512_loadu_si512(reinterpret_cast<const void*>(a + i));
@@ -50,7 +50,7 @@ void k4_mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, st
 }
 
 void k4_mask_not(const std::uint8_t* a, std::int64_t n, std::uint8_t* out) noexcept {
-  const std::int64_t bytes = bitmap_bytes(n);
+  const std::int64_t bytes = bitmap_byte_count(n);
   const __m512i ones = _mm512_set1_epi8(static_cast<char>(0xFF));
   std::int64_t i = 0;
   for (; i + 64 <= bytes; i += 64) {

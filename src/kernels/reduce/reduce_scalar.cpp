@@ -22,8 +22,9 @@ std::int64_t k6_reduce_sum_wrap(const std::int8_t* in, std::int64_t n, const std
   return scalar_impl::reduce_sum_wrap<std::int8_t>(in, n, validity, sel, sel_len);
 }
 
-Sma<std::int8_t> k6_compute_sma(const std::int8_t* in, std::int64_t n, const std::uint8_t* validity,
-                                const std::uint32_t* sel, std::int64_t sel_len) noexcept {
+MinMaxSummary<std::int8_t> k6_compute_sma(const std::int8_t* in, std::int64_t n,
+                                          const std::uint8_t* validity, const std::uint32_t* sel,
+                                          std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<std::int8_t>(in, n, validity, sel, sel_len);
 }
 
@@ -43,9 +44,9 @@ std::int64_t k6_reduce_sum_wrap(const std::int16_t* in, std::int64_t n,
   return scalar_impl::reduce_sum_wrap<std::int16_t>(in, n, validity, sel, sel_len);
 }
 
-Sma<std::int16_t> k6_compute_sma(const std::int16_t* in, std::int64_t n,
-                                 const std::uint8_t* validity, const std::uint32_t* sel,
-                                 std::int64_t sel_len) noexcept {
+MinMaxSummary<std::int16_t> k6_compute_sma(const std::int16_t* in, std::int64_t n,
+                                           const std::uint8_t* validity, const std::uint32_t* sel,
+                                           std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<std::int16_t>(in, n, validity, sel, sel_len);
 }
 
@@ -65,9 +66,9 @@ std::int64_t k6_reduce_sum_wrap(const std::int32_t* in, std::int64_t n,
   return scalar_impl::reduce_sum_wrap<std::int32_t>(in, n, validity, sel, sel_len);
 }
 
-Sma<std::int32_t> k6_compute_sma(const std::int32_t* in, std::int64_t n,
-                                 const std::uint8_t* validity, const std::uint32_t* sel,
-                                 std::int64_t sel_len) noexcept {
+MinMaxSummary<std::int32_t> k6_compute_sma(const std::int32_t* in, std::int64_t n,
+                                           const std::uint8_t* validity, const std::uint32_t* sel,
+                                           std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<std::int32_t>(in, n, validity, sel, sel_len);
 }
 
@@ -87,9 +88,9 @@ std::int64_t k6_reduce_sum_wrap(const std::int64_t* in, std::int64_t n,
   return scalar_impl::reduce_sum_wrap<std::int64_t>(in, n, validity, sel, sel_len);
 }
 
-Sma<std::int64_t> k6_compute_sma(const std::int64_t* in, std::int64_t n,
-                                 const std::uint8_t* validity, const std::uint32_t* sel,
-                                 std::int64_t sel_len) noexcept {
+MinMaxSummary<std::int64_t> k6_compute_sma(const std::int64_t* in, std::int64_t n,
+                                           const std::uint8_t* validity, const std::uint32_t* sel,
+                                           std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<std::int64_t>(in, n, validity, sel, sel_len);
 }
 
@@ -109,9 +110,9 @@ std::uint64_t k6_reduce_sum_wrap(const std::uint8_t* in, std::int64_t n,
   return scalar_impl::reduce_sum_wrap<std::uint8_t>(in, n, validity, sel, sel_len);
 }
 
-Sma<std::uint8_t> k6_compute_sma(const std::uint8_t* in, std::int64_t n,
-                                 const std::uint8_t* validity, const std::uint32_t* sel,
-                                 std::int64_t sel_len) noexcept {
+MinMaxSummary<std::uint8_t> k6_compute_sma(const std::uint8_t* in, std::int64_t n,
+                                           const std::uint8_t* validity, const std::uint32_t* sel,
+                                           std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<std::uint8_t>(in, n, validity, sel, sel_len);
 }
 
@@ -131,9 +132,9 @@ std::uint64_t k6_reduce_sum_wrap(const std::uint16_t* in, std::int64_t n,
   return scalar_impl::reduce_sum_wrap<std::uint16_t>(in, n, validity, sel, sel_len);
 }
 
-Sma<std::uint16_t> k6_compute_sma(const std::uint16_t* in, std::int64_t n,
-                                  const std::uint8_t* validity, const std::uint32_t* sel,
-                                  std::int64_t sel_len) noexcept {
+MinMaxSummary<std::uint16_t> k6_compute_sma(const std::uint16_t* in, std::int64_t n,
+                                            const std::uint8_t* validity, const std::uint32_t* sel,
+                                            std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<std::uint16_t>(in, n, validity, sel, sel_len);
 }
 
@@ -153,9 +154,9 @@ std::uint64_t k6_reduce_sum_wrap(const std::uint32_t* in, std::int64_t n,
   return scalar_impl::reduce_sum_wrap<std::uint32_t>(in, n, validity, sel, sel_len);
 }
 
-Sma<std::uint32_t> k6_compute_sma(const std::uint32_t* in, std::int64_t n,
-                                  const std::uint8_t* validity, const std::uint32_t* sel,
-                                  std::int64_t sel_len) noexcept {
+MinMaxSummary<std::uint32_t> k6_compute_sma(const std::uint32_t* in, std::int64_t n,
+                                            const std::uint8_t* validity, const std::uint32_t* sel,
+                                            std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<std::uint32_t>(in, n, validity, sel, sel_len);
 }
 
@@ -175,9 +176,9 @@ std::uint64_t k6_reduce_sum_wrap(const std::uint64_t* in, std::int64_t n,
   return scalar_impl::reduce_sum_wrap<std::uint64_t>(in, n, validity, sel, sel_len);
 }
 
-Sma<std::uint64_t> k6_compute_sma(const std::uint64_t* in, std::int64_t n,
-                                  const std::uint8_t* validity, const std::uint32_t* sel,
-                                  std::int64_t sel_len) noexcept {
+MinMaxSummary<std::uint64_t> k6_compute_sma(const std::uint64_t* in, std::int64_t n,
+                                            const std::uint8_t* validity, const std::uint32_t* sel,
+                                            std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<std::uint64_t>(in, n, validity, sel, sel_len);
 }
 
@@ -196,8 +197,8 @@ float k6_reduce_sum_wrap(const float* in, std::int64_t n, const std::uint8_t* va
   return scalar_impl::reduce_sum_wrap<float>(in, n, validity, sel, sel_len);
 }
 
-Sma<float> k6_compute_sma(const float* in, std::int64_t n, const std::uint8_t* validity,
-                          const std::uint32_t* sel, std::int64_t sel_len) noexcept {
+MinMaxSummary<float> k6_compute_sma(const float* in, std::int64_t n, const std::uint8_t* validity,
+                                    const std::uint32_t* sel, std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<float>(in, n, validity, sel, sel_len);
 }
 
@@ -216,8 +217,8 @@ double k6_reduce_sum_wrap(const double* in, std::int64_t n, const std::uint8_t* 
   return scalar_impl::reduce_sum_wrap<double>(in, n, validity, sel, sel_len);
 }
 
-Sma<double> k6_compute_sma(const double* in, std::int64_t n, const std::uint8_t* validity,
-                           const std::uint32_t* sel, std::int64_t sel_len) noexcept {
+MinMaxSummary<double> k6_compute_sma(const double* in, std::int64_t n, const std::uint8_t* validity,
+                                     const std::uint32_t* sel, std::int64_t sel_len) noexcept {
   return scalar_impl::compute_sma<double>(in, n, validity, sel, sel_len);
 }
 

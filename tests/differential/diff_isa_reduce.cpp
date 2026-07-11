@@ -123,8 +123,8 @@ void run_reduce_diff(quiver::Isa isa, std::uint64_t seed) {
         ASSERT_TRUE(sum_nan_class || std::memcmp(&got_sum, &want_sum, sizeof(want_sum)) == 0)
             << "sum n=" << n;
 
-        const quiver::Sma<T> sma =
-            with_sel ? quiver::compute_sma(in, val, sel) : quiver::compute_sma(in, val);
+        const quiver::MinMaxSummary<T> sma =
+            with_sel ? quiver::compute_min_max(in, val, sel) : quiver::compute_min_max(in, val);
         ASSERT_EQ(std::memcmp(&sma.min, &want_min, sizeof(T)), 0);
         ASSERT_EQ(std::memcmp(&sma.max, &want_max, sizeof(T)), 0);
       }

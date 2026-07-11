@@ -1,9 +1,13 @@
-// Surface B — vocabulary types, enums, and concepts. Exactly the inventory of PRD 04 §3.
-// Module: MOD-CORE | REQs: REQ-CORE-001/-002, REQ-API-001/-004/-005 | ADRs: ADR-006, ADR-007
+// Surface B — vocabulary types, enums, concepts, and the zero-cost convenience helpers.
+// Exactly the inventory of PRD 04 §3 (+ the §3.6 convenience additions, ADR-027).
+// Module: MOD-CORE | REQs: REQ-CORE-001/-002, REQ-API-001/-004/-005 | ADRs: ADR-006, ADR-007,
+// ADR-027
 #pragma once
 
 #include <concepts>
 #include <cstdint>
+#include <ranges>
+#include <span>
 #include <type_traits>
 
 #include "quiver/detail/config.h"
@@ -64,13 +68,52 @@ struct SelVec {
 };
 
 // Identity values when no valid element participates: min = numeric max, max = numeric lowest
-// (PRD 08 §3.5).
+// (PRD 08 §3.5). Renamed from `Sma` in 0.8 (ADR-027): the old name read as "simple moving
+// average", which this never was — it is the fused single-pass min/max/null-count summary.
 template <Element T>
-struct Sma {
+struct MinMaxSummary {
   T min;
   T max;
   std::int64_t null_count;
 };
+
+template <Element T>
+using Sma [[deprecated("renamed to MinMaxSummary in 0.8; the Sma alias is removed at v1.0")]] =
+    MinMaxSummary<T>;
+
+// --- Zero-cost convenience helpers (PRD 04 §3.6, ADR-027). No allocation, no behavior change:
+// --- pure spelling improvements over the buffer-oriented core.
+
+// "All rows valid" — the named form of BitmapView{nullptr} for `validity` parameters.
+inline constexpr BitmapView all_valid{nullptr};
+
+// Bytes a bitmap over `row_count` rows occupies: the ⌈n/8⌉ every caller otherwise rewrites.
+constexpr std::size_t bitmap_bytes(std::int64_t row_count) noexcept {
+  return static_cast<std::size_t>((row_count + 7) / 8);
+}
+
+// A contiguous range of Element values (vector, span, array...) usable as a batch source.
+template <class R>
+concept BatchRange = std::ranges::contiguous_range<R> && std::ranges::sized_range<R> &&
+                     Element<std::remove_cv_t<std::ranges::range_value_t<R>>>;
+
+// A contiguous range of selection indices.
+template <class R>
+concept IndexRange = std::ranges::contiguous_range<R> && std::ranges::sized_range<R> &&
+                     std::same_as<std::remove_cv_t<std::ranges::range_value_t<R>>, std::uint32_t>;
+
+// View builders: `quiver::batch_view(my_vector)` instead of spelling BatchView<T>{data, size}.
+template <BatchRange R>
+constexpr auto batch_view(const R& values) noexcept {
+  using T = std::remove_cv_t<std::ranges::range_value_t<R>>;
+  return BatchView<T>{std::ranges::data(values),
+                      static_cast<std::int64_t>(std::ranges::size(values))};
+}
+
+template <IndexRange R>
+constexpr SelVec selection_view(const R& indices) noexcept {
+  return SelVec{std::ranges::data(indices), static_cast<std::int64_t>(std::ranges::size(indices))};
+}
 
 namespace detail {
 template <Element T>

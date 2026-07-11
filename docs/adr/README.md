@@ -38,3 +38,4 @@ The 26 settled engineering decisions of the Quiver Engineering PRD, materialized
 | [ADR-024](ADR-024-release-and-branching-strategy.md) | Release and branching strategy | [19-release-plan.md](../prd/19-release-plan.md) | Accepted |
 | [ADR-025](ADR-025-selection-vector-semantics.md) | Selection-vector semantics | [08-kernel-design.md](../prd/08-kernel-design.md) | Accepted |
 | [ADR-026](ADR-026-bit-packing-layout.md) | Bit-packing layout | [08-kernel-design.md](../prd/08-kernel-design.md) | Accepted |
+| [ADR-027](ADR-027-convenience-surface.md) | Convenience surface + MinMaxSummary rename | [04-public-api.md](../prd/04-public-api.md) §3.6 | Accepted |

@@ -47,8 +47,8 @@ void guard_sweep_for_type() {
                    out_vals.data());
       (void)quiver::reduce_min(quiver::BatchView<T>{in.data(), n},
                                quiver::BitmapView{sel_bits.data()});
-      (void)quiver::compute_sma(quiver::BatchView<T>{in.data(), n},
-                                quiver::BitmapView{sel_bits.data()});
+      (void)quiver::compute_min_max(quiver::BatchView<T>{in.data(), n},
+                                    quiver::BitmapView{sel_bits.data()});
     }
   }
 }

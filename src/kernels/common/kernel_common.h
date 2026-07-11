@@ -26,7 +26,7 @@ QUIVER_FORCE_INLINE bool is_valid(const std::uint8_t* validity, std::int64_t i) 
   return validity == nullptr || bitmap_get(validity, i);
 }
 
-QUIVER_FORCE_INLINE std::int64_t bitmap_bytes(std::int64_t n) noexcept {
+QUIVER_FORCE_INLINE std::int64_t bitmap_byte_count(std::int64_t n) noexcept {
   return (n + 7) >> 3;
 }
 

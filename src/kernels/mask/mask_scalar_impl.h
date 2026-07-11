@@ -33,7 +33,7 @@ QUIVER_FORCE_INLINE std::uint64_t apply_mask_op(MaskOp op, std::uint64_t a,
 
 inline void mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
                          std::uint8_t* out) noexcept {
-  const std::int64_t bytes = bitmap_bytes(n);
+  const std::int64_t bytes = bitmap_byte_count(n);
   const std::int64_t words = bytes >> 3;
   for (std::int64_t w = 0; w < words; ++w) {
     store_word(out + w * 8, apply_mask_op(op, load_word(a + w * 8), load_word(b + w * 8)));
@@ -45,7 +45,7 @@ inline void mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b
 }
 
 inline void mask_not(const std::uint8_t* a, std::int64_t n, std::uint8_t* out) noexcept {
-  const std::int64_t bytes = bitmap_bytes(n);
+  const std::int64_t bytes = bitmap_byte_count(n);
   const std::int64_t words = bytes >> 3;
   for (std::int64_t w = 0; w < words; ++w) {
     store_word(out + w * 8, ~load_word(a + w * 8));

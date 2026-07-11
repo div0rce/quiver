@@ -497,7 +497,7 @@
     (const std::int8_t* in, std::int64_t n, const std::uint8_t* validity,                          \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_i8, Sma<std::int8_t>, k6_compute_sma,                                                   \
+  X(k6_sma_i8, MinMaxSummary<std::int8_t>, k6_compute_sma,                                         \
     (const std::int8_t* in, std::int64_t n, const std::uint8_t* validity,                          \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
@@ -513,7 +513,7 @@
     (const std::int16_t* in, std::int64_t n, const std::uint8_t* validity,                         \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_i16, Sma<std::int16_t>, k6_compute_sma,                                                 \
+  X(k6_sma_i16, MinMaxSummary<std::int16_t>, k6_compute_sma,                                       \
     (const std::int16_t* in, std::int64_t n, const std::uint8_t* validity,                         \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
@@ -529,7 +529,7 @@
     (const std::int32_t* in, std::int64_t n, const std::uint8_t* validity,                         \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_i32, Sma<std::int32_t>, k6_compute_sma,                                                 \
+  X(k6_sma_i32, MinMaxSummary<std::int32_t>, k6_compute_sma,                                       \
     (const std::int32_t* in, std::int64_t n, const std::uint8_t* validity,                         \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
@@ -545,7 +545,7 @@
     (const std::int64_t* in, std::int64_t n, const std::uint8_t* validity,                         \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_i64, Sma<std::int64_t>, k6_compute_sma,                                                 \
+  X(k6_sma_i64, MinMaxSummary<std::int64_t>, k6_compute_sma,                                       \
     (const std::int64_t* in, std::int64_t n, const std::uint8_t* validity,                         \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
@@ -561,7 +561,7 @@
     (const std::uint8_t* in, std::int64_t n, const std::uint8_t* validity,                         \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_u8, Sma<std::uint8_t>, k6_compute_sma,                                                  \
+  X(k6_sma_u8, MinMaxSummary<std::uint8_t>, k6_compute_sma,                                        \
     (const std::uint8_t* in, std::int64_t n, const std::uint8_t* validity,                         \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
@@ -577,7 +577,7 @@
     (const std::uint16_t* in, std::int64_t n, const std::uint8_t* validity,                        \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_u16, Sma<std::uint16_t>, k6_compute_sma,                                                \
+  X(k6_sma_u16, MinMaxSummary<std::uint16_t>, k6_compute_sma,                                      \
     (const std::uint16_t* in, std::int64_t n, const std::uint8_t* validity,                        \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
@@ -593,7 +593,7 @@
     (const std::uint32_t* in, std::int64_t n, const std::uint8_t* validity,                        \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_u32, Sma<std::uint32_t>, k6_compute_sma,                                                \
+  X(k6_sma_u32, MinMaxSummary<std::uint32_t>, k6_compute_sma,                                      \
     (const std::uint32_t* in, std::int64_t n, const std::uint8_t* validity,                        \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
@@ -609,7 +609,7 @@
     (const std::uint64_t* in, std::int64_t n, const std::uint8_t* validity,                        \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_u64, Sma<std::uint64_t>, k6_compute_sma,                                                \
+  X(k6_sma_u64, MinMaxSummary<std::uint64_t>, k6_compute_sma,                                      \
     (const std::uint64_t* in, std::int64_t n, const std::uint8_t* validity,                        \
      const std::uint32_t* sel, std::int64_t sel_len),                                              \
     (in, n, validity, sel, sel_len))                                                               \
@@ -625,7 +625,7 @@
     (const float* in, std::int64_t n, const std::uint8_t* validity, const std::uint32_t* sel,      \
      std::int64_t sel_len),                                                                        \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_f32, Sma<float>, k6_compute_sma,                                                        \
+  X(k6_sma_f32, MinMaxSummary<float>, k6_compute_sma,                                              \
     (const float* in, std::int64_t n, const std::uint8_t* validity, const std::uint32_t* sel,      \
      std::int64_t sel_len),                                                                        \
     (in, n, validity, sel, sel_len))                                                               \
@@ -641,7 +641,7 @@
     (const double* in, std::int64_t n, const std::uint8_t* validity, const std::uint32_t* sel,     \
      std::int64_t sel_len),                                                                        \
     (in, n, validity, sel, sel_len))                                                               \
-  X(k6_sma_f64, Sma<double>, k6_compute_sma,                                                       \
+  X(k6_sma_f64, MinMaxSummary<double>, k6_compute_sma,                                             \
     (const double* in, std::int64_t n, const std::uint8_t* validity, const std::uint32_t* sel,     \
      std::int64_t sel_len),                                                                        \
     (in, n, validity, sel, sel_len))                                                               \

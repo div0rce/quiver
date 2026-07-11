@@ -41,7 +41,7 @@ void run(quiver_fuzz::Decoder& d) {
   T min0{};
   T max0{};
   quiver::SumType<T> sum0{};
-  quiver::Sma<T> sma0{};
+  quiver::MinMaxSummary<T> sma0{};
   bool overflow0 = false;
   bool first = true;
   for (const quiver::Isa isa : quiver_fuzz::host_backends()) {
@@ -50,8 +50,8 @@ void run(quiver_fuzz::Decoder& d) {
     const T mx = with_sel ? quiver::reduce_max(in, val, sel) : quiver::reduce_max(in, val);
     const auto sm =
         with_sel ? quiver::reduce_sum_wrap(in, val, sel) : quiver::reduce_sum_wrap(in, val);
-    const quiver::Sma<T> sma =
-        with_sel ? quiver::compute_sma(in, val, sel) : quiver::compute_sma(in, val);
+    const quiver::MinMaxSummary<T> sma =
+        with_sel ? quiver::compute_min_max(in, val, sel) : quiver::compute_min_max(in, val);
 
     if constexpr (std::is_floating_point_v<T>) {
       // Per-backend policy oracle for sums (dense AVX2/NEON = blocked {w,a}; else strict
