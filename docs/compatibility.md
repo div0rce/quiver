@@ -21,10 +21,12 @@ Emulator on the `-spr` and `-skx` profiles every push (ADR-010). No AVX-512 perf
 published anywhere — that is exactly the missing-machine gap ([help here](https://github.com/div0rce/quiver/issues/39)).
 
 ² MSVC builds the **full** test suite and passes it with **no exclusions** — 128/128 on the
-`msvc` CI job. This is narrower than the *correctness-tested* definition above: `QUIVER_SANITIZE`
-is rejected on MSVC (`cmake/sanitizers.cmake`), so the ASan/UBSan/TSan legs run on tier-1
-toolchains only and Windows carries no sanitizer coverage. Guard-page coverage *is* included. alongside the separate amalgamation leg on the default `/arch`. The two
-former exclusions are fixed at the source, not filtered: `reduce_sum_checked` now accumulates
+`msvc` CI job, which runs through the `ci-msvc` preset and therefore under
+`QUIVER_ENABLE_WERROR=ON`. This is narrower than the *correctness-tested* definition above:
+`QUIVER_SANITIZE` is rejected on MSVC (`cmake/sanitizers.cmake`), so the ASan/UBSan/TSan legs
+run on tier-1 toolchains only and Windows carries no sanitizer coverage. Guard-page coverage
+*is* included, and a separate amalgamation leg builds the two-file pair on the default `/arch`.
+The two former exclusions are fixed at the source, not filtered: `reduce_sum_checked` now accumulates
 exactly without `__int128` (`reduce_scalar_impl.h`), and the Windows guard-page harness is
 implemented with `VirtualAlloc`/`VirtualProtect` (`tests/testkit/generators.cpp`) instead of
 returning `nullptr` — risk R-18 is closed.

@@ -168,7 +168,11 @@ bool reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validit
   // to INT64_MAX, which is representable, so the correct answer is false.
   if constexpr (std::is_signed_v<T>) {
     std::uint64_t lo = 0;
-    std::int64_t hi = 0;  // |sum| <= 2^31 * 2^63 = 2^94, so hi itself cannot overflow
+    // hi cannot overflow: even at the full std::int64_t range of n the exact sum satisfies
+    // |sum| <= 2^63 * 2^63 = 2^126 < 2^127, so it fits the signed 128-bit (hi, lo) pair. The
+    // batch contract bounds n far lower still (kMaxBatchLen = 2^31-1, PRD 04), but the proof
+    // does not depend on that.
+    std::int64_t hi = 0;
     for_each_participant(n, validity, sel, sel_len, [&](std::int64_t i, bool valid) {
       if (valid) {
         const S v = static_cast<S>(in[i]);

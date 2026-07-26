@@ -170,11 +170,16 @@ TEST(Reduce, TargetPipelineCompilesAsReviewed) {
 #if defined(__clang__) || defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)  // calling the deprecated alias IS the point of this test
 #endif
   const quiver::Sma<std::int32_t> old_name =
       quiver::compute_sma(quiver::batch_view(values), quiver::all_valid);
 #if defined(__clang__) || defined(__GNUC__)
 #pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
 #endif
   EXPECT_EQ(old_name.min, 0);
   EXPECT_EQ(old_name.max, 9);

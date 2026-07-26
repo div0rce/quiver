@@ -266,12 +266,15 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-      - name: Configure
-        run: cmake -S . -B build -DQUIVER_ENABLE_TESTS=ON
+      # Presets only, never ad-hoc flags (REQ-BUILD-011). ci-msvc also sets
+      # QUIVER_ENABLE_WERROR=ON, so this gate holds Windows to the same warning policy as
+      # tier-1 — which no MSVC job did before.
+      - name: Configure (ci-msvc preset)
+        run: cmake --preset ci-msvc
       - name: Build every test target
-        run: cmake --build build --config Debug -j 4
+        run: cmake --build --preset ci-msvc -j 4
       - name: Run the full suite (no exclusions)
-        run: ctest --test-dir build -C Debug -j 4 --output-on-failure
+        run: ctest --preset ci-msvc -j 4
 
   msvc-amalgamation:
     name: MSVC amalgamation (ADR-018)
