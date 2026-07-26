@@ -14,18 +14,23 @@ Three different claims, kept deliberately distinct:
 | Linux x86-64 (GCC 13/14, Clang 17/19) | tested | tested | tested under Intel SDE¹ | — | pending native machines |
 | macOS ARM64 (Apple Clang) | tested | — | — | tested | **Apple M2 ledger** |
 | Linux ARM64 (GCC 14, Clang 19) | tested | — | — | tested | pending |
-| Windows x86-64 (MSVC) | tested² | tested² | tested² | — | pending |
+| Windows x86-64 (MSVC) | tested² | tested² | compiles only³ | — | pending |
 
 ¹ There is no AVX-512 hardware in CI; correctness runs under the Intel Software Development
 Emulator on the `-spr` and `-skx` profiles every push (ADR-010). No AVX-512 performance number is
 published anywhere — that is exactly the missing-machine gap ([help here](https://github.com/div0rce/quiver/issues/39)).
 
-² MSVC builds the **full** test suite and passes it with **no exclusions** (127/127, MSVC 14.44
+² MSVC builds the **full** test suite and passes it with **no exclusions** (128/128, MSVC 14.44
 / VS 2022 17.14), alongside the separate amalgamation leg on the default `/arch`. The two
 former exclusions are fixed at the source, not filtered: `reduce_sum_checked` now accumulates
 exactly without `__int128` (`reduce_scalar_impl.h`), and the Windows guard-page harness is
 implemented with `VirtualAlloc`/`VirtualProtect` (`tests/testkit/generators.cpp`) instead of
 returning `nullptr` — risk R-18 is closed.
+
+³ The Windows AVX-512 backend **compiles but has never been executed**. The verification run
+above was on an i9-9900K (Coffee Lake), which has no AVX-512, and the Intel SDE legs run on
+Linux only — so no Windows AVX-512 correctness claim is made. Closing this needs either
+AVX-512 hardware on Windows or an SDE leg in the Windows CI job.
 
 MSVC nonetheless remains **toolchain tier-2** in the support matrix. That is now a governance
 position, not a technical one: Charter §8.1 defers tier-1 promotion until "demonstrated demand",

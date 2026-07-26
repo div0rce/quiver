@@ -135,11 +135,13 @@ Three different claims, kept distinct: *compiles*, *correctness-tested*, and *pe
 | Linux x86-64 | tested | tested | tested (Intel SDE emulator) | — | pending native machines |
 | macOS ARM64 | tested | — | — | tested | **Apple M2 ledger** |
 | Linux ARM64 | tested | — | — | tested | pending |
-| Windows x86-64 | tested² | tested² | tested² | — | pending |
+| Windows x86-64 | tested² | tested² | compiles only² | — | pending |
 
-² MSVC builds and passes the **full** test suite with **no exclusions** (127/127). It stays
-labelled toolchain tier-2 only because Charter §8.1 gates tier-1 promotion on demonstrated
-demand; tier-1 promises are still made only for GCC/Clang.
+² MSVC builds and passes the **full** test suite with **no exclusions** (128/128) on scalar and
+AVX2. The Windows AVX-512 backend compiles but has never been executed — the verification
+machine has no AVX-512 and the Intel SDE legs are Linux-only. Windows stays labelled toolchain
+tier-2: Charter §8.1 gates tier-1 promotion on demonstrated demand, and tier-1 promises are made
+only for GCC/Clang. No Windows performance evidence exists; the ledger has no x86 entry at all.
 
 ## Why Quiver (and when not)
 
