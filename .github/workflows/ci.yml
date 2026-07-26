@@ -31,6 +31,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Run repository lint
         run: python3 .github/scripts/repo_lint.py
 
@@ -39,6 +41,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang-format
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-format-18
       - name: Check formatting of all C++ sources
@@ -56,6 +60,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned docs toolchain
         run: python3 -m pip install -r docs/requirements.txt
       - name: Build documentation site (strict; broken links fail, REQ-DOC-005)
@@ -69,6 +75,8 @@ jobs:
         preset: [dev, release]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure (${{ matrix.preset }})
         run: cmake --preset ${{ matrix.preset }}
 
@@ -98,6 +106,8 @@ jobs:
           - { os: macos-15, compiler: appleclang, cc: cc, cxx: c++, preset: release }
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install compiler (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -138,6 +148,8 @@ jobs:
         os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Build + install, then consume both ways
         run: |
           set -eu
@@ -196,6 +208,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-18
       - name: "REQ-STD-006: amalgamation-compatibility lint"
@@ -250,6 +264,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure
         run: cmake -S . -B build -DQUIVER_ENABLE_TESTS=ON
       - name: Build every test target
@@ -262,6 +278,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure (default VS generator, default /arch)
         run: cmake -S . -B build -DQUIVER_ENABLE_TESTS=ON
       - name: Build the amalgamated verify target (generate + compile the pair)
@@ -282,6 +300,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-18
       - name: Build the pinned library, unit suite, and ISA example
@@ -305,6 +325,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure
         env: { CC: clang-18, CXX: clang++-18 }
         run: cmake --preset asan-ubsan
@@ -318,6 +340,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure
         env: { CC: clang-18, CXX: clang++-18 }
         run: cmake --preset tsan
@@ -335,6 +359,8 @@ jobs:
       SDE_URL: "https://downloadmirror.intel.com/850782/sde-external-9.53.0-2025-03-16-lin.tar.xz"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-18
       - name: Cache Intel SDE
@@ -386,6 +412,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang-tidy
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-tidy-18
       - name: Configure (compile commands)
@@ -402,6 +430,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure bench preset
         run: cmake --preset bench
       - name: Build
@@ -427,6 +457,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure fuzz preset
         env: { CC: clang-18, CXX: clang++-18 }
         run: cmake --preset fuzz
@@ -460,6 +492,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Verify Signed-off-by on every commit in the PR
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
