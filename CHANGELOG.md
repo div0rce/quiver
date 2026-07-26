@@ -39,7 +39,7 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
   to the scalar reference) on GCC, Clang, MSVC, and AVX-512 under SDE.
 
 - **Windows CI now builds the full test suite and runs it with no `--gtest_filter` exclusions**
-  (127/127 under MSVC 14.44 / VS 2022 17.14). Previously only the amalgamated unit target was
+  (128/128 under MSVC 14.44 / VS 2022 17.14). Previously only the amalgamated unit target was
   built, with two cases filtered out. Risk R-18 is closed. MSVC remains labelled toolchain
   tier-2: that is now a Charter §8.1 governance gate ("promote on demonstrated demand"), not a
   technical gap.
