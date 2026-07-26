@@ -160,34 +160,46 @@ bool reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validit
   }
 #pragma GCC diagnostic pop
 #else
-  // No 128-bit type (MSVC x64 tier-2): carry-tracked 64-bit accumulation.
+  // No 128-bit type (MSVC x64 tier-2): exact 128-bit accumulation via an explicit
+  // (hi, lo) pair. This MUST reproduce the __int128 branch bit-for-bit, because the
+  // contract is "true iff mathematically unrepresentable" (API-K6-003, docs/api/reduce.md)
+  // — a property of the FINAL sum, not of any intermediate step. A sticky per-step
+  // overflow flag is not equivalent: [INT64_MAX, 1, -1] overflows transiently but sums
+  // to INT64_MAX, which is representable, so the correct answer is false.
   if constexpr (std::is_signed_v<T>) {
-    S acc = 0;
-    bool overflowed = false;
+    std::uint64_t lo = 0;
+    // hi cannot overflow: even at the full std::int64_t range of n the exact sum satisfies
+    // |sum| <= 2^63 * 2^63 = 2^126 < 2^127, so it fits the signed 128-bit (hi, lo) pair. The
+    // batch contract bounds n far lower still (kMaxBatchLen = 2^31-1, PRD 04), but the proof
+    // does not depend on that.
+    std::int64_t hi = 0;
     for_each_participant(n, validity, sel, sel_len, [&](std::int64_t i, bool valid) {
       if (valid) {
         const S v = static_cast<S>(in[i]);
-        using U = std::make_unsigned_t<S>;
-        const S r = static_cast<S>(static_cast<U>(acc) + static_cast<U>(v));
-        overflowed = overflowed || (((acc ^ r) & (v ^ r)) < 0);
-        acc = r;
+        const std::uint64_t uv = static_cast<std::uint64_t>(v);
+        const std::uint64_t nlo = lo + uv;
+        // sign-extend v into the high limb, then add the carry out of the low limb
+        hi += (v < 0 ? -1 : 0) + (nlo < lo ? 1 : 0);
+        lo = nlo;
       }
     });
-    *out_sum = acc;
-    return overflowed;
+    *out_sum = static_cast<S>(lo);  // wrapped value on overflow (API-K6-003)
+    // Representable iff the high limb is exactly the sign extension of the low limb.
+    const std::int64_t sign_ext = (static_cast<std::int64_t>(lo) < 0) ? -1 : 0;
+    return hi != sign_ext;
   } else {
-    S acc = 0;
-    bool overflowed = false;
+    std::uint64_t lo = 0;
+    std::uint64_t hi = 0;
     for_each_participant(n, validity, sel, sel_len, [&](std::int64_t i, bool valid) {
       if (valid) {
-        const S v = static_cast<S>(in[i]);
-        const S r = static_cast<S>(acc + v);
-        overflowed = overflowed || (r < acc);
-        acc = r;
+        const std::uint64_t uv = static_cast<std::uint64_t>(in[i]);
+        const std::uint64_t nlo = lo + uv;
+        hi += (nlo < lo) ? 1u : 0u;
+        lo = nlo;
       }
     });
-    *out_sum = acc;
-    return overflowed;
+    *out_sum = static_cast<S>(lo);
+    return hi != 0;  // exceeds the 64-bit range iff anything reached the high limb
   }
 #endif
 }

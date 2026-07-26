@@ -38,7 +38,11 @@ endif()
 # Applied per-target from M1 onward; fetched third-party code is excluded via SYSTEM includes.
 function(quiver_apply_warnings target)
   if(MSVC)
-    target_compile_options(${target} PRIVATE /W4)
+    # /wd4324 — "structure was padded due to alignment specifier". The AVX2 compare kernels
+    # deliberately over-align their operand structs so the loads are vector-aligned; the
+    # padding is the intent, and C4324 is informational. Suppressed with reason per
+    # REQ-STD-007, the same discipline .clang-tidy uses for its global disables.
+    target_compile_options(${target} PRIVATE /W4 /wd4324)
     if(QUIVER_ENABLE_WERROR)
       target_compile_options(${target} PRIVATE /WX)
     endif()
@@ -50,6 +54,16 @@ function(quiver_apply_warnings target)
     endif()
   endif()
 endfunction()
+
+# --- MSVC CRT deprecations (REQ-BUILD-008) ----------------------------------------------------
+# std::getenv is flagged C4996 by MSVC in favour of getenv_s. Quiver reads exactly two
+# environment variables (the ISA override and the test seam), both at init time on a single
+# thread and read-only, so the reentrancy the _s variants buy is not needed — and getenv is the
+# only spelling portable across the whole PRD 03 §7 matrix. Applied at directory scope so the
+# test suites, which read the same seed/ISA variables, are covered too.
+if(MSVC)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()
 
 # --- Library execution constraints (REQ-BUILD-004, Charter §7.3) ------------------------------
 # Shipped-library TUs compile with exceptions and RTTI disabled to enforce the noexcept /

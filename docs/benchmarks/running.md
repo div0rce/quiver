@@ -23,6 +23,21 @@ Numbers intended for comparison, and everything ledger-bound, require a controll
 
 macOS note: no public PMU access; wall-clock only; entries are labeled secondary (Survey §7.3, Charter §6.4).
 
+**WSL2 note: WSL2 cannot produce a publishable ledger run.** The guest kernel exposes no
+`cpufreq` subsystem, so `/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor` does not exist
+and `frequency_governor()` returns `unknown` — which `environment_checklist()` records as the
+deviation `frequency governor is 'unknown', not 'performance'`, making the run non-publishable
+(REQ-LEDGER-013). `--allow-deviations` runs it anyway for local optimization work, but those
+numbers must not be committed as ledger entries.
+
+This is not specific to WSL: it applies to any environment where `frequency_governor()` falls
+back to `unknown`. Native **Windows** is one — the check keys on the Linux sysfs path, so it
+takes the same fallback and is no better. macOS is **not** affected: it reports an explicit
+`n/a (macOS: OS-managed DVFS, no user governor)`, which `environment_checklist()` accepts as
+that platform's normal state rather than a deviation (REQ-LEDGER-008). Contributing an x86 entry therefore needs
+a bare-metal Linux boot (dual-boot or live USB) with `cpupower frequency-set -g performance`,
+plus the SMT and turbo steps above.
+
 ## PMU counters
 
 On Linux with PMU access (`kernel.perf_event_paranoid ≤ 2` or CAP_PERFMON), benchmarks report `cycles_per_value`, `ipc`, and `branch_miss_pct` per REQ-BENCH-005; without access they run and mark `pmu: unavailable`.

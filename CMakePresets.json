@@ -156,7 +156,8 @@
     },
     {
       "name": "ci-msvc",
-      "configurePreset": "ci-msvc"
+      "configurePreset": "ci-msvc",
+      "configuration": "Release"
     }
   ],
   "testPresets": [
@@ -238,7 +239,8 @@
       },
       "execution": {
         "stopOnFailure": false
-      }
+      },
+      "configuration": "Release"
     }
   ]
 }

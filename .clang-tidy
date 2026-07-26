@@ -10,7 +10,8 @@ Checks: >
   cppcoreguidelines-init-variables,
   misc-definitions-in-headers,
   -bugprone-easily-swappable-parameters,
-  -portability-simd-intrinsics
+  -portability-simd-intrinsics,
+  -portability-avoid-pragma-once
 WarningsAsErrors: ''
 HeaderFilterRegex: '(include/quiver|src)/.*'
 FormatStyle: file
@@ -25,3 +26,9 @@ CheckOptions:
 # intrinsics ARE the charter decision (no SIMD abstraction layer; Charter §7.2,
 # ADR-003) — every *_avx2/_avx512/_neon.cpp TU is intentionally non-portable and
 # architecture-guarded. Recorded here per REQ-STD-007 (added at M4).
+# Note: portability-avoid-pragma-once is disabled globally with reason: it arrived in
+# clang-tidy 20 (CI pins the 18 major, so it is latent there) and fires on all 184 headers.
+# `#pragma once` is the project-wide convention (REQ-STD-002) and is supported by every
+# toolchain in the PRD 03 §7 matrix, including MSVC; the check targets exotic compilers
+# Quiver does not claim. Recorded here per REQ-STD-007 so a future clang-tidy bump does not
+# break the gate with 184 findings.

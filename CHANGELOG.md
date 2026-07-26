@@ -22,6 +22,28 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ### Changed
 
+- **AVX2 64-bit `filter` is ~4x faster**, and now beats the equal-ISA autovectorized baseline
+  on every measured shape instead of losing on nearly all of them. `kCompactLut64` stored four
+  64-bit lane indices, which `compact4_64bit` expanded into vpermd's epi32 pair indices with
+  `_mm256_setr_epi32` **on every nibble** — 8 scalar loads plus an insert chain, per 4 elements.
+  The table now stores the expanded `{2p, 2p+1}` pairs directly, so the control vector is one
+  aligned 32-byte load, exactly like the 32-bit path. Same 512 B either way; the 32-byte row
+  alignment `_mm256_load_si256` needs is asserted by a new test.
+
+  Measured on an i9-9900K (Coffee Lake, AVX2) — the compaction loop alone is **3.48x** faster;
+  end to end across 20 i64 `filter/bitmap` shapes the median is **4.17x**, and AVX2 goes from
+  beating the `autovec-avx2` baseline in **1/20 shapes to 20/20**. These are development-box
+  numbers under WSL2, **not** ledger entries: that environment reports no cpufreq governor and
+  is non-publishable under REQ-LEDGER-013. No dispatch routing changed, so REQ-KERNEL-007 does
+  not gate this; correctness is unchanged and proven by the differential suite (byte-identical
+  to the scalar reference) on GCC, Clang, MSVC, and AVX-512 under SDE.
+
+- **Windows CI now builds the full test suite and runs it with no `--gtest_filter` exclusions**
+  (128/128 under MSVC 14.44 / VS 2022 17.14). Previously only the amalgamated unit target was
+  built, with two cases filtered out. Risk R-18 is closed. MSVC remains labelled toolchain
+  tier-2: that is now a Charter §8.1 governance gate ("promote on demonstrated demand"), not a
+  technical gap.
+
 - **Breaking (0.x rules, REQ-API-009): `Sma<T>` → `MinMaxSummary<T>`, `compute_sma` →
   `compute_min_max`** (ADR-027). The old name read as "simple moving average", which the
   operation never was — it is the fused single-pass min/max/null-count summary. `[[deprecated]]`
@@ -34,6 +56,23 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
   (#35).
 
 ### Fixed
+
+- **`reduce_sum_checked` reported overflow for representable sums on toolchains without
+  `__int128`** (MSVC; risk R-18). The fallback used a *sticky per-add* overflow flag, but
+  API-K6-003 specifies "true iff mathematically unrepresentable (exact, 128-bit accumulation)"
+  — a property of the **final** sum. `[INT64_MAX, 1, -1]` overflows transiently yet sums to
+  `INT64_MAX`, so tier-1 returned `false` and MSVC returned `true`: a silent cross-platform
+  result divergence in a library that promises bit-identical integer results. Replaced with
+  exact 128-bit `(hi, lo)` limb accumulation, differentially verified bit-identical to
+  `__int128` over 800k randomized adversarial sequences (int64 and uint64).
+- **The Windows guard-page test harness never allocated anything.** `GuardedAlloc`'s `_WIN32`
+  branch discarded its arguments and set `payload_ = nullptr` despite a comment claiming a
+  `VirtualAlloc` guard, so every guard-page test took an access violation during setup.
+  Implemented with `VirtualAlloc(MEM_RESERVE|MEM_COMMIT)` + `VirtualProtect(PAGE_NOACCESS)`,
+  mirroring the POSIX `mmap`/`mprotect` leg (REQ-TEST-006, REQ-MEM-008).
+- `tests/property/prop_reduce.cpp` used `__int128` unguarded, which MSVC rejects on every
+  architecture (error C4235) — the whole property suite failed to compile on Windows.
+
 
 - R-19 closed in the risk register and status docs after the v0.7.0 release run live-verified the
   publish path.

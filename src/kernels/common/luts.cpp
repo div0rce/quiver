@@ -3,6 +3,8 @@
 // Module: MOD-KCOMMON | REQs: REQ-SIMD-005, REQ-CORE-004 (constinit, no dynamic init)
 #include "src/kernels/common/luts.h"
 
+#include <cstddef>
+
 QUIVER_BEGIN_NAMESPACE
 namespace detail {
 
@@ -29,16 +31,25 @@ consteval CompactLut32 build_lut32() {
 consteval CompactLut64 build_lut64() {
   CompactLut64 lut{};
   for (int b = 0; b < 16; ++b) {
-    int cursor = 0;
-    for (int lane = 0; lane < 4; ++lane) {
-      if ((b >> lane) & 1) {
-        lut.perm[b][cursor++] = static_cast<std::uint64_t>(lane);
+    std::uint32_t lanes[4] = {};
+    std::size_t cursor = 0;
+    for (std::uint32_t lane = 0; lane < 4; ++lane) {
+      if ((static_cast<std::uint32_t>(b) >> lane) & 1u) {
+        lanes[cursor++] = lane;
       }
     }
-    for (int lane = 0; lane < 4; ++lane) {
-      if (((b >> lane) & 1) == 0) {
-        lut.perm[b][cursor++] = static_cast<std::uint64_t>(lane);
+    for (std::uint32_t lane = 0; lane < 4; ++lane) {
+      if (((static_cast<std::uint32_t>(b) >> lane) & 1u) == 0u) {
+        lanes[cursor++] = lane;
       }
+    }
+    // Expand each 64-bit lane index p into the epi32 pair {2p, 2p+1} for vpermd.
+    // k is std::size_t so the 2*k subscripts are computed in the index type directly —
+    // an int multiply widened to ptrdiff_t at the subscript trips
+    // bugprone-implicit-widening-of-multiplication-result (REQ-STD-007).
+    for (std::size_t k = 0; k < 4; ++k) {
+      lut.perm[b][2 * k] = 2u * lanes[k];
+      lut.perm[b][2 * k + 1] = 2u * lanes[k] + 1u;
     }
   }
   return lut;

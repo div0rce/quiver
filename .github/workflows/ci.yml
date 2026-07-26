@@ -31,6 +31,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Run repository lint
         run: python3 .github/scripts/repo_lint.py
 
@@ -39,6 +41,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang-format
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-format-18
       - name: Check formatting of all C++ sources
@@ -56,6 +60,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned docs toolchain
         run: python3 -m pip install -r docs/requirements.txt
       - name: Build documentation site (strict; broken links fail, REQ-DOC-005)
@@ -69,6 +75,8 @@ jobs:
         preset: [dev, release]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure (${{ matrix.preset }})
         run: cmake --preset ${{ matrix.preset }}
 
@@ -98,6 +106,8 @@ jobs:
           - { os: macos-15, compiler: appleclang, cc: cc, cxx: c++, preset: release }
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install compiler (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -138,6 +148,8 @@ jobs:
         os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Build + install, then consume both ways
         run: |
           set -eu
@@ -196,6 +208,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-18
       - name: "REQ-STD-006: amalgamation-compatibility lint"
@@ -235,16 +249,40 @@ jobs:
             -o demo_noexc
           ./demo_noexc
 
-  msvc-amalgamation:
-    # REQ-BUILD-010 tier-2 leg (M8 risk register): the amalgamation compiles on MSVC with the
-    # DEFAULT /arch (SSE2 baseline — baseline-safe by construction: MSVC self-contains AVX2/AVX-512
-    # intrinsics at their call sites, so nothing leaks into the scalar/dispatch path) and the unit
-    # suite passes against it. Run the amalgamated exe directly — gtest exits 0 on pass-with-skips,
-    # avoiding the ctest skip-counting quirk. See docs/adr/ADR-018 (MSVC narrowing note).
-    name: MSVC amalgamation (tier-2; ADR-018)
+  msvc:
+    # REQ-BUILD-010 Windows leg. Builds the FULL test suite (not just the amalgamated unit
+    # target) and runs it with NO --gtest_filter exclusions: both former R-18 deviations are
+    # fixed at the source rather than filtered —
+    #  - reduce_sum_checked now accumulates exactly on toolchains without __int128
+    #    (reduce_scalar_impl.h), so API-K6-003 holds on MSVC;
+    #  - GuardedAlloc's Windows branch is implemented with VirtualAlloc/VirtualProtect
+    #    (tests/testkit/generators.cpp) instead of returning nullptr.
+    # The amalgamation leg still runs separately below, on the DEFAULT /arch (SSE2 baseline —
+    # baseline-safe by construction: MSVC self-contains AVX2/AVX-512 intrinsics at their call
+    # sites, so nothing leaks into the scalar/dispatch path). See docs/adr/ADR-018.
+    name: MSVC full suite
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      # Presets only, never ad-hoc flags (REQ-BUILD-011). ci-msvc also sets
+      # QUIVER_ENABLE_WERROR=ON, so this gate holds Windows to the same warning policy as
+      # tier-1 — which no MSVC job did before.
+      - name: Configure (ci-msvc preset)
+        run: cmake --preset ci-msvc
+      - name: Build every test target
+        run: cmake --build --preset ci-msvc -j 4
+      - name: Run the full suite (no exclusions)
+        run: ctest --preset ci-msvc -j 4
+
+  msvc-amalgamation:
+    name: MSVC amalgamation (ADR-018)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure (default VS generator, default /arch)
         run: cmake -S . -B build -DQUIVER_ENABLE_TESTS=ON
       - name: Build the amalgamated verify target (generate + compile the pair)
@@ -255,15 +293,7 @@ jobs:
           set -eu
           exe=$(find build -name quiver_tests_unit_amalgamated.exe | head -1)
           echo "running $exe"
-          # Two pre-existing tier-2 cases are excluded (surfaced by the first-ever MSVC CI, NOT
-          # amalgamation-related — the amalgamation is byte-identical to the tier-1-green build;
-          # recorded as risk R-18 in gate M8 §8):
-          #  - Reduce.CheckedSumReportsExactOverflow: the exact-unrepresentability contract
-          #    (API-K6-003) is met by the __int128 path (all tier-1 toolchains); MSVC lacks
-          #    __int128 and uses the documented tier-2 per-add fallback (reduce_scalar_impl.h).
-          #  - Unpack.ExactReadBoundOnGuardPage: the Windows VirtualAlloc guard-page harness
-          #    (generators.h, never exercised before) SEH-faults during setup — test-infra debt.
-          "$exe" --gtest_filter="-Reduce.CheckedSumReportsExactOverflow:Unpack.ExactReadBoundOnGuardPage"
+          "$exe"
 
   pinned-build:
     # REQ-DISP-013 / REQ-CI-008: a compile-time-pinned build (QUIVER_PIN_ISA=avx2) on an x86
@@ -273,6 +303,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-18
       - name: Build the pinned library, unit suite, and ISA example
@@ -296,6 +328,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure
         env: { CC: clang-18, CXX: clang++-18 }
         run: cmake --preset asan-ubsan
@@ -309,6 +343,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure
         env: { CC: clang-18, CXX: clang++-18 }
         run: cmake --preset tsan
@@ -326,6 +362,8 @@ jobs:
       SDE_URL: "https://downloadmirror.intel.com/850782/sde-external-9.53.0-2025-03-16-lin.tar.xz"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-18
       - name: Cache Intel SDE
@@ -377,6 +415,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Install pinned clang-tidy
         run: sudo apt-get update -q && sudo apt-get install -y -q clang-tidy-18
       - name: Configure (compile commands)
@@ -393,6 +433,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure bench preset
         run: cmake --preset bench
       - name: Build
@@ -418,6 +460,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure fuzz preset
         env: { CC: clang-18, CXX: clang++-18 }
         run: cmake --preset fuzz
@@ -451,6 +495,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Verify Signed-off-by on every commit in the PR
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}

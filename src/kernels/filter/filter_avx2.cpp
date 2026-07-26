@@ -2,7 +2,7 @@
 // 32-bit lanes: per selection byte, kCompactLut32 row -> vpermd, full-vector store, cursor
 // advances by popcount (all stores stay within the n-element capacity region: the output
 // cursor never exceeds the processed-input count, REQ-MEM-008 / PRD 09 §6).
-// 64-bit lanes: per nibble via kCompactLut64 expanded to epi32 pair indices.
+// 64-bit lanes: per nibble via kCompactLut64, which stores the epi32 pair indices directly.
 // 8/16-bit lanes: BMI2 PDEP/PEXT byte-compaction (mask expanded to byte/word granularity,
 // PEXT extracts selected lanes) — a documented technique deviation from the PRD's pshufb
 // sketch, recorded in the M4 gate (same output, simpler and exact; bmi2 is in the AVX2
@@ -53,13 +53,10 @@ QUIVER_FORCE_INLINE std::int64_t compact8_32bit(const std::uint32_t* in, std::ui
 // first (the scalar core has the same property element-wise).
 QUIVER_FORCE_INLINE std::int64_t compact4_64bit(__m256i v, unsigned nibble, std::uint64_t* out,
                                                 std::int64_t count) noexcept {
-  // Expand the 64-bit lane indices of the nibble row into epi32 pair indices {2p, 2p+1}.
-  const std::uint64_t* row = kCompactLut64.perm[nibble];
+  // The nibble row already holds the epi32 pair indices {2p, 2p+1} (luts.h), so the vpermd
+  // control vector is one aligned 32-byte load instead of an 8-way scalar insert chain.
   const __m256i pairs =
-      _mm256_setr_epi32(static_cast<int>(2 * row[0]), static_cast<int>(2 * row[0] + 1),
-                        static_cast<int>(2 * row[1]), static_cast<int>(2 * row[1] + 1),
-                        static_cast<int>(2 * row[2]), static_cast<int>(2 * row[2] + 1),
-                        static_cast<int>(2 * row[3]), static_cast<int>(2 * row[3] + 1));
+      _mm256_load_si256(reinterpret_cast<const __m256i*>(kCompactLut64.perm[nibble]));
   _mm256_storeu_si256(reinterpret_cast<__m256i*>(out + count),
                       _mm256_permutevar8x32_epi32(v, pairs));
   return count + kPopcountLut.count[nibble];

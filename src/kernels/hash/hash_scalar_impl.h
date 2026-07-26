@@ -42,11 +42,16 @@ QUIVER_FORCE_INLINE constexpr std::uint64_t fmix64(std::uint64_t x) noexcept {
 template <class T>
 QUIVER_FORCE_INLINE std::uint64_t key64(T v) noexcept {
   if constexpr (std::is_same_v<T, float>) {
-    const float c = (v == 0.0f) ? 0.0f : v;  // +0.0 for both zeros; NaN != 0 keeps payload
-    return std::bit_cast<std::uint32_t>(c);
+    // Canonicalize on the BIT PATTERN, not by value comparison. `(v == 0.0f) ? 0.0f : v` is
+    // folded to plain `v` by MSVC at /O2 — the rewrite is valid for every float except the
+    // sign of zero, which is exactly the case this exists for. That made -0.0f hash
+    // differently from +0.0f on MSVC Release only, breaking the cross-platform bit-identity
+    // guarantee (ADR-012). Comparing bits cannot be optimized away. NaN payloads pass through.
+    const std::uint32_t bits = std::bit_cast<std::uint32_t>(v);
+    return bits == 0x8000'0000u ? 0u : bits;
   } else if constexpr (std::is_same_v<T, double>) {
-    const double c = (v == 0.0) ? 0.0 : v;
-    return std::bit_cast<std::uint64_t>(c);
+    const std::uint64_t bits = std::bit_cast<std::uint64_t>(v);
+    return bits == 0x8000'0000'0000'0000ull ? 0ull : bits;
   } else {
     using U = std::make_unsigned_t<T>;
     return static_cast<std::uint64_t>(static_cast<U>(v));  // zero-extend the bit pattern

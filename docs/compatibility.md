@@ -14,16 +14,32 @@ Three different claims, kept deliberately distinct:
 | Linux x86-64 (GCC 13/14, Clang 17/19) | tested | tested | tested under Intel SDE¹ | — | pending native machines |
 | macOS ARM64 (Apple Clang) | tested | — | — | tested | **Apple M2 ledger** |
 | Linux ARM64 (GCC 14, Clang 19) | tested | — | — | tested | pending |
-| Windows x86-64 (MSVC) | tier-2² | tier-2² | tier-2² | — | pending |
+| Windows x86-64 (MSVC) | tested (no sanitizers)² | tested (no sanitizers)² | compiles only³ | — | pending |
 
 ¹ There is no AVX-512 hardware in CI; correctness runs under the Intel Software Development
 Emulator on the `-spr` and `-skx` profiles every push (ADR-010). No AVX-512 performance number is
 published anywhere — that is exactly the missing-machine gap ([help here](https://github.com/div0rce/quiver/issues/39)).
 
-² MSVC is a best-effort toolchain tier: the amalgamation builds and passes the unit suite in CI
-with the default `/arch`, with two documented exclusions (a checked-sum fallback without
-`__int128`, and the Windows guard-page harness — R-18). Tier-1 promises are made only for
-GCC and Clang.
+² MSVC builds the **full** test suite and passes it with **no exclusions** — 128/128 on the
+`msvc` CI job, which runs through the `ci-msvc` preset and therefore under
+`QUIVER_ENABLE_WERROR=ON`. This is narrower than the *correctness-tested* definition above:
+`QUIVER_SANITIZE` is rejected on MSVC (`cmake/sanitizers.cmake`), so the ASan/UBSan/TSan legs
+run on tier-1 toolchains only and Windows carries no sanitizer coverage. Guard-page coverage
+*is* included, and a separate amalgamation leg builds the two-file pair on the default `/arch`.
+The two former exclusions are fixed at the source, not filtered: `reduce_sum_checked` now accumulates
+exactly without `__int128` (`reduce_scalar_impl.h`), and the Windows guard-page harness is
+implemented with `VirtualAlloc`/`VirtualProtect` (`tests/testkit/generators.cpp`) instead of
+returning `nullptr` — risk R-18 is closed.
+
+³ The Windows AVX-512 backend **compiles but has never been executed**. The verification run
+above was on an i9-9900K (Coffee Lake), which has no AVX-512, and the Intel SDE legs run on
+Linux only — so no Windows AVX-512 correctness claim is made. Closing this needs either
+AVX-512 hardware on Windows or an SDE leg in the Windows CI job.
+
+MSVC nonetheless remains **toolchain tier-2** in the support matrix. That is now a governance
+position, not a technical one: Charter §8.1 defers tier-1 promotion until "demonstrated demand",
+so promoting it requires a Charter amendment rather than more engineering. Tier-1 *promises*
+are still made only for GCC/Clang.
 
 ## Toolchain floor
 
