@@ -34,22 +34,33 @@ TEST(Luts, CompactLut32Rederives) {
 }
 
 TEST(Luts, CompactLut64Rederives) {
+  // The table stores the epi32 pair indices {2p, 2p+1} that vpermd consumes, not the raw
+  // 64-bit lane indices p — re-derive both steps independently (luts.h).
   for (int b = 0; b < 16; ++b) {
-    std::uint64_t expect[4];
+    std::uint32_t lanes[4];
     int c = 0;
-    for (std::uint64_t lane = 0; lane < 4; ++lane) {
+    for (std::uint32_t lane = 0; lane < 4; ++lane) {
       if ((b >> lane) & 1) {
-        expect[c++] = lane;
+        lanes[c++] = lane;
       }
     }
-    for (std::uint64_t lane = 0; lane < 4; ++lane) {
+    for (std::uint32_t lane = 0; lane < 4; ++lane) {
       if (((b >> lane) & 1) == 0) {
-        expect[c++] = lane;
+        lanes[c++] = lane;
       }
     }
     for (int k = 0; k < 4; ++k) {
-      ASSERT_EQ(kCompactLut64.perm[b][k], expect[k]) << "nibble=" << b;
+      ASSERT_EQ(kCompactLut64.perm[b][2 * k], 2 * lanes[k]) << "nibble=" << b << " k=" << k;
+      ASSERT_EQ(kCompactLut64.perm[b][2 * k + 1], 2 * lanes[k] + 1) << "nibble=" << b << " k=" << k;
     }
+  }
+}
+
+TEST(Luts, CompactLut64RowsAre32ByteAligned) {
+  // compact4_64bit loads rows with _mm256_load_si256 (aligned); a misaligned row would fault.
+  for (int b = 0; b < 16; ++b) {
+    const auto addr = reinterpret_cast<std::uintptr_t>(&kCompactLut64.perm[b][0]);
+    ASSERT_EQ(addr % 32u, 0u) << "row " << b << " is not 32-byte aligned";
   }
 }
 

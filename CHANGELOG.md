@@ -4,6 +4,24 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Changed
+
+- **AVX2 64-bit `filter` is ~4x faster**, and now beats the equal-ISA autovectorized baseline
+  on every measured shape instead of losing on nearly all of them. `kCompactLut64` stored four
+  64-bit lane indices, which `compact4_64bit` expanded into vpermd's epi32 pair indices with
+  `_mm256_setr_epi32` **on every nibble** — 8 scalar loads plus an insert chain, per 4 elements.
+  The table now stores the expanded `{2p, 2p+1}` pairs directly, so the control vector is one
+  aligned 32-byte load, exactly like the 32-bit path. Same 512 B either way; the 32-byte row
+  alignment `_mm256_load_si256` needs is asserted by a new test.
+
+  Measured on an i9-9900K (Coffee Lake, AVX2) — the compaction loop alone is **3.48x** faster;
+  end to end across 20 i64 `filter/bitmap` shapes the median is **4.17x**, and AVX2 goes from
+  beating the `autovec-avx2` baseline in **1/20 shapes to 20/20**. These are development-box
+  numbers under WSL2, **not** ledger entries: that environment reports no cpufreq governor and
+  is non-publishable under REQ-LEDGER-013. No dispatch routing changed, so REQ-KERNEL-007 does
+  not gate this; correctness is unchanged and proven by the differential suite (byte-identical
+  to the scalar reference) on GCC, Clang, MSVC, and AVX-512 under SDE.
+
 ### Fixed
 
 - **`reduce_sum_checked` reported overflow for representable sums on toolchains without

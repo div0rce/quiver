@@ -29,16 +29,22 @@ consteval CompactLut32 build_lut32() {
 consteval CompactLut64 build_lut64() {
   CompactLut64 lut{};
   for (int b = 0; b < 16; ++b) {
+    int lanes[4] = {};
     int cursor = 0;
     for (int lane = 0; lane < 4; ++lane) {
       if ((b >> lane) & 1) {
-        lut.perm[b][cursor++] = static_cast<std::uint64_t>(lane);
+        lanes[cursor++] = lane;
       }
     }
     for (int lane = 0; lane < 4; ++lane) {
       if (((b >> lane) & 1) == 0) {
-        lut.perm[b][cursor++] = static_cast<std::uint64_t>(lane);
+        lanes[cursor++] = lane;
       }
+    }
+    // Expand each 64-bit lane index p into the epi32 pair {2p, 2p+1} for vpermd.
+    for (int k = 0; k < 4; ++k) {
+      lut.perm[b][2 * k] = static_cast<std::uint32_t>(2 * lanes[k]);
+      lut.perm[b][2 * k + 1] = static_cast<std::uint32_t>(2 * lanes[k] + 1);
     }
   }
   return lut;
