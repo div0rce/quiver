@@ -35,6 +35,24 @@ if("memory" IN_LIST QUIVER_SANITIZE AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang
     "MemorySanitizer requires Clang (docs/prd/12-testing-architecture.md REQ-TEST-009).")
 endif()
 
+# MSan reports every read of memory written by UNINSTRUMENTED code as uninitialized, so the
+# whole C++ standard library must be instrumented too. Against a stock libstdc++ the build
+# links fine and then fails inside std::string/memchr during GoogleTest's test discovery —
+# a false positive that looks exactly like a real defect and has cost real debugging time.
+# CI's nightly MSan leg supplies an instrumented libc++ (see risk R-19); warn anyone who
+# configures this preset without one.
+if("memory" IN_LIST QUIVER_SANITIZE
+   AND NOT CMAKE_CXX_FLAGS MATCHES "stdlib=libc\\+\\+"
+   AND NOT "$ENV{CXXFLAGS}" MATCHES "stdlib=libc\\+\\+")
+  message(WARNING
+    "QUIVER_SANITIZE=memory without -stdlib=libc++: MemorySanitizer needs an MSan-INSTRUMENTED "
+    "standard library. Against stock libstdc++ the suite fails with "
+    "'use-of-uninitialized-value' inside memchr/std::string during test discovery — those are "
+    "false positives, not Quiver defects. Build an instrumented libc++ and pass "
+    "-stdlib=libc++ (plus its include/lib paths) via CXXFLAGS/LDFLAGS, as the nightly MSan job "
+    "does (docs/prd/12-testing-architecture.md REQ-TEST-009).")
+endif()
+
 # --- Application (used by all instrumented targets from M1 onward) -----------------------------
 function(quiver_apply_sanitizers target)
   if(NOT QUIVER_SANITIZE)
