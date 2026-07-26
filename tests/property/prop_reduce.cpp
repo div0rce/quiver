@@ -55,20 +55,29 @@ TEST(PropReduce, CompositionIdentities) {
       EXPECT_EQ(sma.null_count, 0);
     }
 
-    // Checked-sum flag matches an independent 128-bit reference.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
+    // Checked-sum flag matches an independent exact 128-bit reference.
+    // __int128 is a GNU extension MSVC does not provide on any architecture (error C4235),
+    // so the reference is an explicit (hi, lo) pair there. Both compute the EXACT sum and
+    // test representability of the final value — never a per-step overflow flag, which
+    // would wrongly report [INT64_MAX, 1, -1] as overflowing (API-K6-003).
     std::int64_t wrapped = 0;
     const bool flag = quiver::reduce_sum_checked(in, quiver::BitmapView{nullptr}, &wrapped);
-    __int128 big = 0;
-    for (std::int64_t i = 0; i < n; ++i) {
-      big += v[static_cast<std::size_t>(i)];
+    bool want_flag = false;
+    std::int64_t want_sum = 0;
+    {
+      std::uint64_t lo = 0;
+      std::int64_t hi = 0;
+      for (std::int64_t i = 0; i < n; ++i) {
+        const std::int64_t x = v[static_cast<std::size_t>(i)];
+        const std::uint64_t nlo = lo + static_cast<std::uint64_t>(x);
+        hi += (x < 0 ? -1 : 0) + (nlo < lo ? 1 : 0);
+        lo = nlo;
+      }
+      want_sum = static_cast<std::int64_t>(lo);
+      want_flag = hi != ((static_cast<std::int64_t>(lo) < 0) ? -1 : 0);
     }
-    const bool want_flag = big > std::numeric_limits<std::int64_t>::max() ||
-                           big < std::numeric_limits<std::int64_t>::min();
     EXPECT_EQ(flag, want_flag);
-    EXPECT_EQ(wrapped, static_cast<std::int64_t>(big));
-#pragma GCC diagnostic pop
+    EXPECT_EQ(wrapped, want_sum);
   }
 }
 
