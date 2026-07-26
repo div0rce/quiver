@@ -8,6 +8,12 @@
 #if !defined(_WIN32)
 #include <sys/mman.h>
 #include <unistd.h>
+#else
+// NOMINMAX / WIN32_LEAN_AND_MEAN keep windows.h from defining min/max macros, which would
+// break std::numeric_limits<>::max() at every later use site.
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
 #endif
 
 namespace quiver_test {
@@ -124,10 +130,30 @@ GuardedAlloc::GuardedAlloc(std::size_t bytes, Guard placement) {
     payload_ = b + page;
   }
 #else
-  // Windows tier-2: VirtualAlloc + PAGE_NOACCESS guard (compiled on that leg only).
-  (void)bytes;
-  (void)placement;
-  payload_ = nullptr;
+  // Windows: VirtualAlloc the payload + one extra page, then flip the guard page to
+  // PAGE_NOACCESS. Mirrors the POSIX mmap/mprotect leg exactly, so the same over-read /
+  // over-write bound is enforced on both platforms (REQ-TEST-006, REQ-MEM-008).
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  const std::size_t page = static_cast<std::size_t>(si.dwPageSize);
+  const std::size_t payload_pages = (bytes + page - 1) / page;
+  map_len_ = (payload_pages + 1) * page;
+  base_ = VirtualAlloc(nullptr, map_len_, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  if (base_ == nullptr) {
+    payload_ = nullptr;
+    return;
+  }
+  auto* b = static_cast<unsigned char*>(base_);
+  DWORD prev = 0;
+  if (placement == Guard::kEnd) {
+    // Payload ends flush against the protected trailing page.
+    VirtualProtect(b + payload_pages * page, page, PAGE_NOACCESS, &prev);
+    payload_ = b + payload_pages * page - bytes;
+  } else {
+    // Payload starts flush after the protected leading page.
+    VirtualProtect(b, page, PAGE_NOACCESS, &prev);
+    payload_ = b + page;
+  }
 #endif
 }
 
@@ -135,6 +161,10 @@ GuardedAlloc::~GuardedAlloc() {
 #if !defined(_WIN32)
   if (base_ != nullptr) {
     munmap(base_, map_len_);
+  }
+#else
+  if (base_ != nullptr) {
+    VirtualFree(base_, 0, MEM_RELEASE);  // size must be 0 with MEM_RELEASE
   }
 #endif
 }
