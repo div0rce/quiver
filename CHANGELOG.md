@@ -4,6 +4,22 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Added
+
+- **Convenience surface** (ADR-027, PRD 04 §3.6) — zero-cost spellings over the unchanged
+  primitives, from the external API-ergonomics review: `all_valid` (the named
+  `BitmapView{nullptr}`), `bitmap_bytes(n)`, `batch_view(range)`/`selection_view(range)` view
+  builders, `validity` defaults and no-validity overloads across compare/reduce, range-in /
+  span-out overloads for `compare_bitmap`/`compare_selvec`/`take` that check output capacity
+  (assertion builds) and return the **written subspan**, and `CheckedSum<T>` + `sum_checked`
+  replacing the pointer-out-parameter pattern. Nothing allocates; no kernel behavior changes.
+
+- Narrow-width compare coverage (i8/i16/i32) with a pre-registered hypothesis, confirmed: the
+  handwritten NEON pack wins 2.8×/1.6×/1.1× respectively (monotone width gradient; i64 stays
+  delegated at parity), so the narrow widths keep their handwritten paths on measured evidence
+  (#35).
+- Dense-min benchmark coverage (i64/i32/f64, nulls axis), pre-registered (#35).
+
 ### Changed
 
 - **AVX2 64-bit `filter` is ~4x faster**, and now beats the equal-ISA autovectorized baseline
@@ -21,6 +37,23 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
   is non-publishable under REQ-LEDGER-013. No dispatch routing changed, so REQ-KERNEL-007 does
   not gate this; correctness is unchanged and proven by the differential suite (byte-identical
   to the scalar reference) on GCC, Clang, MSVC, and AVX-512 under SDE.
+
+- **Windows CI now builds the full test suite and runs it with no `--gtest_filter` exclusions**
+  (127/127 under MSVC 14.44 / VS 2022 17.14). Previously only the amalgamated unit target was
+  built, with two cases filtered out. Risk R-18 is closed. MSVC remains labelled toolchain
+  tier-2: that is now a Charter §8.1 governance gate ("promote on demonstrated demand"), not a
+  technical gap.
+
+- **Breaking (0.x rules, REQ-API-009): `Sma<T>` → `MinMaxSummary<T>`, `compute_sma` →
+  `compute_min_max`** (ADR-027). The old name read as "simple moving average", which the
+  operation never was — it is the fused single-pass min/max/null-count summary. `[[deprecated]]`
+  aliases keep old code compiling through 0.x and are removed at v1.0.
+- On aarch64, **integer dense min/max/SMA delegates to the autovectorized scalar reference**: the
+  measured handwritten single-accumulator chain lost 0.26×–0.27× (integer min is
+  associative-exact, so the compiler builds a multi-accumulator loop), and the delegated path
+  confirms parity — a ~3.8× user-visible gain on dense integer min. Floats keep the handwritten
+  path (measured 4.0× win; the compiler cannot reassociate float min/max past NaN semantics)
+  (#35).
 
 ### Fixed
 
@@ -40,44 +73,6 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 - `tests/property/prop_reduce.cpp` used `__int128` unguarded, which MSVC rejects on every
   architecture (error C4235) — the whole property suite failed to compile on Windows.
 
-### Changed
-
-- **Windows CI now builds the full test suite and runs it with no `--gtest_filter` exclusions**
-  (127/127 under MSVC 14.44 / VS 2022 17.14). Previously only the amalgamated unit target was
-  built, with two cases filtered out. Risk R-18 is closed. MSVC remains labelled toolchain
-  tier-2: that is now a Charter §8.1 governance gate ("promote on demonstrated demand"), not a
-  technical gap.
-
-### Added
-
-- **Convenience surface** (ADR-027, PRD 04 §3.6) — zero-cost spellings over the unchanged
-  primitives, from the external API-ergonomics review: `all_valid` (the named
-  `BitmapView{nullptr}`), `bitmap_bytes(n)`, `batch_view(range)`/`selection_view(range)` view
-  builders, `validity` defaults and no-validity overloads across compare/reduce, range-in /
-  span-out overloads for `compare_bitmap`/`compare_selvec`/`take` that check output capacity
-  (assertion builds) and return the **written subspan**, and `CheckedSum<T>` + `sum_checked`
-  replacing the pointer-out-parameter pattern. Nothing allocates; no kernel behavior changes.
-
-- Narrow-width compare coverage (i8/i16/i32) with a pre-registered hypothesis, confirmed: the
-  handwritten NEON pack wins 2.8×/1.6×/1.1× respectively (monotone width gradient; i64 stays
-  delegated at parity), so the narrow widths keep their handwritten paths on measured evidence
-  (#35).
-- Dense-min benchmark coverage (i64/i32/f64, nulls axis), pre-registered (#35).
-
-### Changed
-
-- **Breaking (0.x rules, REQ-API-009): `Sma<T>` → `MinMaxSummary<T>`, `compute_sma` →
-  `compute_min_max`** (ADR-027). The old name read as "simple moving average", which the
-  operation never was — it is the fused single-pass min/max/null-count summary. `[[deprecated]]`
-  aliases keep old code compiling through 0.x and are removed at v1.0.
-- On aarch64, **integer dense min/max/SMA delegates to the autovectorized scalar reference**: the
-  measured handwritten single-accumulator chain lost 0.26×–0.27× (integer min is
-  associative-exact, so the compiler builds a multi-accumulator loop), and the delegated path
-  confirms parity — a ~3.8× user-visible gain on dense integer min. Floats keep the handwritten
-  path (measured 4.0× win; the compiler cannot reassociate float min/max past NaN semantics)
-  (#35).
-
-### Fixed
 
 - R-19 closed in the risk register and status docs after the v0.7.0 release run live-verified the
   publish path.

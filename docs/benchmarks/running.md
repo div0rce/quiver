@@ -30,9 +30,11 @@ deviation `frequency governor is 'unknown', not 'performance'`, making the run n
 (REQ-LEDGER-013). `--allow-deviations` runs it anyway for local optimization work, but those
 numbers must not be committed as ledger entries.
 
-This is not specific to WSL: the same applies to any environment without a user-controllable
-governor, and note that the check keys on the Linux sysfs path — running natively on **Windows**
-takes the same `unknown` fallback, so it is no better. Contributing an x86 entry therefore needs
+This is not specific to WSL: it applies to any environment where `frequency_governor()` falls
+back to `unknown`. Native **Windows** is one — the check keys on the Linux sysfs path, so it
+takes the same fallback and is no better. macOS is **not** affected: it reports an explicit
+`n/a (macOS: OS-managed DVFS, no user governor)`, which `environment_checklist()` accepts as
+that platform's normal state rather than a deviation (REQ-LEDGER-008). Contributing an x86 entry therefore needs
 a bare-metal Linux boot (dual-boot or live USB) with `cpupower frequency-set -g performance`,
 plus the SMT and turbo steps above.
 

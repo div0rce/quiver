@@ -87,6 +87,9 @@ TEST(Unpack, ExactReadBoundOnGuardPage) {
       }
       const std::int64_t bytes = (n * w + 7) / 8;
       quiver_test::GuardedBuffer<std::uint8_t> packed(bytes, quiver_test::Guard::kEnd);
+      // A null payload means the guard page could not be armed; without this the test would
+      // "pass" while proving nothing about the read bound (REQ-TEST-006).
+      ASSERT_NE(packed.data(), nullptr) << "guard-page allocation failed (w=" << w << ")";
       for (std::int64_t b = 0; b < bytes; ++b) {
         packed.data()[b] = static_cast<std::uint8_t>(b * 131 + 7);
       }

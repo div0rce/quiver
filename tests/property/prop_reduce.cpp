@@ -55,11 +55,17 @@ TEST(PropReduce, CompositionIdentities) {
       EXPECT_EQ(sma.null_count, 0);
     }
 
-    // Checked-sum flag matches an independent exact 128-bit reference.
-    // __int128 is a GNU extension MSVC does not provide on any architecture (error C4235),
-    // so the reference is an explicit (hi, lo) pair there. Both compute the EXACT sum and
-    // test representability of the final value — never a per-step overflow flag, which
-    // would wrongly report [INT64_MAX, 1, -1] as overflowing (API-K6-003).
+    // Checked-sum flag matches an exact 128-bit reference computed here, independently of
+    // the kernel. Both compute the EXACT sum and test representability of the final value —
+    // never a per-step overflow flag, which would wrongly report [INT64_MAX, 1, -1] as
+    // overflowing (API-K6-003).
+    //
+    // CAVEAT on oracle independence: __int128 is a GNU extension MSVC does not provide on any
+    // architecture (error C4235), so this reference uses an explicit (hi, lo) limb pair. On
+    // GCC/Clang that is a genuine differential — the kernel takes the __int128 branch while
+    // this takes limbs. On MSVC both sides are limb-based, so a shared misconception about
+    // the carry expression would not be caught HERE; the tier-1 legs of the CI matrix are what
+    // provide the independent cross-check for that path (reduce_scalar_impl.h, REQ-TEST-002).
     std::int64_t wrapped = 0;
     const bool flag = quiver::reduce_sum_checked(in, quiver::BitmapView{nullptr}, &wrapped);
     bool want_flag = false;

@@ -120,13 +120,26 @@ GuardedAlloc::GuardedAlloc(std::size_t bytes, Guard placement) {
     return;
   }
   auto* b = static_cast<unsigned char*>(base_);
+  // If the guard page cannot be protected the allocation is USELESS but not obviously
+  // broken: an over-read would land on ordinary readable memory and the test would pass
+  // while proving nothing. Fail loudly instead — callers assert data() != nullptr.
   if (placement == Guard::kEnd) {
     // Payload ends flush against the protected trailing page.
-    mprotect(b + payload_pages * page, page, PROT_NONE);
+    if (mprotect(b + payload_pages * page, page, PROT_NONE) != 0) {
+      munmap(base_, map_len_);
+      base_ = nullptr;
+      payload_ = nullptr;
+      return;
+    }
     payload_ = b + payload_pages * page - bytes;
   } else {
     // Payload starts flush after the protected leading page.
-    mprotect(b, page, PROT_NONE);
+    if (mprotect(b, page, PROT_NONE) != 0) {
+      munmap(base_, map_len_);
+      base_ = nullptr;
+      payload_ = nullptr;
+      return;
+    }
     payload_ = b + page;
   }
 #else
@@ -145,13 +158,26 @@ GuardedAlloc::GuardedAlloc(std::size_t bytes, Guard placement) {
   }
   auto* b = static_cast<unsigned char*>(base_);
   DWORD prev = 0;
+  // VirtualProtect returns BOOL. On failure the guard page stays readable, so an over-read
+  // would hit ordinary memory and the test would pass without proving anything — exactly the
+  // silent-no-op this branch used to be. Fail loudly; callers assert data() != nullptr.
   if (placement == Guard::kEnd) {
     // Payload ends flush against the protected trailing page.
-    VirtualProtect(b + payload_pages * page, page, PAGE_NOACCESS, &prev);
+    if (VirtualProtect(b + payload_pages * page, page, PAGE_NOACCESS, &prev) == 0) {
+      VirtualFree(base_, 0, MEM_RELEASE);
+      base_ = nullptr;
+      payload_ = nullptr;
+      return;
+    }
     payload_ = b + payload_pages * page - bytes;
   } else {
     // Payload starts flush after the protected leading page.
-    VirtualProtect(b, page, PAGE_NOACCESS, &prev);
+    if (VirtualProtect(b, page, PAGE_NOACCESS, &prev) == 0) {
+      VirtualFree(base_, 0, MEM_RELEASE);
+      base_ = nullptr;
+      payload_ = nullptr;
+      return;
+    }
     payload_ = b + page;
   }
 #endif
