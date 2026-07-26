@@ -4,6 +4,32 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+### Fixed
+
+- **`reduce_sum_checked` reported overflow for representable sums on toolchains without
+  `__int128`** (MSVC; risk R-18). The fallback used a *sticky per-add* overflow flag, but
+  API-K6-003 specifies "true iff mathematically unrepresentable (exact, 128-bit accumulation)"
+  — a property of the **final** sum. `[INT64_MAX, 1, -1]` overflows transiently yet sums to
+  `INT64_MAX`, so tier-1 returned `false` and MSVC returned `true`: a silent cross-platform
+  result divergence in a library that promises bit-identical integer results. Replaced with
+  exact 128-bit `(hi, lo)` limb accumulation, differentially verified bit-identical to
+  `__int128` over 800k randomized adversarial sequences (int64 and uint64).
+- **The Windows guard-page test harness never allocated anything.** `GuardedAlloc`'s `_WIN32`
+  branch discarded its arguments and set `payload_ = nullptr` despite a comment claiming a
+  `VirtualAlloc` guard, so every guard-page test took an access violation during setup.
+  Implemented with `VirtualAlloc(MEM_RESERVE|MEM_COMMIT)` + `VirtualProtect(PAGE_NOACCESS)`,
+  mirroring the POSIX `mmap`/`mprotect` leg (REQ-TEST-006, REQ-MEM-008).
+- `tests/property/prop_reduce.cpp` used `__int128` unguarded, which MSVC rejects on every
+  architecture (error C4235) — the whole property suite failed to compile on Windows.
+
+### Changed
+
+- **Windows CI now builds the full test suite and runs it with no `--gtest_filter` exclusions**
+  (127/127 under MSVC 14.44 / VS 2022 17.14). Previously only the amalgamated unit target was
+  built, with two cases filtered out. Risk R-18 is closed. MSVC remains labelled toolchain
+  tier-2: that is now a Charter §8.1 governance gate ("promote on demonstrated demand"), not a
+  technical gap.
+
 ### Added
 
 - **Convenience surface** (ADR-027, PRD 04 §3.6) — zero-cost spellings over the unchanged

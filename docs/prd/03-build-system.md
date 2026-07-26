@@ -75,9 +75,14 @@ Specifies the complete build architecture: CMake organization, targets, options,
 | GCC (Linux x86-64, ARM64) | 1 | 13 | 13 and 14 |
 | Clang (Linux x86-64, ARM64) | 1 | 17 | 17 and 19 |
 | AppleClang (macOS ARM64) | 1 | Xcode 16 | latest stable |
-| MSVC (Windows x86-64) | 2 (best-effort, non-blocking) | 19.40 / VS2022 | windows-2022, continue-on-error |
+| MSVC (Windows x86-64) | 2 (best-effort) | 19.40 / VS2022 | windows-latest, full suite + amalgamation; blocking in practice |
 
 Tier-1 failures block merges; tier-2 failures open issues (Charter §8.1 Windows posture).
+
+Note (v0.7.1): the MSVC jobs carry no `continue-on-error` in `ci.yml`, so they block merges
+today despite the best-effort label, and they now run the full suite with no `--gtest_filter`
+exclusions (R-18 closed). The remaining gap to a formal tier-1 listing is the Charter §8.1
+"demonstrated demand" gate, not test coverage.
 
 ## 8. Failure modes
 

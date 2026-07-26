@@ -135,10 +135,11 @@ Three different claims, kept distinct: *compiles*, *correctness-tested*, and *pe
 | Linux x86-64 | tested | tested | tested (Intel SDE emulator) | — | pending native machines |
 | macOS ARM64 | tested | — | — | tested | **Apple M2 ledger** |
 | Linux ARM64 | tested | — | — | tested | pending |
-| Windows x86-64 | tier-2² | tier-2² | tier-2² | — | pending |
+| Windows x86-64 | tested² | tested² | tested² | — | pending |
 
-² MSVC builds and passes the amalgamation suite in CI with documented exclusions; tier-1 promises
-are made only for GCC/Clang.
+² MSVC builds and passes the **full** test suite with **no exclusions** (127/127). It stays
+labelled toolchain tier-2 only because Charter §8.1 gates tier-1 promotion on demonstrated
+demand; tier-1 promises are still made only for GCC/Clang.
 
 ## Why Quiver (and when not)
 
