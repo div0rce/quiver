@@ -21,6 +21,8 @@ jobs:
   nightly:
     name: nightly suite
     uses: ./.github/workflows/nightly.yml
+    secrets:  # REQ-SEC-008: pass only what the callee needs, not `inherit`
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   publish:
     name: build artifacts + draft release
