@@ -152,6 +152,27 @@ def cmd_run(args: argparse.Namespace) -> int:
             st = stats.metric_stats(values, seed=args.seed)["median"]
             results_obj[metric] = {"median": st.median, "min": st.min, "ci95_lo": st.ci95_lo,
                                    "ci95_hi": st.ci95_hi, "cv": st.cv}
+
+        # REQ-BENCH-005 / running.md: with perf_event_open available the harness reports
+        # cycles_per_value, ipc and branch_miss_pct; without it the entry must say so rather
+        # than carry an empty object indistinguishable from "measured nothing". cycles_per_value
+        # stays in `results` (it is a per-value rate the CV policy screens); ipc and
+        # branch_miss_pct are microarchitectural context and live here.
+        if "no_pmu" in machine_flags:
+            pmu_obj = None  # platform cannot expose counters at all (Charter §6.4)
+        else:
+            pmu_metrics = {
+                "ipc": [r.ipc for r in reps],
+                "branch_miss_pct": [r.branch_miss_pct for r in reps],
+            }
+            if all(all(v is not None for v in vals) for vals in pmu_metrics.values()):
+                pmu_obj = {"status": "available"}
+                for metric, values in pmu_metrics.items():
+                    st = stats.metric_stats(values, seed=args.seed)["median"]
+                    pmu_obj[metric] = {"median": st.median, "min": st.min,
+                                       "ci95_lo": st.ci95_lo, "ci95_hi": st.ci95_hi, "cv": st.cv}
+            else:
+                pmu_obj = {"status": "unavailable"}
         cv = results_obj["ns_per_batch"]["cv"]
         noise, publishable = stats.noise_flags(cv)
         flags = sorted(set(machine_flags) | set(noise))
@@ -181,7 +202,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             "bootstrap_seed": args.seed,
             "results": results_obj,
             "metrics": sorted(results_obj.keys()),
-            "pmu": None if "no_pmu" in machine_flags else {},
+            "pmu": pmu_obj,
             "flags": flags,
             "notes": notes,
         }

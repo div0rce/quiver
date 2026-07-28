@@ -35,6 +35,11 @@ class BenchResult:
     items_per_second: float | None
     bytes_per_second: float | None
     cycles_per_value: float | None
+    # REQ-BENCH-005 reports three PMU-derived counters when perf_event_open succeeds; all three
+    # are None on a machine or kernel without PMU access, and the entry records that as
+    # `pmu: unavailable` rather than silently omitting the columns.
+    ipc: float | None = None
+    branch_miss_pct: float | None = None
     raw: dict[str, Any] = field(repr=False, default_factory=dict)
 
 
@@ -63,6 +68,8 @@ def parse_gb_json(text: str) -> list[BenchResult]:
             items_per_second=float(b["items_per_second"]) if "items_per_second" in b else None,
             bytes_per_second=float(b["bytes_per_second"]) if "bytes_per_second" in b else None,
             cycles_per_value=float(b["cycles_per_value"]) if "cycles_per_value" in b else None,
+            ipc=float(b["ipc"]) if "ipc" in b else None,
+            branch_miss_pct=float(b["branch_miss_pct"]) if "branch_miss_pct" in b else None,
             raw=b,
         ))
     return out
