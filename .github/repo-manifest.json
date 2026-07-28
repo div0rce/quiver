@@ -1,5 +1,5 @@
 {
-  "comment": "Repository tree manifest \u2014 REQ-REPO-001 (docs/prd/02-repository-architecture.md \u00a711). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 \u00a73. State: M10 \u2014 API surface frozen-clean; v1.0 certification deferred (R-06).",
+  "comment": "Repository tree manifest — REQ-REPO-001 (docs/prd/02-repository-architecture.md §11). The repo-lint CI job compares the working tree against this file. Both allow-lists hold fnmatch globs, so a literal name matches only itself. allowed_toplevel is repository layout; allowed_toplevel_local is developer-local tooling state, tolerated only as a gitignored directory holding no committed content. Updated only by milestone PRs; the canonical layout is PRD 02 §3. State: M10 — API surface frozen-clean; v1.0 certification deferred (R-06).",
   "milestone": "M10",
   "allowed_toplevel": [
     ".clang-format",
@@ -8,7 +8,6 @@
     ".gitattributes",
     ".github",
     ".gitignore",
-    ".venv",
     "CHANGELOG.md",
     "ADOPTERS.md",
     "CITATION.cff",
@@ -29,6 +28,14 @@
     "src",
     "tests",
     "tools"
+  ],
+  "allowed_toplevel_local": [
+    ".idea",
+    ".serena",
+    ".venv",
+    ".vscode",
+    "cmake-build-*",
+    "venv"
   ],
   "required": [
     "LICENSE",
@@ -316,7 +323,8 @@
     "docs/releases/v0.7.0.md",
     "docs/releases/gates/M9.md",
     "docs/releases/gates/M10.md",
-    "docs/releases/final-implementation-report.md"
+    "docs/releases/final-implementation-report.md",
+    ".github/scripts/test_repo_lint.py"
   ],
   "forbidden_at_milestone": [],
   "docs_dirs_requiring_readme": [

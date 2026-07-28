@@ -12,9 +12,10 @@ venv/
 __pycache__/
 *.pyc
 
-# Editor/IDE
+# Editor/IDE and local agent tooling
 .vscode/
 .idea/
+.serena/
 *.swp
 
 # macOS

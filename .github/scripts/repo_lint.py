@@ -17,6 +17,7 @@ Exit code 0 = clean; non-zero = violations printed to stderr.
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import re
 import subprocess
@@ -33,15 +34,60 @@ def err(msg: str) -> None:
     errors.append(msg)
 
 
+def git(*args: str) -> tuple[int, str]:
+    """Run git inside ROOT. Returns (-1, "") when git is unavailable (see REQ-REL-001 below)."""
+    try:
+        proc = subprocess.run(["git", "-C", str(ROOT), *args],
+                              capture_output=True, text=True, timeout=10)
+        return proc.returncode, proc.stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return -1, ""
+
+
+def check_local_tree(entry: Path) -> None:
+    """REQ-REPO-001: a developer-local pattern tolerates a gitignored *directory* holding no
+    committed content — never a tracked path. Name-matching alone would accept a regular file
+    named `.idea` (`.gitignore` ignores only `.idea/`) or a force-added `.serena/secret`."""
+    if entry.is_symlink() or not entry.is_dir():
+        err(f"REQ-REPO-001: '{entry.name}' matches a developer-local allow-list pattern but is "
+            f"not a real directory; those patterns cover gitignored directories only")
+        return
+    rc, out = git("ls-files", "--", f"{entry.name}/")
+    if rc == 0 and out.strip():
+        tracked = out.strip().splitlines()
+        err(f"REQ-REPO-001: developer-local tree '{entry.name}/' holds {len(tracked)} committed "
+            f"path(s) (e.g. {tracked[0]}); these trees may never hold committed content")
+    rc, _ = git("check-ignore", "-q", f"{entry.name}/")
+    if rc == 1:  # 0 = ignored, 1 = not ignored, other = git unavailable or erroring
+        err(f"REQ-REPO-001: developer-local tree '{entry.name}/' is not gitignored; add it to "
+            f".gitignore or remove it")
+
+
+def check_toplevel(manifest: dict) -> None:
+    """REQ-REPO-001 top-level allow-list. Kept separate from main() so test_repo_lint.py can
+    exercise it against a throwaway tree without stubbing every other check's inputs.
+
+    Both lists hold fnmatch globs; a literal name matches only itself, so plain entries keep
+    exact-match semantics. `allowed_toplevel` is repository layout. `allowed_toplevel_local` is
+    developer-local tooling state (IDE metadata, virtualenvs, tool-chosen build trees such as
+    `cmake-build-*`) which the lint tolerates but holds to the stricter contract in
+    check_local_tree: gitignored directory, no committed content."""
+    allowed = manifest["allowed_toplevel"]
+    local = manifest.get("allowed_toplevel_local", [])
+    for entry in sorted(ROOT.iterdir()):
+        if any(fnmatch.fnmatchcase(entry.name, pat) for pat in allowed):
+            continue
+        if any(fnmatch.fnmatchcase(entry.name, pat) for pat in local):
+            check_local_tree(entry)
+            continue
+        err(f"REQ-REPO-001: unexpected top-level entry '{entry.name}' "
+            f"(not in .github/repo-manifest.json; new directories need a PRD amendment)")
+
+
 def main() -> int:
     manifest = json.loads(MANIFEST.read_text())
 
-    # --- REQ-REPO-001: top-level allow-list -------------------------------------------------
-    allowed = set(manifest["allowed_toplevel"])
-    for entry in sorted(ROOT.iterdir()):
-        if entry.name not in allowed:
-            err(f"REQ-REPO-001: unexpected top-level entry '{entry.name}' "
-                f"(not in .github/repo-manifest.json; new directories need a PRD amendment)")
+    check_toplevel(manifest)
 
     # --- REQ-REPO-001: required paths exist --------------------------------------------------
     for rel in manifest["required"]:

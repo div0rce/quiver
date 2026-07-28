@@ -187,6 +187,13 @@ if(TARGET quiver_amalgamate)
   endif()
 endif()
 
+# REQ-REPO-001 allow-list semantics: globs, the developer-local contract, and the regressions that
+# keep the gate from silently widening. Independent of the library targets.
+if(Python3_FOUND AND NOT Python3_VERSION VERSION_LESS 3.11)
+  add_test(NAME RepoLint.AllowListUnit
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/.github/scripts/test_repo_lint.py)
+endif()
+
 # MOD-LEDGER runner unit tests (REQ-INT-004: Python >= 3.11 stdlib only): ADR-020 golden
 # statistics + QLS-1 schema accept/reject fixtures (PRD 11 §10).
 find_package(Python3 COMPONENTS Interpreter QUIET)

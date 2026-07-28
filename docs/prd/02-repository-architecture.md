@@ -234,7 +234,7 @@ Total shipped-library production files: **73**. Test/bench/tool file inventories
 
 | ID | Requirement | Acceptance |
 |---|---|---|
-| REQ-REPO-001 | The repository shall match the §3 layout exactly; new top-level directories require a PRD amendment. | CI job compares tree against a committed manifest. |
+| REQ-REPO-001 | The repository shall match the §3 layout exactly; new top-level directories require a PRD amendment. Developer-local tooling trees (virtualenvs, IDE state, tool-chosen build directories) are not repository layout: they are carried in a separate `allowed_toplevel_local` list, matched as literal names or fnmatch globs, and are admissible only as a gitignored directory holding no committed content. | CI job compares tree against a committed manifest; allow-list semantics and the developer-local contract carry self-tests (`.github/scripts/test_repo_lint.py`). |
 | REQ-REPO-002 | All public declarations shall live under `include/quiver/`; no other header shall be installed. | Install-tree inspection test (M8). |
 | REQ-REPO-003 | Each kernel family shall consist of exactly the five-file pattern of §3. | File-inventory check. |
 | REQ-REPO-004 | Scalar reference logic shall live in `<family>_scalar_impl.h`, free of ISA intrinsics and target regions, includable by bench baselines. | Grep-based CI lint + baseline TUs compile. |
