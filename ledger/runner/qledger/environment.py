@@ -119,12 +119,11 @@ def environment_checklist(repo: pathlib.Path, machine: dict[str, Any]) -> list[s
 
 def build_manifest(repo: pathlib.Path, build_dir: pathlib.Path, machine: dict[str, Any],
                    gb_version: str, repetition_seed: int,
-                   deviations: list[str], dirty: str | None = None) -> dict[str, Any]:
-    """`dirty` is the caller's pre-run reading. Re-checking here would see the run's own output
-    directory (community-run writes ./submission inside the repo) and mark every run dirty."""
-    sha, dirty_now = git_state(repo)
-    if dirty is None:
-        dirty = dirty_now
+                   deviations: list[str], dirty: str) -> dict[str, Any]:
+    """`dirty` is the caller's PRE-RUN reading and is required. Re-deriving it here would see the
+    run's own output directory (community-run writes ./submission inside the repo) and mark every
+    run `git tree dirty` — REQ-LEDGER-013 non-publishable, self-inflicted."""
+    sha, _ = git_state(repo)
     comp, flags, lto = compiler_from_cache(build_dir)
     devs = list(deviations)
     if dirty == "dirty":
