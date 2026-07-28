@@ -39,6 +39,15 @@ def git_state(repo: pathlib.Path, out_dir: pathlib.Path | None = None) -> tuple[
     return sha, ("dirty" if status else "clean")
 
 
+def _read_sysfs(path: pathlib.Path) -> str | None:
+    """Stripped contents of a sysfs/procfs knob, or None when it is absent or unreadable — the
+    four readers below all mean the same thing by both: the value could not be recorded."""
+    try:
+        return path.read_text().strip()
+    except OSError:
+        return None
+
+
 def cpu_model() -> str:
     if platform.system() == "Darwin":
         return _run(["sysctl", "-n", "machdep.cpu.brand_string"]) or platform.processor()
@@ -55,24 +64,18 @@ def frequency_governor() -> str:
     """Linux: the cpufreq governor (must be 'performance' for publishable runs).
     macOS exposes no governor control; that is the platform's normal state, recorded as such
     (not a deviation) — Apple entries are secondary-platform anyway (REQ-LEDGER-008)."""
-    gov_path = pathlib.Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
-    if gov_path.exists():
-        try:
-            return gov_path.read_text().strip()
-        except OSError:
-            return "unreadable"
+    gov = _read_sysfs(pathlib.Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"))
+    if gov is not None:
+        return gov
     if platform.system() == "Darwin":
         return "n/a (macOS: OS-managed DVFS, no user governor)"
     return "unknown"
 
 
 def smt_state() -> str:
-    smt = pathlib.Path("/sys/devices/system/cpu/smt/control")
-    if smt.exists():
-        try:
-            return smt.read_text().strip()
-        except OSError:
-            return "unreadable"
+    smt = _read_sysfs(pathlib.Path("/sys/devices/system/cpu/smt/control"))
+    if smt is not None:
+        return smt
     if platform.system() == "Darwin":
         return "n/a (Apple Silicon has no SMT)"
     return "unknown"
@@ -85,24 +88,17 @@ def turbo_state(machine: dict[str, Any]) -> str:
     for path, on, off in ((pathlib.Path("/sys/devices/system/cpu/intel_pstate/no_turbo"),
                            "0", "1"),
                           (pathlib.Path("/sys/devices/system/cpu/cpufreq/boost"), "1", "0")):
-        if path.exists():
-            try:
-                value = path.read_text().strip()
-            except OSError:
-                return "unreadable"
+        value = _read_sysfs(path)
+        if value is not None:
             state = {on: "enabled", off: "disabled"}.get(value, f"unknown ({value})")
             return f"{state} (measured: {path.name}={value})"
     return machine.get("turbo_boost", "platform-managed")  # macOS/Arm: no user control to read
 
 
 def aslr_state() -> str:
-    p = pathlib.Path("/proc/sys/kernel/randomize_va_space")
-    if p.exists():
-        try:
-            return {"0": "off", "1": "conservative", "2": "full"}.get(
-                p.read_text().strip(), "unknown")
-        except OSError:
-            return "unreadable"
+    value = _read_sysfs(pathlib.Path("/proc/sys/kernel/randomize_va_space"))
+    if value is not None:
+        return {"0": "off", "1": "conservative", "2": "full"}.get(value, "unknown")
     if platform.system() == "Darwin":
         return "on (macOS default, not user-controllable per-process here)"
     return "unknown"
