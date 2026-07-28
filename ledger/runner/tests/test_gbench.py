@@ -19,6 +19,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
+import quiver_ledger  # noqa: E402
 from qledger import gbench  # noqa: E402
 
 # Real REQ-BENCH-002 names, including the hyphenated x86 baselines that regressed.
@@ -95,6 +96,45 @@ class TestPmuParsing(unittest.TestCase):
         r = gbench.parse_gb_json(self._doc(ipc=2.0))[0]
         self.assertAlmostEqual(r.ipc, 2.0)
         self.assertIsNone(r.branch_miss_pct)
+
+
+class TestBuildPmu(unittest.TestCase):
+    """`pmu` must distinguish three outcomes: the platform cannot measure (None), it could but
+    did not this run ("unavailable"), or it did ("available"). The field was previously hardcoded
+    to `{}` for every PMU-capable machine, collapsing the last two."""
+
+    @staticmethod
+    def _reps(ipc, bmiss, n=10):
+        return [gbench.BenchResult(name="x", real_time_ns=1.0, items_per_second=None,
+                                   bytes_per_second=None, cycles_per_value=None,
+                                   ipc=ipc, branch_miss_pct=bmiss) for _ in range(n)]
+
+    def test_no_pmu_platform_is_null(self):
+        """Apple Silicon withholds counters entirely (Charter §6.4) — not the same as 'unavailable'."""
+        self.assertIsNone(quiver_ledger.build_pmu(self._reps(3.0, 0.01), ["no_pmu"], seed=1))
+
+    def test_missing_counters_report_unavailable(self):
+        got = quiver_ledger.build_pmu(self._reps(None, None), [], seed=1)
+        self.assertEqual(got, {"status": "unavailable"})
+
+    def test_partial_counters_report_unavailable(self):
+        """Half a measurement is not a measurement."""
+        got = quiver_ledger.build_pmu(self._reps(3.0, None), [], seed=1)
+        self.assertEqual(got, {"status": "unavailable"})
+
+    def test_available_carries_summarized_counters(self):
+        got = quiver_ledger.build_pmu(self._reps(3.5, 0.002), [], seed=1)
+        self.assertEqual(got["status"], "available")
+        for key in ("ipc", "branch_miss_pct"):
+            self.assertEqual(sorted(got[key]), ["ci95_hi", "ci95_lo", "cv", "median", "min"])
+        self.assertAlmostEqual(got["ipc"]["median"], 3.5)
+        self.assertAlmostEqual(got["branch_miss_pct"]["median"], 0.002)
+
+    def test_zero_is_measured_not_missing(self):
+        """A genuine 0.0 branch-miss rate must not be mistaken for an absent counter."""
+        got = quiver_ledger.build_pmu(self._reps(3.5, 0.0), [], seed=1)
+        self.assertEqual(got["status"], "available")
+        self.assertAlmostEqual(got["branch_miss_pct"]["median"], 0.0)
 
 
 if __name__ == "__main__":
