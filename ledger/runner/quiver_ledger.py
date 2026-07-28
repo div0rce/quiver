@@ -69,6 +69,36 @@ def library_version() -> str:
     return f"{parts['MAJOR']}.{parts['MINOR']}.{parts['PATCH']}"
 
 
+def summarize(values: list[float], seed: int) -> dict[str, float]:
+    """The ADR-020 median estimator with its bootstrap CI and CV, as stored in an entry."""
+    st = stats.metric_stats(values, seed=seed)["median"]
+    return {"median": st.median, "min": st.min, "ci95_lo": st.ci95_lo,
+            "ci95_hi": st.ci95_hi, "cv": st.cv}
+
+
+def build_pmu(reps: list, machine_flags: list[str], seed: int) -> dict | None:
+    """The entry's `pmu` object (REQ-BENCH-005, Charter §6.4).
+
+    Three outcomes, deliberately distinct:
+      * `None`          — the platform cannot expose counters at all (machine flagged `no_pmu`,
+                          e.g. Apple Silicon withholds them from user processes);
+      * `unavailable`   — a capable platform where perf_event_open did not succeed this run
+                          (kernel.perf_event_paranoid too high, no CAP_PERFMON);
+      * `available`     — counters measured, summarized like any other metric.
+
+    `cycles_per_value` is not here: it is a per-value rate screened by the CV policy, so it lives
+    in `results`. `ipc` and `branch_miss_pct` are microarchitectural context.
+    """
+    if "no_pmu" in machine_flags:
+        return None
+    counters = {"ipc": [r.ipc for r in reps],
+                "branch_miss_pct": [r.branch_miss_pct for r in reps]}
+    if any(v is None for values in counters.values() for v in values):
+        return {"status": "unavailable"}
+    return {"status": "available",
+            **{name: summarize(values, seed) for name, values in counters.items()}}
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     machine = environment.load_machine(REPO, args.machine)
     deviations = environment.environment_checklist(REPO, machine)
@@ -147,11 +177,8 @@ def cmd_run(args: argparse.Namespace) -> int:
             metrics["bytes_per_s"] = [r.bytes_per_second for r in reps]  # type: ignore
         if all(r.cycles_per_value is not None for r in reps) and "no_pmu" not in machine_flags:
             metrics["cycles_per_value"] = [r.cycles_per_value for r in reps]  # type: ignore
-        results_obj = {}
-        for metric, values in metrics.items():
-            st = stats.metric_stats(values, seed=args.seed)["median"]
-            results_obj[metric] = {"median": st.median, "min": st.min, "ci95_lo": st.ci95_lo,
-                                   "ci95_hi": st.ci95_hi, "cv": st.cv}
+        results_obj = {metric: summarize(values, args.seed) for metric, values in metrics.items()}
+        pmu_obj = build_pmu(reps, machine_flags, args.seed)
         cv = results_obj["ns_per_batch"]["cv"]
         noise, publishable = stats.noise_flags(cv)
         flags = sorted(set(machine_flags) | set(noise))
@@ -181,7 +208,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             "bootstrap_seed": args.seed,
             "results": results_obj,
             "metrics": sorted(results_obj.keys()),
-            "pmu": None if "no_pmu" in machine_flags else {},
+            "pmu": pmu_obj,
             "flags": flags,
             "notes": notes,
         }
