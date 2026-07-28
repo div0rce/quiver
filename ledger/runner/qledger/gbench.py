@@ -85,11 +85,26 @@ def list_benchmarks(binary: pathlib.Path, env_cap: str | None) -> list[str]:
     return [ln.strip() for ln in proc.stdout.splitlines() if ln.strip().startswith("BM_")]
 
 
+# Google Benchmark compiles --benchmark_filter as a POSIX ERE, where a backslash before a
+# non-special character is undefined. Python's re.escape escapes '-' as '\-', which GB rejects with
+# "Could not compile benchmark re: Invalid escape in regular expression" — it then exits 0 having
+# printed nothing, so the failure surfaces as a JSON parse error rather than a filter error. Only
+# ERE metacharacters may be escaped; '-' is literal outside a bracket expression. This is reachable
+# on any variant whose name contains a hyphen (`autovec-avx2`, `autovec-avx512`), i.e. every x86
+# baseline (REQ-BENCH-002 / ADR-011).
+_ERE_METACHARS = frozenset(".^$*+?()[]{}|\\")
+
+
+def ere_escape(text: str) -> str:
+    """Escape `text` for a POSIX ERE, touching only characters that are actually metacharacters."""
+    return "".join("\\" + ch if ch in _ERE_METACHARS else ch for ch in text)
+
+
 def run_one(binary: pathlib.Path, bench_name: str, env_cap: str | None,
             min_time: str) -> tuple[str, list[BenchResult]]:
     """One fresh-process run of exactly one benchmark; returns (raw JSON text, parsed)."""
     env = _env_with_cap(env_cap)
-    pattern = "^" + re.escape(bench_name) + "$"
+    pattern = "^" + ere_escape(bench_name) + "$"
     proc = subprocess.run(
         [str(binary), f"--benchmark_filter={pattern}", "--benchmark_format=json",
          f"--benchmark_min_time={min_time}"],
