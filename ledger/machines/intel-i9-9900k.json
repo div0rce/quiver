@@ -1,0 +1,16 @@
+{
+  "machine_id": "intel-i9-9900k",
+  "uarch": "Intel Coffee Lake Refresh (Skylake-derived core)",
+  "uarch_dir": "intel-coffee-lake",
+  "cpu_model": "Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz",
+  "cores": "8 physical / 16 logical (SMT enabled; benchmarks run on an otherwise idle machine)",
+  "memory": "16 GiB DDR4",
+  "os_baseline": "Ubuntu 26.04 LTS, kernel 7.0.x (bare metal, not virtualized)",
+  "isa_tiers": ["scalar", "avx2"],
+  "core_policy": "OS-scheduled on an idle machine; no cgroup isolation",
+  "pinning": "none",
+  "turbo_boost": "disabled for measurement (intel_pstate/no_turbo=1); recorded per run",
+  "flags": [],
+  "owner": "maintainer (div0rce)",
+  "notes": "First x86 machine on the ledger and the first carrying PMU counters — the Apple M2 entry is secondary_platform + no_pmu because macOS withholds the counters from user processes (Charter §6.4). Coffee Lake Refresh has no AVX-512, so this machine measures the scalar and AVX2 tiers only; AVX-512 remains emulation-only under Intel SDE (ADR-010) until Zen 4/5 or a Golden-Cove-class part is registered. Fills the 'Intel x86 with AVX2' slot in docs/benchmarks/hardware-coverage-plan.md. Prepared per docs/benchmarks/running.md: performance governor, turbo disabled, kernel.perf_event_paranoid lowered for perf_event_open. SMT is left enabled and recorded rather than disabled, since toggling it requires a reboot on this host; no load is placed on sibling threads during a run."
+}
