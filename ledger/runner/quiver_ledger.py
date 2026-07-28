@@ -91,12 +91,18 @@ def build_pmu(reps: list, machine_flags: list[str], seed: int) -> dict | None:
     """
     if "no_pmu" in machine_flags:
         return None
-    counters = {"ipc": [r.ipc for r in reps],
-                "branch_miss_pct": [r.branch_miss_pct for r in reps]}
-    if any(v is None for values in counters.values() for v in values):
+    # Summarize over the repetitions that DID read counters. Requiring all ten threw away every
+    # measurement when a single perf_event_open failed transiently under load; the count is
+    # recorded so a partial sample is visible rather than passed off as a full one.
+    counters = {"ipc": [r.ipc for r in reps if r.ipc is not None],
+                "branch_miss_pct": [r.branch_miss_pct for r in reps
+                                    if r.branch_miss_pct is not None]}
+    if not all(counters.values()):
         return {"status": "unavailable"}
-    return {"status": "available",
-            **{name: summarize(values, seed) for name, values in counters.items()}}
+    out = {"status": "available", "repetitions_measured": min(map(len, counters.values()))}
+    if out["repetitions_measured"] < len(reps):
+        out["status"] = "partial"  # some repetitions had no PMU access
+    return {**out, **{name: summarize(values, seed) for name, values in counters.items()}}
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -125,10 +131,19 @@ def cmd_run(args: argparse.Namespace) -> int:
     name_filter = re.compile(args.filter) if args.filter else None
     jobs: list[tuple[pathlib.Path, str | None, str]] = []
     for binary in binaries:
+        # A benchmark name already encodes its variant (REQ-BENCH-002), so the same name seen
+        # under two ISA caps is the same measurement twice. On x86 the autovec-* baselines
+        # register in both the uncapped and QUIVER_ISA=scalar processes (they are separate
+        # compiled TUs, ADR-011, and do not route through dispatch), which produced 75 duplicate
+        # benchmarks with COLLIDING entry_ids in the first x86 run. Keep the first cap that
+        # offers a name; the raw filename still records which cap ran it.
+        seen: set[str] = set()
         for env_cap in gbench.VARIANT_ENV.values():
             for name in gbench.list_benchmarks(binary, env_cap):
-                if name_filter is None or name_filter.search(name):
-                    jobs.append((binary, env_cap, name))
+                if name in seen or (name_filter is not None and not name_filter.search(name)):
+                    continue
+                seen.add(name)
+                jobs.append((binary, env_cap, name))
     if not jobs:
         print("filter matched no benchmarks", file=sys.stderr)
         return 2

@@ -152,7 +152,9 @@ jobs:
             -instr-profile=/tmp/quiver.profdata \
             -ignore-filename-regex='/(tests|bench|examples)/' > coverage.lcov || true
       - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        with: { name: coverage-report, path: coverage.txt }
+        # Keep the machine-readable lcov too: if the Codecov upload below is rejected, rate-limited
+        # or the service is down, the run's coverage is still recoverable from the artifact.
+        with: { name: coverage-report, path: "coverage.txt\ncoverage.lcov" }
       # REQ-TEST-013: coverage is diagnostic, not a quality gate — this step never fails the run.
       - name: Upload coverage to Codecov (informational)
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0

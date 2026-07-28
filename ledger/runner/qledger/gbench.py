@@ -99,7 +99,10 @@ def list_benchmarks(binary: pathlib.Path, env_cap: str | None) -> list[str]:
 # ERE metacharacters may be escaped; '-' is literal outside a bracket expression. This is reachable
 # on any variant whose name contains a hyphen (`autovec-avx2`, `autovec-avx512`), i.e. every x86
 # baseline (REQ-BENCH-002 / ADR-011).
-_ERE_METACHARS = frozenset(".^$*+?()[]{}|\\")
+# `]` and `}` are omitted deliberately: they are metacharacters only *inside* a bracket
+# expression or interval, which escaping a literal never opens, and Google Benchmark rejects
+# `\]` / `\}` as invalid escapes exactly like `\-` — the failure this function exists to avoid.
+_ERE_METACHARS = frozenset(".^$*+?()[{|\\")
 
 
 def ere_escape(text: str) -> str:

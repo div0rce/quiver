@@ -7,8 +7,8 @@ own, it says exactly what evidence is missing and how to add it without rewritin
 
 ```mermaid
 flowchart LR
-  NOW["Today:<br/>1 machine (Apple M2)"] --> BLK["Blocked:<br/>AVX-512 numbers,<br/>study conclusion,<br/>v1.0 certification"]
-  ADD["Register more CPUs:<br/>Intel AVX2, AMD AVX-512,<br/>a second Arm"] --> RUN["Run the ledger on each,<br/>append results (never rewrite)"]
+  NOW["Today:<br/>2 machines (Apple M2 NEON,<br/>Intel Coffee Lake AVX2)"] --> BLK["Blocked:<br/>AVX-512 numbers,<br/>study conclusion,<br/>v1.0 certification"]
+  ADD["Register more CPUs:<br/>AMD AVX-512,<br/>a second Arm"] --> RUN["Run the ledger on each,<br/>append results (never rewrite)"]
   RUN --> OK["Unblocked:<br/>cross-CPU numbers,<br/>study concludes,<br/>v1.0 can certify"]
   BLK -. "needs hardware" .-> ADD
 ```
@@ -23,10 +23,11 @@ flowchart LR
 
 ## Machines needed
 
-REQ-LEDGER-012 calls for ≥5 microarchitectures across ≥3 ISAs; the registry has 1. **Minimum useful
-set to unblock** (each a distinct, widely-deployed µarch spanning the shipped ISAs):
+REQ-LEDGER-012 calls for ≥5 microarchitectures across ≥3 ISAs; the registry has 2 — Apple M2
+(NEON, secondary platform, no PMU) and Intel Coffee Lake Refresh (`intel-i9-9900k`: AVX2, bare
+metal, the first entries carrying PMU counters). **Still needed to unblock** (each a distinct,
+widely-deployed µarch spanning the shipped ISAs):
 
-- **Intel x86 with AVX2** (e.g. a Golden-Cove-class part), the mainstream AVX2 baseline.
 - **AMD x86 with AVX-512** (Zen 4/5), the first *measured* AVX-512 numbers (today AVX-512 is
   SDE-correctness-only).
 - **A second ARM µarch** (e.g. AWS Graviton 3/4), cross-validates the Apple M2 NEON numbers on a

@@ -78,6 +78,23 @@ def smt_state() -> str:
     return "unknown"
 
 
+def turbo_state(machine: dict[str, Any]) -> str:
+    """Measured turbo/boost state, not the machine file's intended policy. Copying the declared
+    policy meant a manifest kept asserting turbo was disabled after a reboot or a power-profile
+    daemon silently re-enabled it — the same way power-profiles-daemon reverts the governor."""
+    for path, on, off in ((pathlib.Path("/sys/devices/system/cpu/intel_pstate/no_turbo"),
+                           "0", "1"),
+                          (pathlib.Path("/sys/devices/system/cpu/cpufreq/boost"), "1", "0")):
+        if path.exists():
+            try:
+                value = path.read_text().strip()
+            except OSError:
+                return "unreadable"
+            state = {on: "enabled", off: "disabled"}.get(value, f"unknown ({value})")
+            return f"{state} (measured: {path.name}={value})"
+    return machine.get("turbo_boost", "platform-managed")  # macOS/Arm: no user control to read
+
+
 def aslr_state() -> str:
     p = pathlib.Path("/proc/sys/kernel/randomize_va_space")
     if p.exists():
@@ -141,7 +158,7 @@ def build_manifest(repo: pathlib.Path, build_dir: pathlib.Path, machine: dict[st
         "core_used": machine.get("core_policy", "OS-scheduled (no pinning control)"),
         "pinning": machine.get("pinning", "none"),
         "frequency_governor": frequency_governor(),
-        "turbo_boost": machine.get("turbo_boost", "platform-managed"),
+        "turbo_boost": turbo_state(machine),
         "smt": smt_state(),
         "aslr": aslr_state(),
         "os": f"{platform.system()} {platform.release()}",

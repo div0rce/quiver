@@ -48,7 +48,8 @@ class TestEreEscape(unittest.TestCase):
         self.assertEqual(escaped, "BM_mask/and/x/n=4096")
 
     def test_metacharacters_are_escaped(self):
-        for ch in ".^$*+?()[]{}|\\":
+        # ']' and '}' are excluded on purpose — see TestEreClosingDelimiters.
+        for ch in ".^$*+?()[{|\\":
             with self.subTest(ch=ch):
                 self.assertEqual(gbench.ere_escape(ch), "\\" + ch)
 
@@ -175,6 +176,43 @@ class TestManifestDirtiness(unittest.TestCase):
         outside = pathlib.Path(tempfile.mkdtemp(prefix="qledger-out-"))
         self.assertEqual(environment.git_state(self.repo, outside)[1], "dirty")  # submission/ shows
 
+
+
+class TestPmuPartialRepetitions(unittest.TestCase):
+    """One transient perf_event_open failure in ten repetitions must not discard the other nine."""
+
+    @staticmethod
+    def _rep(ipc, bmiss):
+        return gbench.BenchResult(name="x", real_time_ns=1.0, items_per_second=None,
+                                  bytes_per_second=None, cycles_per_value=None,
+                                  ipc=ipc, branch_miss_pct=bmiss)
+
+    def test_partial_sample_is_kept_and_labelled(self):
+        reps = [self._rep(3.5, 0.002) for _ in range(9)] + [self._rep(None, None)]
+        got = quiver_ledger.build_pmu(reps, [], seed=1)
+        self.assertEqual(got["status"], "partial")
+        self.assertEqual(got["repetitions_measured"], 9)
+        self.assertAlmostEqual(got["ipc"]["median"], 3.5)
+
+    def test_full_sample_is_available_not_partial(self):
+        got = quiver_ledger.build_pmu([self._rep(3.5, 0.002) for _ in range(10)], [], seed=1)
+        self.assertEqual(got["status"], "available")
+        self.assertEqual(got["repetitions_measured"], 10)
+
+    def test_no_counters_at_all_is_unavailable(self):
+        got = quiver_ledger.build_pmu([self._rep(None, None) for _ in range(10)], [], seed=1)
+        self.assertEqual(got, {"status": "unavailable"})
+
+
+class TestEreClosingDelimiters(unittest.TestCase):
+    """Google Benchmark rejects \\] and \\} as invalid escapes, exactly like \\-. They are
+    metacharacters only inside a bracket expression or interval, which a literal never opens."""
+
+    def test_closing_delimiters_are_not_escaped(self):
+        self.assertEqual(gbench.ere_escape("a]b}c"), "a]b}c")
+
+    def test_opening_delimiters_are_still_escaped(self):
+        self.assertEqual(gbench.ere_escape("a[b{c"), "a\\[b\\{c")
 
 
 if __name__ == "__main__":
