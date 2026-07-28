@@ -86,7 +86,9 @@ inline void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters
     return;  // no perf_event_open: the entry records `pmu: unavailable`, never a fabricated zero
   }
   const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-  state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
+  // Guard the denominator like the two below: a zero-length batch would otherwise publish
+  // inf/NaN into a ledger entry rather than an obviously-absent measurement.
+  state.counters["cycles_per_value"] = total > 0.0 ? static_cast<double>(c.cycles) / total : 0.0;
   state.counters["ipc"] =
       c.cycles > 0 ? static_cast<double>(c.instructions) / static_cast<double>(c.cycles) : 0.0;
   state.counters["branch_miss_pct"] =

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/ usr / bin / env python3
 """Quiver ledger runner (MOD-LEDGER; PRD 11; ADR-020/021). Python >= 3.11, stdlib only
 (REQ-INT-004).
 
@@ -134,10 +134,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         return 2
     print(f"{len(jobs)} benchmark configurations × {args.reps} repetitions")
 
-    # Read git state BEFORE creating out_dir: the run writes its own output inside the repo
-    # (community-run defaults to ./submission), which would otherwise show up as an untracked
-    # entry and mark the run's own manifest `git tree dirty` — REQ-LEDGER-013 non-publishable.
-    sha, dirty_at_start = environment.git_state(REPO)
+    sha, _ = environment.git_state(REPO)
     date = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d")
     out_dir = (pathlib.Path(args.out) if args.out
                else REPO / "ledger" / "results" / machine["uarch_dir"] / f"{date}-{sha}")
@@ -164,7 +161,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"  repetition {rep + 1}/{args.reps} complete")
 
     manifest = environment.build_manifest(REPO, build_dir, machine, gb_ver, args.seed,
-                                          deviations, dirty_at_start)
+                                          deviations, out_dir)
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
     entries, rejected = [], []

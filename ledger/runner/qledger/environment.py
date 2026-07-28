@@ -23,13 +23,19 @@ def _run(cmd: list[str]) -> str:
         return ""
 
 
-def git_state(repo: pathlib.Path) -> tuple[str, str]:
-    """(short commit, 'clean'|'dirty'). The runner's own output under ledger/results/ is
-    excluded — a run must not flag itself dirty by writing its results (everything else,
-    including untracked source files, still counts: provenance)."""
+def git_state(repo: pathlib.Path, out_dir: pathlib.Path | None = None) -> tuple[str, str]:
+    """(short commit, 'clean'|'dirty'). The runner's own output is excluded — a run must not flag
+    itself dirty by writing its results. `ledger/results/` covers the default destination;
+    `out_dir` covers an explicit `--output` (community-run defaults to ./submission, inside the
+    repo). Everything else, including untracked source files, still counts: provenance."""
     sha = _run(["git", "-C", str(repo), "rev-parse", "--short=12", "HEAD"]) or "unknown"
-    status = _run(["git", "-C", str(repo), "status", "--porcelain", "--",
-                   ".", ":(exclude)ledger/results"])
+    specs = [".", ":(exclude)ledger/results"]
+    if out_dir is not None:
+        try:
+            specs.append(f":(exclude){out_dir.resolve().relative_to(repo.resolve()).as_posix()}")
+        except ValueError:
+            pass  # output lives outside the repo: nothing to exclude
+    status = _run(["git", "-C", str(repo), "status", "--porcelain", "--", *specs])
     return sha, ("dirty" if status else "clean")
 
 
@@ -119,11 +125,11 @@ def environment_checklist(repo: pathlib.Path, machine: dict[str, Any]) -> list[s
 
 def build_manifest(repo: pathlib.Path, build_dir: pathlib.Path, machine: dict[str, Any],
                    gb_version: str, repetition_seed: int,
-                   deviations: list[str], dirty: str) -> dict[str, Any]:
-    """`dirty` is the caller's PRE-RUN reading and is required. Re-deriving it here would see the
-    run's own output directory (community-run writes ./submission inside the repo) and mark every
-    run `git tree dirty` — REQ-LEDGER-013 non-publishable, self-inflicted."""
-    sha, _ = git_state(repo)
+                   deviations: list[str], out_dir: pathlib.Path) -> dict[str, Any]:
+    """Dirtiness is re-checked here, AFTER the run, so a tracked file edited mid-run is still
+    caught — a ~50-minute run is long enough for that to happen. `out_dir` is excluded so the
+    run's own output cannot mark it dirty."""
+    sha, dirty = git_state(repo, out_dir)
     comp, flags, lto = compiler_from_cache(build_dir)
     devs = list(deviations)
     if dirty == "dirty":

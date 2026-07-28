@@ -14,7 +14,9 @@ exactly the x86 auto-vectorized baselines (`autovec-avx2`, `autovec-avx512`, ADR
 import json
 import pathlib
 import re
+import subprocess
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
@@ -137,22 +139,42 @@ class TestBuildPmu(unittest.TestCase):
         self.assertAlmostEqual(got["branch_miss_pct"]["median"], 0.0)
 
 
-class TestManifestDirtyPassthrough(unittest.TestCase):
-    """build_manifest must trust the caller's pre-run git reading. Re-deriving it would see the
-    run's own output directory (community-run writes ./submission inside the repo) and mark every
-    run `git tree dirty` — REQ-LEDGER-013 non-publishable, self-inflicted."""
+class TestManifestDirtiness(unittest.TestCase):
+    """A run must not flag itself dirty by writing its own output, but must still catch a real
+    edit made mid-run. So dirtiness is re-checked after the run with out_dir excluded, rather
+    than trusting a pre-run snapshot (which would miss mid-run edits entirely)."""
 
-    def test_caller_reading_wins_over_live_state(self):
-        repo = pathlib.Path(__file__).resolve().parents[3]
-        m = environment.build_manifest(repo, repo / "build" / "bench", {"machine_id": "m",
-                                       "uarch": "u"}, "gb", 1, [], dirty="clean")
-        self.assertNotIn("git tree dirty", m["deviations"])
+    def setUp(self):
+        self.repo = pathlib.Path(tempfile.mkdtemp(prefix="qledger-")) / "r"
+        self.repo.mkdir(parents=True)
+        for cmd in (["init", "-q", "-b", "main"], ["config", "user.email", "t@e.invalid"],
+                    ["config", "user.name", "t"]):
+            subprocess.run(["git", "-C", str(self.repo), *cmd], check=True)
+        (self.repo / "tracked.txt").write_text("v1\n")
+        subprocess.run(["git", "-C", str(self.repo), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.repo), "commit", "-qm", "base"], check=True)
+        self.out = self.repo / "submission"
+        self.out.mkdir()
+        (self.out / "entries.json").write_text("[]")
 
-    def test_dirty_caller_reading_is_recorded(self):
-        repo = pathlib.Path(__file__).resolve().parents[3]
-        m = environment.build_manifest(repo, repo / "build" / "bench", {"machine_id": "m",
-                                       "uarch": "u"}, "gb", 1, [], dirty="dirty")
-        self.assertIn("git tree dirty", m["deviations"])
+    def test_own_output_does_not_mark_dirty(self):
+        """The regression: community-run writes ./submission inside the repo."""
+        self.assertEqual(environment.git_state(self.repo, self.out)[1], "clean")
+        self.assertEqual(environment.git_state(self.repo)[1], "dirty")  # unexcluded => dirty
+
+    def test_real_edit_is_still_caught(self):
+        """Excluding out_dir must not blind the check to an actual mid-run change."""
+        (self.repo / "tracked.txt").write_text("edited mid-run\n")
+        self.assertEqual(environment.git_state(self.repo, self.out)[1], "dirty")
+
+    def test_unrelated_untracked_file_is_still_caught(self):
+        (self.repo / "stray.txt").write_text("x\n")
+        self.assertEqual(environment.git_state(self.repo, self.out)[1], "dirty")
+
+    def test_out_dir_outside_the_repo_is_tolerated(self):
+        outside = pathlib.Path(tempfile.mkdtemp(prefix="qledger-out-"))
+        self.assertEqual(environment.git_state(self.repo, outside)[1], "dirty")  # submission/ shows
+
 
 
 if __name__ == "__main__":
