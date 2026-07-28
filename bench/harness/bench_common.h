@@ -4,10 +4,14 @@
 // Module: MOD-BENCH | REQs: REQ-BENCH-002/-004/-006 | ADR-008, ADR-011
 #pragma once
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
 
+#include <benchmark/benchmark.h>
+
+#include "bench/harness/pmu.h"
 #include "quiver/dispatch.h"
 
 namespace quiver::bench {
@@ -66,6 +70,29 @@ inline void validate_or_abort(const char* bench, bool ok, const char* detail) {
                  bench, detail);
     std::abort();
   }
+}
+
+// REQ-BENCH-005: the three PMU-derived columns a ledger entry carries. Defined once — every
+// bench file previously hand-copied this block, and five of twelve had drifted to emitting only
+// cycles_per_value, so those families silently reached the ledger as `pmu: unavailable`.
+// `bytes` < 0 skips SetBytesProcessed (only the unpack family reports a byte rate).
+inline void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
+                       std::int64_t values, std::int64_t bytes = -1) {
+  state.SetItemsProcessed(state.iterations() * values);
+  if (bytes >= 0) {
+    state.SetBytesProcessed(state.iterations() * bytes);
+  }
+  if (!c.valid) {
+    return;  // no perf_event_open: the entry records `pmu: unavailable`, never a fabricated zero
+  }
+  const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
+  state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
+  state.counters["ipc"] =
+      c.cycles > 0 ? static_cast<double>(c.instructions) / static_cast<double>(c.cycles) : 0.0;
+  state.counters["branch_miss_pct"] =
+      c.branches > 0
+          ? 100.0 * static_cast<double>(c.branch_misses) / static_cast<double>(c.branches)
+          : 0.0;
 }
 
 // Force a specific ISA variant for the process (REQ-BENCH-006): override + warmup + verify.

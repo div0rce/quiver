@@ -23,14 +23,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB00Aull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
-  state.SetItemsProcessed(state.iterations() * values);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-  }
-}
-
 // Inputs with a controlled overflow density: overflowing lanes get a = max-1, b = 2.
 void make_inputs(quiver::bench::Rng& rng, std::int64_t n, int ovf_permille,
                  std::vector<std::int64_t>& a, std::vector<std::int64_t>& b) {

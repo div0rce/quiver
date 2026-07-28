@@ -20,7 +20,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 import quiver_ledger  # noqa: E402
-from qledger import gbench  # noqa: E402
+from qledger import environment, gbench  # noqa: E402
 
 # Real REQ-BENCH-002 names, including the hyphenated x86 baselines that regressed.
 NAMES = [
@@ -135,6 +135,24 @@ class TestBuildPmu(unittest.TestCase):
         got = quiver_ledger.build_pmu(self._reps(3.5, 0.0), [], seed=1)
         self.assertEqual(got["status"], "available")
         self.assertAlmostEqual(got["branch_miss_pct"]["median"], 0.0)
+
+
+class TestManifestDirtyPassthrough(unittest.TestCase):
+    """build_manifest must trust the caller's pre-run git reading. Re-deriving it would see the
+    run's own output directory (community-run writes ./submission inside the repo) and mark every
+    run `git tree dirty` — REQ-LEDGER-013 non-publishable, self-inflicted."""
+
+    def test_caller_reading_wins_over_live_state(self):
+        repo = pathlib.Path(__file__).resolve().parents[3]
+        m = environment.build_manifest(repo, repo / "build" / "bench", {"machine_id": "m",
+                                       "uarch": "u"}, "gb", 1, [], dirty="clean")
+        self.assertNotIn("git tree dirty", m["deviations"])
+
+    def test_dirty_caller_reading_is_recorded(self):
+        repo = pathlib.Path(__file__).resolve().parents[3]
+        m = environment.build_manifest(repo, repo / "build" / "bench", {"machine_id": "m",
+                                       "uarch": "u"}, "gb", 1, [], dirty="dirty")
+        self.assertIn("git tree dirty", m["deviations"])
 
 
 if __name__ == "__main__":

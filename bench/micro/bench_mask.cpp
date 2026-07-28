@@ -20,20 +20,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB001ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
-  state.SetItemsProcessed(state.iterations() * values);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-    state.counters["ipc"] =
-        c.cycles > 0 ? static_cast<double>(c.instructions) / static_cast<double>(c.cycles) : 0.0;
-    state.counters["branch_miss_pct"] =
-        c.branches > 0
-            ? 100.0 * static_cast<double>(c.branch_misses) / static_cast<double>(c.branches)
-            : 0.0;
-  }
-}
-
 template <bool kAutovec>
 void bm_mask_and(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));

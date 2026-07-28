@@ -21,16 +21,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB008ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values,
-                std::int64_t bytes) {
-  state.SetItemsProcessed(state.iterations() * values);
-  state.SetBytesProcessed(state.iterations() * bytes);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-  }
-}
-
 template <bool kAutovec>
 void bm_unpack_u32(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
