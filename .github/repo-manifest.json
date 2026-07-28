@@ -1,5 +1,5 @@
 {
-  "comment": "Repository tree manifest \u2014 REQ-REPO-001 (docs/prd/02-repository-architecture.md \u00a711). The repo-lint CI job compares the working tree against this file. Updated only by milestone PRs; the canonical layout is PRD 02 \u00a73. State: M10 \u2014 API surface frozen-clean; v1.0 certification deferred (R-06).",
+  "comment": "Repository tree manifest \u2014 REQ-REPO-001 (docs/prd/02-repository-architecture.md \u00a711). The repo-lint CI job compares the working tree against this file. allowed_toplevel entries are fnmatch globs, so a literal name matches only itself; patterns cover gitignored developer-local trees whose exact name is tool-chosen (cmake-build-*). Updated only by milestone PRs; the canonical layout is PRD 02 \u00a73. State: M10 \u2014 API surface frozen-clean; v1.0 certification deferred (R-06).",
   "milestone": "M10",
   "allowed_toplevel": [
     ".clang-format",
@@ -8,7 +8,10 @@
     ".gitattributes",
     ".github",
     ".gitignore",
+    ".idea",
+    ".serena",
     ".venv",
+    ".vscode",
     "CHANGELOG.md",
     "ADOPTERS.md",
     "CITATION.cff",
@@ -21,6 +24,7 @@
     "bench",
     "build",
     "cmake",
+    "cmake-build-*",
     "docs",
     "examples",
     "include",

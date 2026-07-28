@@ -17,6 +17,7 @@ Exit code 0 = clean; non-zero = violations printed to stderr.
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import re
 import subprocess
@@ -37,9 +38,14 @@ def main() -> int:
     manifest = json.loads(MANIFEST.read_text())
 
     # --- REQ-REPO-001: top-level allow-list -------------------------------------------------
-    allowed = set(manifest["allowed_toplevel"])
+    # Entries are glob patterns (fnmatch); a literal name matches only itself, so plain entries
+    # keep exact-match semantics. Patterns exist for developer-local trees whose exact name is
+    # tool-chosen (e.g. `cmake-build-*` from the CLion default profile) — the same tolerance
+    # `build` and `.venv` already carry. These paths are gitignored and never committed; the
+    # lint governs repository layout, not a contributor's working directory.
+    allowed = manifest["allowed_toplevel"]
     for entry in sorted(ROOT.iterdir()):
-        if entry.name not in allowed:
+        if not any(fnmatch.fnmatchcase(entry.name, pat) for pat in allowed):
             err(f"REQ-REPO-001: unexpected top-level entry '{entry.name}' "
                 f"(not in .github/repo-manifest.json; new directories need a PRD amendment)")
 
