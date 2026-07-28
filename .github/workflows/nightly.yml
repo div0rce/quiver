@@ -12,6 +12,9 @@ on:
     - cron: "17 6 * * *"
   workflow_dispatch:
   workflow_call:  # invoked by release.yml so a tag runs the nightly suite too (REQ-CI-009)
+    secrets:
+      CODECOV_TOKEN:  # optional: coverage upload is informational (REQ-TEST-013), never a gate
+        required: false
 
 permissions:
   contents: read
@@ -144,8 +147,20 @@ jobs:
           llvm-cov-18 report build/dev/libquiver.a -instr-profile=/tmp/quiver.profdata > coverage.txt || true
           llvm-cov-18 report build/dev/tests/quiver_tests_unit -instr-profile=/tmp/quiver.profdata >> coverage.txt || true
           cat coverage.txt
+          # Machine-readable form for Codecov: `report` emits a human summary it cannot parse.
+          llvm-cov-18 export -format=lcov build/dev/libquiver.a \
+            -instr-profile=/tmp/quiver.profdata \
+            -ignore-filename-regex='/(tests|bench|examples)/' > coverage.lcov || true
       - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with: { name: coverage-report, path: coverage.txt }
+      # REQ-TEST-013: coverage is diagnostic, not a quality gate — this step never fails the run.
+      - name: Upload coverage to Codecov (informational)
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        continue-on-error: true
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.lcov
+          fail_ci_if_error: false
 
   vectorization-report:
     name: -Rpass-missed report (REQ-SIMD-009, informational)
