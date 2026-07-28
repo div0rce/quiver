@@ -196,7 +196,12 @@ def cmd_run(args: argparse.Namespace) -> int:
         pmu_obj = build_pmu(reps, machine_flags, args.seed)
         cv = results_obj["ns_per_batch"]["cv"]
         noise, publishable = stats.noise_flags(cv)
-        flags = sorted(set(machine_flags) | set(noise))
+        # A machine without a static no_pmu flag can still fail perf_event_open transiently or by
+        # configuration; flag the measured outcome so flag-based filtering finds it instead of it
+        # being visible only inside the pmu object. A `partial` sample keeps its counters and is
+        # recorded there — `no_pmu` would misstate it, and the schema fixes the flag vocabulary.
+        measured = {"no_pmu"} if (pmu_obj or {}).get("status") == "unavailable" else set()
+        flags = sorted(set(machine_flags) | set(noise) | measured)
         notes = ""
         if noise and publishable:
             notes = (f"cv={cv:.4f} in the 3-5% band: published with noisy flag per "
