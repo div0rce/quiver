@@ -27,6 +27,7 @@ env:
 
 jobs:
   repo-lint:
+    timeout-minutes: 30
     name: repo lint (tree manifest, ADR set, source scans)
     runs-on: ubuntu-24.04
     steps:
@@ -39,6 +40,7 @@ jobs:
         run: python3 .github/scripts/repo_lint.py
 
   format-check:
+    timeout-minutes: 30
     name: clang-format (pinned major 18)
     runs-on: ubuntu-24.04
     steps:
@@ -58,6 +60,7 @@ jobs:
           echo "$files" | xargs ${CLANG_FORMAT} --dry-run --Werror
 
   docs-build:
+    timeout-minutes: 30
     name: docs build (mkdocs --strict)
     runs-on: ubuntu-24.04
     steps:
@@ -70,6 +73,7 @@ jobs:
         run: mkdocs build --strict -f docs/mkdocs.yml
 
   configure-check:
+    timeout-minutes: 30
     name: cmake presets configure (REQ-BUILD-011)
     runs-on: ubuntu-24.04
     strategy:
@@ -83,6 +87,7 @@ jobs:
         run: cmake --preset ${{ matrix.preset }}
 
   build-test:
+    timeout-minutes: 45
     name: build+test (${{ matrix.os }}, ${{ matrix.compiler }}, ${{ matrix.preset }})
     runs-on: ${{ matrix.os }}
     strategy:
@@ -138,6 +143,7 @@ jobs:
         run: ctest --preset ${{ matrix.preset }} --output-on-failure
 
   consumption:
+    timeout-minutes: 30
     # REQ-BUILD-010 / REQ-CI-008: consume the installed package two ways — find_package(CONFIG)
     # against the install tree (mode a) and FetchContent from source (mode b). The amalgamation
     # single-file mode (c) is verified by its own job once amalgamate.py lands. Uses each runner's
@@ -202,6 +208,7 @@ jobs:
           ./build/consume-fc/consumer
 
   amalgamation:
+    timeout-minutes: 30
     # REQ-BUILD-013 / REQ-INT-005 / REQ-STD-006 / REQ-BUILD-010 mode (c): lint the source
     # amalgamation-compatibility rules, compile the generated single-file pair and run the unit
     # suite against it (byte-identical kernel outputs), and prove the two-file drop-in builds with
@@ -252,6 +259,7 @@ jobs:
           ./demo_noexc
 
   msvc:
+    timeout-minutes: 45
     # REQ-BUILD-010 Windows leg. Builds the FULL test suite (not just the amalgamated unit
     # target) and runs it with NO --gtest_filter exclusions: both former R-18 deviations are
     # fixed at the source rather than filtered —
@@ -279,6 +287,7 @@ jobs:
         run: ctest --preset ci-msvc -j 4
 
   msvc-amalgamation:
+    timeout-minutes: 45
     name: MSVC amalgamation (ADR-018)
     runs-on: windows-latest
     steps:
@@ -298,6 +307,7 @@ jobs:
           "$exe"
 
   pinned-build:
+    timeout-minutes: 30
     # REQ-DISP-013 / REQ-CI-008: a compile-time-pinned build (QUIVER_PIN_ISA=avx2) on an x86
     # runner statically resolves every entry to AVX2 — build it, run the unit suite (the
     # runtime-dispatch-policy cases self-skip under a pin), and assert active_isa() == avx2.
@@ -326,6 +336,7 @@ jobs:
           echo "$out" | grep -q "default active ISA: avx2"
 
   asan-ubsan:
+    timeout-minutes: 30
     name: sanitizers (ASan+UBSan, clang)
     runs-on: ubuntu-24.04
     steps:
@@ -341,6 +352,7 @@ jobs:
         run: ctest --preset asan-ubsan --output-on-failure
 
   tsan:
+    timeout-minutes: 30
     name: sanitizers (TSan, dispatch protocol)
     runs-on: ubuntu-24.04
     steps:
@@ -356,12 +368,15 @@ jobs:
         run: ctest --preset tsan --output-on-failure
 
   sde-avx512:
+    timeout-minutes: 45
     name: SDE AVX-512 (correctness, -spr + -skx; REQ-CI-004)
     runs-on: ubuntu-24.04
     env:
       # Pinned Intel SDE (REQ-CI-011: cached, keyed by version; ADR-010; risk R-04).
       SDE_VERSION: "9.53.0-2025-03-16"
       SDE_URL: "https://downloadmirror.intel.com/850782/sde-external-9.53.0-2025-03-16-lin.tar.xz"
+      # Pin the artifact, not just its name: the URL is a mutable mirror path (REQ-SEC-006).
+      SDE_SHA256: "f55138df53378198e8c0a89598351cdb3c5e7f8819e63e472b0bc179afaad34c"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -379,6 +394,9 @@ jobs:
         run: |
           set -eu
           curl -fsSL "$SDE_URL" -o sde.tar.xz
+          # REQ-SEC-006: dev dependencies are pinned by version AND SHA-256. This tarball is
+          # extracted and then executed, so verify before unpacking, not after.
+          echo "${SDE_SHA256}  sde.tar.xz" | sha256sum -c -
           mkdir -p sde && tar xf sde.tar.xz -C sde --strip-components=1
       - name: Build release + asan-ubsan presets
         env: { CC: clang-18, CXX: clang++-18 }
@@ -413,6 +431,7 @@ jobs:
           "$SDE" -spr -- ./build/asan-ubsan/tests/quiver_tests_differential --gtest_brief=1
 
   clang-tidy:
+    timeout-minutes: 30
     name: clang-tidy (pinned major 18, REQ-TEST-010)
     runs-on: ubuntu-24.04
     steps:
@@ -431,6 +450,7 @@ jobs:
             $(git ls-files 'src/*.cpp')
 
   bench-smoke:
+    timeout-minutes: 30
     name: bench smoke (harness pipeline + validation abort, REQ-CI-007)
     runs-on: ubuntu-24.04
     steps:
@@ -458,6 +478,7 @@ jobs:
           echo "validation abort path confirmed (non-zero exit)"
 
   fuzz-smoke:
+    timeout-minutes: 45
     name: fuzz smoke (differential libFuzzer, >=30 s/family, REQ-CI-005/REQ-TEST-007)
     runs-on: ubuntu-24.04
     steps:
@@ -490,6 +511,7 @@ jobs:
           if-no-files-found: ignore
 
   dco-check:
+    timeout-minutes: 30
     name: DCO sign-off (REQ-STD-009)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04

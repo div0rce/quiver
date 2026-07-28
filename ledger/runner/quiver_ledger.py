@@ -291,19 +291,30 @@ def cmd_community_run(args: argparse.Namespace) -> int:
     rc = cmd_run(args)
     if rc != 0:
         return rc
+    # Charter T2: "can a stranger with the named hardware reproduce the number from the repo
+    # alone?" — so record EVERY argument that changes the result, defaults included. --seed
+    # drives the bootstrap CIs (ADR-020), so omitting it silently changed the reported interval;
+    # --allow-deviations says the bundle is investigation-only.
     (out_dir / "commands.txt").write_text(
         "python3 ledger/runner/quiver_ledger.py community-run "
         f"--machine {args.machine} --output {args.output}"
         + (f" --filter '{args.filter}'" if args.filter else "")
-        + (f" --reps {args.reps}" if args.reps != DEFAULT_REPS else "")
-        + (f" --min-time {args.min_time}" if args.min_time != DEFAULT_MIN_TIME else "")
+        + f" --reps {args.reps} --min-time {args.min_time} --seed {args.seed}"
+        + f" --build-dir {args.build_dir}"
+        + (" --allow-deviations" if args.allow_deviations else "")
         + "\n")
-    git_status = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain=v1", "-b"],
-                                capture_output=True, text=True, timeout=30)
-    git_sha = subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"],
-                             capture_output=True, text=True, timeout=30)
+
+    def _git(*argv: str) -> str:
+        """Provenance must fail loudly: a silently empty git-status.txt looks like a clean tree."""
+        proc = subprocess.run(["git", "-C", str(REPO), *argv],
+                              capture_output=True, text=True, timeout=30)
+        if proc.returncode != 0:
+            raise RuntimeError(f"git {' '.join(argv)} failed ({proc.returncode}): "
+                               f"{proc.stderr.strip()[:200]}")
+        return proc.stdout
+
     (out_dir / "git-status.txt").write_text(
-        f"commit: {git_sha.stdout.strip()}\n{git_status.stdout}")
+        f"commit: {_git('rev-parse', 'HEAD').strip()}\n{_git('status', '--porcelain=v1', '-b')}")
     sums = []
     for f in sorted(out_dir.rglob("*")):
         if f.is_file() and f.name != "checksums.txt":
