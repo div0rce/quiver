@@ -27,58 +27,81 @@ namespace ref = quiver_test::ref;
 // Boundary lengths around the 8-value (byte-aligned) block edge, per the correctness spec.
 constexpr std::int64_t kBoundaryN[] = {0, 1, 2, 7, 8, 9, 15, 16, 17, 31, 32, 33, 257};
 
+// Widths run 1..7 and must also fit the output type — a bound that only binds for 1-byte outputs.
 template <class Out>
-void check_bit_exact(std::uint64_t seed) {
-  Rng rng(seed);
-  for (int w = 1; w <= 7; ++w) {
-    if (w > 8 * static_cast<int>(sizeof(Out))) {
-      continue;  // width must fit the output type (only matters for Out == u8)
-    }
-    for (const std::int64_t n : kBoundaryN) {
-      const std::size_t nbytes = static_cast<std::size_t>((n * w + 7) / 8) + 1;  // +1 slack pad
-      std::vector<std::uint8_t> packed(nbytes ? nbytes : 1);
-      for (auto& byte : packed) {
-        byte = static_cast<std::uint8_t>(rng.next());
-      }
-      const auto base = static_cast<Out>(rng.next());
-      std::vector<Out> got(static_cast<std::size_t>(n) + 1, Out{0xAB});
-      quiver::detail::neon::unpack_subbyte_candidate<Out>(packed.data(), n, w, base, got.data());
-      for (std::int64_t i = 0; i < n; ++i) {
-        const Out want =
-            static_cast<Out>(base + ref::unpack_value_expected<Out>(packed.data(), i, w));
-        ASSERT_EQ(got[static_cast<std::size_t>(i)], want)
-            << "Out=" << sizeof(Out) << " w=" << w << " n=" << n << " i=" << i;
-      }
-    }
+constexpr int max_width() {
+  constexpr int kBits = 8 * static_cast<int>(sizeof(Out));
+  return kBits < 7 ? kBits : 7;
+}
+
+void fill_random(std::uint8_t* bytes, std::size_t count, Rng& rng) {
+  for (std::size_t i = 0; i < count; ++i) {
+    bytes[i] = static_cast<std::uint8_t>(rng.next());
   }
+}
+
+// One unpack case: the packed input, how many values it holds, at what width, over what base.
+template <class Out>
+struct SubbyteCase {
+  const std::uint8_t* packed;
+  std::int64_t n;
+  int w;
+  Out base;
+};
+
+// Every case ends the same way: each unpacked value equals base + the oracle's value.
+template <class Out>
+void expect_matches_oracle(const SubbyteCase<Out>& c, const Out* got, const char* label) {
+  for (std::int64_t i = 0; i < c.n; ++i) {
+    const Out want = static_cast<Out>(c.base + ref::unpack_value_expected<Out>(c.packed, i, c.w));
+    ASSERT_EQ(got[i], want) << label << " Out=" << sizeof(Out) << " w=" << c.w << " n=" << c.n
+                            << " i=" << i;
+  }
+}
+
+// Slack-padded buffers: a spare packed byte and a spare output element, both left poisoned.
+template <class Out>
+void run_padded_case(std::int64_t n, int w, Rng& rng, const char* label) {
+  const std::size_t nbytes = static_cast<std::size_t>((n * w + 7) / 8) + 1;  // +1 slack pad
+  std::vector<std::uint8_t> packed(nbytes);
+  fill_random(packed.data(), packed.size(), rng);
+  const auto base = static_cast<Out>(rng.next());
+  std::vector<Out> got(static_cast<std::size_t>(n) + 1, Out{0xAB});
+  quiver::detail::neon::unpack_subbyte_candidate<Out>(packed.data(), n, w, base, got.data());
+  expect_matches_oracle<Out>({packed.data(), n, w, base}, got.data(), label);
 }
 
 // Input packed buffer sized to EXACTLY ceil(n*w/8) with a guard page at its end, and output sized
 // to EXACTLY n with a guard page at its end: any over-read or over-write faults.
 template <class Out>
+void run_bounded_case(std::int64_t n, int w, Rng& rng) {
+  const std::int64_t nbytes = (n * w + 7) / 8;  // exact contract bound
+  GuardedBuffer<std::uint8_t> packed(nbytes, Guard::kEnd);
+  fill_random(packed.data(), static_cast<std::size_t>(nbytes), rng);
+  GuardedBuffer<Out> got(n, Guard::kEnd);
+  const auto base = static_cast<Out>(rng.next());
+  quiver::detail::neon::unpack_subbyte_candidate<Out>(packed.data(), n, w, base, got.data());
+  // Correctness under the tight allocation too (reads must have been in-bounds to be correct).
+  expect_matches_oracle<Out>({packed.data(), n, w, base}, got.data(), "bounded");
+}
+
+template <class Out>
+void check_bit_exact(std::uint64_t seed) {
+  Rng rng(seed);
+  for (int w = 1; w <= max_width<Out>(); ++w) {
+    for (const std::int64_t n : kBoundaryN) {
+      run_padded_case<Out>(n, w, rng, "boundary");
+    }
+  }
+}
+
+template <class Out>
 void check_no_over_read(std::uint64_t seed) {
   Rng rng(seed);
-  for (int w = 1; w <= 7; ++w) {
-    if (w > 8 * static_cast<int>(sizeof(Out))) {
-      continue;
-    }
+  for (int w = 1; w <= max_width<Out>(); ++w) {
     for (const std::int64_t n : kBoundaryN) {
-      if (n == 0) {
-        continue;  // no bytes to bound
-      }
-      const std::int64_t nbytes = (n * w + 7) / 8;  // exact contract bound
-      GuardedBuffer<std::uint8_t> packed(nbytes, Guard::kEnd);
-      for (std::int64_t b = 0; b < nbytes; ++b) {
-        packed.data()[b] = static_cast<std::uint8_t>(rng.next());
-      }
-      GuardedBuffer<Out> got(n, Guard::kEnd);
-      const auto base = static_cast<Out>(rng.next());
-      quiver::detail::neon::unpack_subbyte_candidate<Out>(packed.data(), n, w, base, got.data());
-      // Correctness under the tight allocation too (reads must have been in-bounds to be correct).
-      for (std::int64_t i = 0; i < n; ++i) {
-        const Out want =
-            static_cast<Out>(base + ref::unpack_value_expected<Out>(packed.data(), i, w));
-        ASSERT_EQ(got.data()[i], want) << "bounded Out=" << sizeof(Out) << " w=" << w << " n=" << n;
+      if (n != 0) {  // n == 0 has no bytes to bound
+        run_bounded_case<Out>(n, w, rng);
       }
     }
   }
@@ -93,25 +116,12 @@ void check_random(std::uint64_t seed) {
   Rng rng(seed);
   for (int iter = 0; iter < 4000; ++iter) {
     const int w = 1 + static_cast<int>(rng.next() % 7);  // width in [1,7]
-    if (w > 8 * static_cast<int>(sizeof(Out))) {
+    if (w > max_width<Out>()) {
       continue;
     }
     const std::int64_t n =
         static_cast<std::int64_t>(rng.next() % 300);  // arbitrary length incl tails
-    const std::size_t nbytes = static_cast<std::size_t>((n * w + 7) / 8) + 1;
-    std::vector<std::uint8_t> packed(nbytes);
-    for (auto& byte : packed) {
-      byte = static_cast<std::uint8_t>(rng.next());
-    }
-    const auto base = static_cast<Out>(rng.next());
-    std::vector<Out> got(static_cast<std::size_t>(n) + 1, Out{0});
-    quiver::detail::neon::unpack_subbyte_candidate<Out>(packed.data(), n, w, base, got.data());
-    for (std::int64_t i = 0; i < n; ++i) {
-      const Out want =
-          static_cast<Out>(base + ref::unpack_value_expected<Out>(packed.data(), i, w));
-      ASSERT_EQ(got[static_cast<std::size_t>(i)], want)
-          << "random Out=" << sizeof(Out) << " w=" << w << " n=" << n << " i=" << i;
-    }
+    run_padded_case<Out>(n, w, rng, "random");
   }
 }
 
