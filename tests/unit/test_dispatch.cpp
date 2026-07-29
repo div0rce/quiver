@@ -142,35 +142,52 @@ TEST(Dispatch, WarmupIsIdempotent) {
 }
 
 // --- Concurrent resolution under override churn (REQ-DISP-008/-009; TSan-validated) ----------
+
+constexpr int kChurnThreads = 8;
+constexpr int kChurnIters = 2000;
+
+// Never null after an epoch match; always one of the row's backends.
+bool is_row_backend(KernelFn fn) {
+  for (const KernelFn candidate :
+       {&backend_scalar, &backend_neon, &backend_avx2, &backend_avx512}) {
+    if (fn == candidate) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Override churn from one thread: concurrent calls may run under either policy — both are
+// correct executions (REQ-DISP-009).
+void churn_override(int iter) {
+  if (iter % 128 == 0) {
+    (void)quiver::set_isa_override(Isa::kScalar);
+    return;
+  }
+  quiver::clear_isa_override();
+}
+
+void resolve_repeatedly(DispatchEntry& entry, const BackendRow<KernelFn>& row,
+                        std::atomic<bool>& failed, int thread_index) {
+  for (int i = 0; i < kChurnIters; ++i) {
+    if (thread_index == 0 && i % 64 == 0) {
+      churn_override(i);
+    }
+    if (!is_row_backend(quiver::detail::dispatch_get(entry, row))) {
+      failed.store(true, std::memory_order_relaxed);
+    }
+  }
+}
+
 TEST(Dispatch, ConcurrentResolutionIsRaceBenign) {
-  constexpr int kThreads = 8;
-  constexpr int kIters = 2000;
   DispatchEntry entry;
   const BackendRow<KernelFn> row = full_row();
   std::atomic<bool> failed{false};
 
   std::vector<std::thread> workers;
-  workers.reserve(kThreads);
-  for (int t = 0; t < kThreads; ++t) {
-    workers.emplace_back([&entry, &row, &failed, t] {
-      for (int i = 0; i < kIters; ++i) {
-        if (t == 0 && i % 64 == 0) {
-          // Override churn from one thread: concurrent calls may run under either policy —
-          // both are correct executions (REQ-DISP-009).
-          if (i % 128 == 0) {
-            (void)quiver::set_isa_override(Isa::kScalar);
-          } else {
-            quiver::clear_isa_override();
-          }
-        }
-        const KernelFn fn = quiver::detail::dispatch_get(entry, row);
-        // Never null after an epoch match; always one of the row's backends.
-        if (fn != &backend_scalar && fn != &backend_neon && fn != &backend_avx2 &&
-            fn != &backend_avx512) {
-          failed.store(true, std::memory_order_relaxed);
-        }
-      }
-    });
+  workers.reserve(kChurnThreads);
+  for (int t = 0; t < kChurnThreads; ++t) {
+    workers.emplace_back([&entry, &row, &failed, t] { resolve_repeatedly(entry, row, failed, t); });
   }
   for (std::thread& w : workers) {
     w.join();
