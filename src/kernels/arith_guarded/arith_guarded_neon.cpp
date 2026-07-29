@@ -341,20 +341,20 @@ void saturating_addsub_impl(ArithOp op, AgBatch<T> in, LoadB load_b, T* out) noe
   std::int64_t k10_arith_checked(ArithOp op, const T* a, const T* b, std::int64_t n, T* out,       \
                                  std::uint8_t* overflow_bits) noexcept {                           \
     if (op == ArithOp::kMul) {                                                                     \
-      return scalar_impl::arith_checked<T>(op, a, b, n, out, overflow_bits);                       \
+      return scalar_impl::arith_checked<T>(op, {a, n}, b, {out, overflow_bits});                   \
     }                                                                                              \
     return checked_addsub_impl<T>(op, {a, n}, ag_BatchRhs<T>{b}, {out, overflow_bits});            \
   }                                                                                                \
   std::int64_t k10_arith_checked_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out,   \
                                             std::uint8_t* overflow_bits) noexcept {                \
     if (op == ArithOp::kMul) {                                                                     \
-      return scalar_impl::arith_checked_scalar_rhs<T>(op, a, b, n, out, overflow_bits);            \
+      return scalar_impl::arith_checked_scalar_rhs<T>(op, {a, n}, b, {out, overflow_bits});        \
     }                                                                                              \
     return checked_addsub_impl<T>(op, {a, n}, ag_ScalarRhs<T>{b}, {out, overflow_bits});           \
   }                                                                                                \
   void k10_arith_saturating(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept { \
     if (op == ArithOp::kMul) {                                                                     \
-      scalar_impl::arith_saturating<T>(op, a, b, n, out); /* REQ-K10-003 concession */             \
+      scalar_impl::arith_saturating<T>(op, {a, n}, b, out); /* REQ-K10-003 concession */           \
       return;                                                                                      \
     }                                                                                              \
     saturating_addsub_impl<T>(op, {a, n}, ag_BatchRhs<T>{b}, out);                                 \
@@ -362,7 +362,7 @@ void saturating_addsub_impl(ArithOp op, AgBatch<T> in, LoadB load_b, T* out) noe
   void k10_arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n,                \
                                        T* out) noexcept {                                          \
     if (op == ArithOp::kMul) {                                                                     \
-      scalar_impl::arith_saturating_scalar_rhs<T>(op, a, b, n, out);                               \
+      scalar_impl::arith_saturating_scalar_rhs<T>(op, {a, n}, b, out);                             \
       return;                                                                                      \
     }                                                                                              \
     saturating_addsub_impl<T>(op, {a, n}, ag_ScalarRhs<T>{b}, out);                                \

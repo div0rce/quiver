@@ -11,18 +11,18 @@ namespace detail::scalar {
 #define QUIVER_K10_DEFINE(T)                                                                       \
   std::int64_t k10_arith_checked(ArithOp op, const T* a, const T* b, std::int64_t n, T* out,       \
                                  std::uint8_t* overflow_bits) noexcept {                           \
-    return scalar_impl::arith_checked<T>(op, a, b, n, out, overflow_bits);                         \
+    return scalar_impl::arith_checked<T>(op, {a, n}, b, {out, overflow_bits});                     \
   }                                                                                                \
   std::int64_t k10_arith_checked_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out,   \
                                             std::uint8_t* overflow_bits) noexcept {                \
-    return scalar_impl::arith_checked_scalar_rhs<T>(op, a, b, n, out, overflow_bits);              \
+    return scalar_impl::arith_checked_scalar_rhs<T>(op, {a, n}, b, {out, overflow_bits});          \
   }                                                                                                \
   void k10_arith_saturating(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept { \
-    scalar_impl::arith_saturating<T>(op, a, b, n, out);                                            \
+    scalar_impl::arith_saturating<T>(op, {a, n}, b, out);                                          \
   }                                                                                                \
   void k10_arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n,                \
                                        T* out) noexcept {                                          \
-    scalar_impl::arith_saturating_scalar_rhs<T>(op, a, b, n, out);                                 \
+    scalar_impl::arith_saturating_scalar_rhs<T>(op, {a, n}, b, out);                               \
   }
 
 QUIVER_K10_DEFINE(std::int8_t)
