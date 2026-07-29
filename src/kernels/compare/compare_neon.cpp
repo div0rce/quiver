@@ -76,121 +76,59 @@ struct cmp_VecOf<double> {
 template <class T>
 using cmp_Vec = typename cmp_VecOf<T>::type;
 
+// One element type's NEON comparison plumbing. Grouping by type — rather than repeating a
+// ten-way ladder inside every operation — keeps each operation a single expression. The compare
+// members return the unsigned lane-mask type of T's width, which is what NEON compares yield.
+template <class T>
+struct CmpOps;
+
+#define QUIVER_CMP_NEON_OPS(T, SUF)                                                                \
+  template <>                                                                                      \
+  struct CmpOps<T> {                                                                               \
+    static QUIVER_FORCE_INLINE cmp_Vec<T> load(const T* p) noexcept {                              \
+      return vld1q_##SUF(p);                                                                       \
+    }                                                                                              \
+    static QUIVER_FORCE_INLINE cmp_Vec<T> broadcast(T v) noexcept {                                \
+      return vdupq_n_##SUF(v);                                                                     \
+    }                                                                                              \
+    static QUIVER_FORCE_INLINE auto eq(cmp_Vec<T> a, cmp_Vec<T> b) noexcept {                      \
+      return vceqq_##SUF(a, b);                                                                    \
+    }                                                                                              \
+    static QUIVER_FORCE_INLINE auto gt(cmp_Vec<T> a, cmp_Vec<T> b) noexcept {                      \
+      return vcgtq_##SUF(a, b);                                                                    \
+    }                                                                                              \
+  };
+
+QUIVER_CMP_NEON_OPS(std::int8_t, s8)
+QUIVER_CMP_NEON_OPS(std::uint8_t, u8)
+QUIVER_CMP_NEON_OPS(std::int16_t, s16)
+QUIVER_CMP_NEON_OPS(std::uint16_t, u16)
+QUIVER_CMP_NEON_OPS(std::int32_t, s32)
+QUIVER_CMP_NEON_OPS(std::uint32_t, u32)
+QUIVER_CMP_NEON_OPS(std::int64_t, s64)
+QUIVER_CMP_NEON_OPS(std::uint64_t, u64)
+QUIVER_CMP_NEON_OPS(float, f32)
+QUIVER_CMP_NEON_OPS(double, f64)
+#undef QUIVER_CMP_NEON_OPS
+
 template <class T>
 QUIVER_FORCE_INLINE cmp_Vec<T> cmp_load_vec(const T* p) noexcept {
-  if constexpr (std::is_same_v<T, std::int8_t>) {
-    return vld1q_s8(p);
-  } else if constexpr (std::is_same_v<T, std::uint8_t>) {
-    return vld1q_u8(p);
-  } else if constexpr (std::is_same_v<T, std::int16_t>) {
-    return vld1q_s16(p);
-  } else if constexpr (std::is_same_v<T, std::uint16_t>) {
-    return vld1q_u16(p);
-  } else if constexpr (std::is_same_v<T, std::int32_t>) {
-    return vld1q_s32(p);
-  } else if constexpr (std::is_same_v<T, std::uint32_t>) {
-    return vld1q_u32(p);
-  } else if constexpr (std::is_same_v<T, std::int64_t>) {
-    return vld1q_s64(p);
-  } else if constexpr (std::is_same_v<T, std::uint64_t>) {
-    return vld1q_u64(p);
-  } else if constexpr (std::is_same_v<T, float>) {
-    return vld1q_f32(p);
-  } else {
-    return vld1q_f64(p);
-  }
+  return CmpOps<T>::load(p);
 }
 
 template <class T>
 QUIVER_FORCE_INLINE cmp_Vec<T> cmp_broadcast(T v) noexcept {
-  if constexpr (std::is_same_v<T, std::int8_t>) {
-    return vdupq_n_s8(v);
-  } else if constexpr (std::is_same_v<T, std::uint8_t>) {
-    return vdupq_n_u8(v);
-  } else if constexpr (std::is_same_v<T, std::int16_t>) {
-    return vdupq_n_s16(v);
-  } else if constexpr (std::is_same_v<T, std::uint16_t>) {
-    return vdupq_n_u16(v);
-  } else if constexpr (std::is_same_v<T, std::int32_t>) {
-    return vdupq_n_s32(v);
-  } else if constexpr (std::is_same_v<T, std::uint32_t>) {
-    return vdupq_n_u32(v);
-  } else if constexpr (std::is_same_v<T, std::int64_t>) {
-    return vdupq_n_s64(v);
-  } else if constexpr (std::is_same_v<T, std::uint64_t>) {
-    return vdupq_n_u64(v);
-  } else if constexpr (std::is_same_v<T, float>) {
-    return vdupq_n_f32(v);
-  } else {
-    return vdupq_n_f64(v);
-  }
+  return CmpOps<T>::broadcast(v);
 }
 
-// Unsigned lane-mask type of T's width (what vector compares return).
 template <class T>
 QUIVER_FORCE_INLINE auto cmp_eq(cmp_Vec<T> a, cmp_Vec<T> b) noexcept {
-  if constexpr (sizeof(T) == 1) {
-    if constexpr (std::is_signed_v<T>) {
-      return vceqq_s8(a, b);
-    } else {
-      return vceqq_u8(a, b);
-    }
-  } else if constexpr (sizeof(T) == 2) {
-    if constexpr (std::is_signed_v<T>) {
-      return vceqq_s16(a, b);
-    } else {
-      return vceqq_u16(a, b);
-    }
-  } else if constexpr (sizeof(T) == 4) {
-    if constexpr (std::is_same_v<T, float>) {
-      return vceqq_f32(a, b);
-    } else if constexpr (std::is_signed_v<T>) {
-      return vceqq_s32(a, b);
-    } else {
-      return vceqq_u32(a, b);
-    }
-  } else {
-    if constexpr (std::is_same_v<T, double>) {
-      return vceqq_f64(a, b);
-    } else if constexpr (std::is_signed_v<T>) {
-      return vceqq_s64(a, b);
-    } else {
-      return vceqq_u64(a, b);
-    }
-  }
+  return CmpOps<T>::eq(a, b);
 }
 
 template <class T>
 QUIVER_FORCE_INLINE auto cmp_gt(cmp_Vec<T> a, cmp_Vec<T> b) noexcept {
-  if constexpr (sizeof(T) == 1) {
-    if constexpr (std::is_signed_v<T>) {
-      return vcgtq_s8(a, b);
-    } else {
-      return vcgtq_u8(a, b);
-    }
-  } else if constexpr (sizeof(T) == 2) {
-    if constexpr (std::is_signed_v<T>) {
-      return vcgtq_s16(a, b);
-    } else {
-      return vcgtq_u16(a, b);
-    }
-  } else if constexpr (sizeof(T) == 4) {
-    if constexpr (std::is_same_v<T, float>) {
-      return vcgtq_f32(a, b);
-    } else if constexpr (std::is_signed_v<T>) {
-      return vcgtq_s32(a, b);
-    } else {
-      return vcgtq_u32(a, b);
-    }
-  } else {
-    if constexpr (std::is_same_v<T, double>) {
-      return vcgtq_f64(a, b);
-    } else if constexpr (std::is_signed_v<T>) {
-      return vcgtq_s64(a, b);
-    } else {
-      return vcgtq_u64(a, b);
-    }
-  }
+  return CmpOps<T>::gt(a, b);
 }
 
 template <class T>
@@ -272,37 +210,48 @@ QUIVER_FORCE_INLINE std::uint32_t pack4_bits(uint64x2_t m0, uint64x2_t m1, uint6
 // --- mask for one vector at element i; inv() says whether packed bits must be complemented
 // --- (integers + float kNe only); one(i) is the exact scalar predicate for tails.
 
+// Floats: native ordered compares (NaN false); kNe = post-pack inversion of eq (NaN true, exact).
+template <class T>
+QUIVER_FORCE_INLINE auto float_op_mask(CompareOp op, cmp_Vec<T> a, cmp_Vec<T> b) noexcept {
+  switch (op) {
+  case CompareOp::kEq:
+  case CompareOp::kNe:
+    return cmp_eq<T>(a, b);
+  case CompareOp::kLt:
+    return cmp_gt<T>(b, a);
+  case CompareOp::kLe:
+    return cmp_le<T>(a, b);
+  case CompareOp::kGt:
+    return cmp_gt<T>(a, b);
+  case CompareOp::kGe:
+    return cmp_ge<T>(a, b);
+  }
+  return cmp_eq<T>(a, a);  // unreachable for in-contract op values
+}
+
+// Integers: eq and gt cover all six ops; kNe/kLe/kGe are the post-pack inversions.
+template <class T>
+QUIVER_FORCE_INLINE auto int_op_mask(CompareOp op, cmp_Vec<T> a, cmp_Vec<T> b) noexcept {
+  switch (op) {
+  case CompareOp::kEq:
+  case CompareOp::kNe:
+    return cmp_eq<T>(a, b);
+  case CompareOp::kGt:
+  case CompareOp::kLe:
+    return cmp_gt<T>(a, b);
+  case CompareOp::kLt:
+  case CompareOp::kGe:
+    return cmp_gt<T>(b, a);
+  }
+  return cmp_eq<T>(a, a);  // unreachable for in-contract op values
+}
+
 template <class T>
 QUIVER_FORCE_INLINE auto op_mask(CompareOp op, cmp_Vec<T> a, cmp_Vec<T> b) noexcept {
   if constexpr (std::is_floating_point_v<T>) {
-    // Native ordered compares (NaN false); kNe = post-pack inversion of eq (NaN true, exact).
-    switch (op) {
-    case CompareOp::kEq:
-    case CompareOp::kNe:
-      return cmp_eq<T>(a, b);
-    case CompareOp::kLt:
-      return cmp_gt<T>(b, a);
-    case CompareOp::kLe:
-      return cmp_le<T>(a, b);
-    case CompareOp::kGt:
-      return cmp_gt<T>(a, b);
-    case CompareOp::kGe:
-      return cmp_ge<T>(a, b);
-    }
-    return cmp_eq<T>(a, a);  // unreachable for in-contract op values
+    return float_op_mask<T>(op, a, b);
   } else {
-    switch (op) {
-    case CompareOp::kEq:
-    case CompareOp::kNe:
-      return cmp_eq<T>(a, b);
-    case CompareOp::kGt:
-    case CompareOp::kLe:
-      return cmp_gt<T>(a, b);
-    case CompareOp::kLt:
-    case CompareOp::kGe:
-      return cmp_gt<T>(b, a);
-    }
-    return cmp_eq<T>(a, a);  // unreachable for in-contract op values
+    return int_op_mask<T>(op, a, b);
   }
 }
 
