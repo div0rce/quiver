@@ -8,6 +8,7 @@ investigation). Stdlib only (REQ-INT-004).
 
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import json
 import pathlib
@@ -136,25 +137,35 @@ def environment_checklist(repo: pathlib.Path, machine: dict[str, Any]) -> list[s
     return deviations
 
 
-def build_manifest(repo: pathlib.Path, build_dir: pathlib.Path, machine: dict[str, Any],
-                   gb_version: str, repetition_seed: int,
-                   deviations: list[str], out_dir: pathlib.Path) -> dict[str, Any]:
+@dataclasses.dataclass(frozen=True)
+class RunContext:
+    """What a manifest needs to know about the run that produced it. Grouped because these
+    always travel together, and a seven-argument call site invites positional mistakes."""
+    repo: pathlib.Path
+    build_dir: pathlib.Path
+    out_dir: pathlib.Path
+    machine: dict[str, Any]
+    gb_version: str
+    repetition_seed: int
+
+
+def build_manifest(ctx: RunContext, deviations: list[str]) -> dict[str, Any]:
     """Dirtiness is re-checked here, AFTER the run, so a tracked file edited mid-run is still
     caught — a ~50-minute run is long enough for that to happen. `out_dir` is excluded so the
     run's own output cannot mark it dirty."""
-    sha, dirty = git_state(repo, out_dir)
-    comp, flags, lto = compiler_from_cache(build_dir)
+    sha, dirty = git_state(ctx.repo, ctx.out_dir)
+    comp, flags, lto = compiler_from_cache(ctx.build_dir)
     devs = list(deviations)
     if dirty == "dirty":
         devs = devs if "git tree dirty" in devs else [*devs, "git tree dirty"]
     return {
         "cpu_model": cpu_model(),
-        "machine_id": machine["machine_id"],
-        "uarch": machine["uarch"],
-        "core_used": machine.get("core_policy", "OS-scheduled (no pinning control)"),
-        "pinning": machine.get("pinning", "none"),
+        "machine_id": ctx.machine["machine_id"],
+        "uarch": ctx.machine["uarch"],
+        "core_used": ctx.machine.get("core_policy", "OS-scheduled (no pinning control)"),
+        "pinning": ctx.machine.get("pinning", "none"),
         "frequency_governor": frequency_governor(),
-        "turbo_boost": turbo_state(machine),
+        "turbo_boost": turbo_state(ctx.machine),
         "smt": smt_state(),
         "aslr": aslr_state(),
         "os": f"{platform.system()} {platform.release()}",
@@ -162,10 +173,10 @@ def build_manifest(repo: pathlib.Path, build_dir: pathlib.Path, machine: dict[st
         "compiler": comp,
         "compiler_flags": flags,
         "lto": lto,
-        "google_benchmark_version": gb_version,
+        "google_benchmark_version": ctx.gb_version,
         "library_commit": sha,
         "timestamp_utc": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
-        "repetition_seed": repetition_seed,
+        "repetition_seed": ctx.repetition_seed,
         "deviations": devs,
     }
 

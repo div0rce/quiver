@@ -75,15 +75,20 @@ def _source_cpp() -> list[str]:
     return _LEADING_CPP + _family_cpp()
 
 
-def _internal_headers_topo() -> list[str]:
-    """All src/**/*.h, topologically ordered by their ``#include "src/..."`` edges so each
-    header follows its dependencies; alphabetical tiebreak keeps it deterministic."""
+def _internal_header_deps() -> dict[str, set[str]]:
+    """src/**/*.h -> the src/ headers it includes. Alphabetical keys keep traversal deterministic."""
     headers = sorted(p.relative_to(ROOT).as_posix() for p in (ROOT / "src").rglob("*.h"))
     deps: dict[str, set[str]] = {h: set() for h in headers}
     for h in headers:
-        for _, target in _includes((ROOT / h).read_text()):
-            if target.startswith("src/") and target in deps:
-                deps[h].add(target)
+        deps[h] = {target for _, target in _includes((ROOT / h).read_text())
+                   if target.startswith("src/") and target in deps}
+    return deps
+
+
+def _internal_headers_topo() -> list[str]:
+    """All src/**/*.h, topologically ordered by their ``#include "src/..."`` edges so each
+    header follows its dependencies; alphabetical tiebreak keeps it deterministic."""
+    deps = _internal_header_deps()
     ordered: list[str] = []
     seen: set[str] = set()
 
@@ -97,7 +102,7 @@ def _internal_headers_topo() -> list[str]:
         seen.add(h)
         ordered.append(h)
 
-    for h in headers:  # headers already sorted -> deterministic visitation
+    for h in deps:  # keys already sorted -> deterministic visitation
         visit(h, ())
     return ordered
 
@@ -113,23 +118,31 @@ def _is_internal(target: str) -> bool:
     return target.startswith("quiver/") or target.startswith("src/")
 
 
+def _drop_line(line: str, *, drop_pragma_once: bool, angle_sink: set[str] | None) -> bool:
+    """True when a line is consumed by the amalgamation rather than emitted.
+
+    Internal quoted includes are inlined elsewhere; angle includes are hoisted into `angle_sink`
+    when one is supplied, so the single TU carries one deduplicated system-include block.
+    """
+    if drop_pragma_once and _PRAGMA_ONCE.match(line):
+        return True
+    m = _INCLUDE.match(line)
+    if not m:
+        return False
+    kind, target = m.group(1), m.group(2)
+    if kind == '"':
+        return _is_internal(target)
+    if angle_sink is None:
+        return False
+    angle_sink.add(target)
+    return True
+
+
 def _strip(text: str, *, drop_pragma_once: bool, angle_sink: set[str] | None) -> list[str]:
     """Return `text`'s lines with internal quoted includes removed; #pragma once removed when
     asked; angle (system) includes routed to `angle_sink` (hoisted) or kept in place."""
-    out: list[str] = []
-    for line in text.splitlines():
-        if drop_pragma_once and _PRAGMA_ONCE.match(line):
-            continue
-        m = _INCLUDE.match(line)
-        if m:
-            kind, target = m.group(1), m.group(2)
-            if kind == '"' and _is_internal(target):
-                continue  # inlined elsewhere in the amalgamation
-            if kind == "<" and angle_sink is not None:
-                angle_sink.add(target)
-                continue
-        out.append(line)
-    return out
+    return [line for line in text.splitlines()
+            if not _drop_line(line, drop_pragma_once=drop_pragma_once, angle_sink=angle_sink)]
 
 
 def _version() -> str:
@@ -190,35 +203,47 @@ def generate(out_dir: Path) -> None:
 _GUARD_MACRO = re.compile(r"^\s*#\s*ifndef\s+\w+_H\b|^\s*#\s*define\s+\w+_H\b")
 
 
-def check_file(rel: str, text: str, *, is_header: bool) -> list[str]:
-    """Return the REQ-STD-006 violations in one file's text (pure; no I/O). `rel` labels the
-    file in messages, `is_header` selects the header-only `#pragma once` rule."""
-    out: list[str] = []
-    lines = text.splitlines()
-
-    # Rule: headers use `#pragma once` exactly, and no include-guard macros anywhere.
+def _guard_errors(rel: str, lines: list[str], is_header: bool) -> list[str]:
+    """REQ-STD-006: headers use `#pragma once` exactly; include-guard macros are banned."""
+    out = []
     if is_header and not any(_PRAGMA_ONCE.match(ln) for ln in lines):
         out.append(f"{rel}: header missing `#pragma once` (REQ-STD-006)")
-    for ln in lines:
-        if _GUARD_MACRO.match(ln):
-            out.append(f"{rel}: include-guard macro; use `#pragma once` (REQ-STD-006): {ln.strip()}")
-            break
+    guard = next((ln for ln in lines if _GUARD_MACRO.match(ln)), None)
+    if guard is not None:
+        out.append(f"{rel}: include-guard macro; use `#pragma once` (REQ-STD-006): {guard.strip()}")
+    return out
 
-    # Rule: internal includes are quoted project-relative; system includes are angle-bracketed.
+
+def _include_style_errors(rel: str, text: str) -> list[str]:
+    """REQ-STD-006: internal includes quoted project-relative, system includes angle-bracketed."""
+    out = []
     for kind, target in _includes(text):
         if kind == '"' and not _is_internal(target):
             out.append(f'{rel}: quoted include "{target}" is not project-relative (REQ-STD-006)')
-        if kind == "<" and (target.startswith("quiver/") or target.startswith("src/")):
+        if kind == "<" and target.startswith(("quiver/", "src/")):
             out.append(f"{rel}: project header <{target}> must be quoted (REQ-STD-006)")
+    return out
 
-    # Rule: no #include inside a namespace or function body (must sit at file scope). Tracked by
-    # brace depth; any include seen at depth > 0 violates it.
-    depth = 0
+
+def _include_scope_errors(rel: str, lines: list[str]) -> list[str]:
+    """REQ-STD-006: no #include inside a namespace or function body — tracked by brace depth,
+    because concatenation into one TU would otherwise nest an include inside a namespace."""
+    out, depth = [], 0
     for ln in lines:
         if _INCLUDE.match(ln) and depth > 0:
-            out.append(f"{rel}: #include inside a namespace/function body (REQ-STD-006): {ln.strip()}")
+            out.append(f"{rel}: #include inside a namespace/function body (REQ-STD-006): "
+                       f"{ln.strip()}")
         depth += ln.count("{") - ln.count("}")
     return out
+
+
+def check_file(rel: str, text: str, *, is_header: bool) -> list[str]:
+    """Return the REQ-STD-006 violations in one file's text (pure; no I/O). `rel` labels the
+    file in messages, `is_header` selects the header-only `#pragma once` rule."""
+    lines = text.splitlines()
+    return (_guard_errors(rel, lines, is_header)
+            + _include_style_errors(rel, text)
+            + _include_scope_errors(rel, lines))
 
 
 def check() -> int:

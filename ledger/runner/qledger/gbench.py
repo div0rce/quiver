@@ -50,6 +50,27 @@ def _to_ns(value: float, unit: str) -> float:
     return value * scale
 
 
+def _optional_float(record: dict[str, Any], key: str) -> float | None:
+    """None means the counter was absent, which must stay distinct from a measured 0.0."""
+    return float(record[key]) if key in record else None
+
+
+def _one_result(record: dict[str, Any]) -> BenchResult:
+    for required in ("name", "real_time", "time_unit"):
+        if required not in record:
+            raise GBParseError(f"GB benchmark record missing '{required}'")
+    return BenchResult(
+        name=record["name"],
+        real_time_ns=_to_ns(float(record["real_time"]), record["time_unit"]),
+        items_per_second=_optional_float(record, "items_per_second"),
+        bytes_per_second=_optional_float(record, "bytes_per_second"),
+        cycles_per_value=_optional_float(record, "cycles_per_value"),
+        ipc=_optional_float(record, "ipc"),
+        branch_miss_pct=_optional_float(record, "branch_miss_pct"),
+        raw=record,
+    )
+
+
 def parse_gb_json(text: str) -> list[BenchResult]:
     try:
         doc = json.loads(text)
@@ -57,22 +78,7 @@ def parse_gb_json(text: str) -> list[BenchResult]:
         raise GBParseError(f"GB output is not valid JSON: {e}") from e
     if "benchmarks" not in doc:
         raise GBParseError("GB JSON missing 'benchmarks' array")
-    out: list[BenchResult] = []
-    for b in doc["benchmarks"]:
-        for req in ("name", "real_time", "time_unit"):
-            if req not in b:
-                raise GBParseError(f"GB benchmark record missing '{req}'")
-        out.append(BenchResult(
-            name=b["name"],
-            real_time_ns=_to_ns(float(b["real_time"]), b["time_unit"]),
-            items_per_second=float(b["items_per_second"]) if "items_per_second" in b else None,
-            bytes_per_second=float(b["bytes_per_second"]) if "bytes_per_second" in b else None,
-            cycles_per_value=float(b["cycles_per_value"]) if "cycles_per_value" in b else None,
-            ipc=float(b["ipc"]) if "ipc" in b else None,
-            branch_miss_pct=float(b["branch_miss_pct"]) if "branch_miss_pct" in b else None,
-            raw=b,
-        ))
-    return out
+    return [_one_result(record) for record in doc["benchmarks"]]
 
 
 def gb_version(doc_text: str) -> str:
