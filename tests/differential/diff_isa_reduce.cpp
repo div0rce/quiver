@@ -69,10 +69,10 @@ quiver::SumType<T> expected_sum(quiver::Isa isa, const T* data, std::int64_t n,
   if constexpr (std::is_floating_point_v<T>) {
     if (p.sel == nullptr) {
       if (isa >= quiver::Isa::kAvx2 && quiver::cpu_supports(quiver::Isa::kAvx2)) {
-        return ref::sum_blocked_expected<T>(data, n, p.validity, sizeof(T) == 4 ? 8 : 4, 4);
+        return ref::sum_blocked_expected<T>(data, n, p.validity, {sizeof(T) == 4 ? 8 : 4, 4});
       }
       if (isa >= quiver::Isa::kNeon && quiver::cpu_supports(quiver::Isa::kNeon)) {
-        return ref::sum_blocked_expected<T>(data, n, p.validity, sizeof(T) == 4 ? 4 : 2, 4);
+        return ref::sum_blocked_expected<T>(data, n, p.validity, {sizeof(T) == 4 ? 4 : 2, 4});
       }
     }
   }

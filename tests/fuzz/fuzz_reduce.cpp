@@ -64,9 +64,9 @@ void run(quiver_fuzz::Decoder& d) {
           isa >= quiver::Isa::kNeon && quiver::cpu_supports(quiver::Isa::kNeon);
       auto want = ref::sum_expected(v.data(), n, p);
       if (!with_sel && avx2_backend) {
-        want = ref::sum_blocked_expected<T>(v.data(), n, vd, sizeof(T) == 4 ? 8 : 4, 4);
+        want = ref::sum_blocked_expected<T>(v.data(), n, vd, {sizeof(T) == 4 ? 8 : 4, 4});
       } else if (!with_sel && neon_backend) {
-        want = ref::sum_blocked_expected<T>(v.data(), n, vd, sizeof(T) == 4 ? 4 : 2, 4);
+        want = ref::sum_blocked_expected<T>(v.data(), n, vd, {sizeof(T) == 4 ? 4 : 2, 4});
       }
       const bool nan_class = (sm != sm) && (want != want);
       quiver_fuzz::check(nan_class || std::memcmp(&sm, &want, sizeof(sm)) == 0,
