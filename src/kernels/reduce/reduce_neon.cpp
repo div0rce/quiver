@@ -493,10 +493,10 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
   T k6_reduce_min(const T* in, std::int64_t n, const std::uint8_t* validity,                       \
                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {                       \
     if constexpr (std::is_integral_v<T>) {                                                         \
-      return scalar_impl::reduce_min<T>(in, n, validity, sel, sel_len);                            \
+      return scalar_impl::reduce_min<T>(in, {n, validity, sel, sel_len});                          \
     } else {                                                                                       \
       if (sel != nullptr) {                                                                        \
-        return scalar_impl::reduce_min<T>(in, n, validity, sel, sel_len);                          \
+        return scalar_impl::reduce_min<T>(in, {n, validity, sel, sel_len});                        \
       }                                                                                            \
       return dense_minmax<T, true, false>(in, n, validity).min;                                    \
     }                                                                                              \
@@ -504,10 +504,10 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
   T k6_reduce_max(const T* in, std::int64_t n, const std::uint8_t* validity,                       \
                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {                       \
     if constexpr (std::is_integral_v<T>) {                                                         \
-      return scalar_impl::reduce_max<T>(in, n, validity, sel, sel_len);                            \
+      return scalar_impl::reduce_max<T>(in, {n, validity, sel, sel_len});                          \
     } else {                                                                                       \
       if (sel != nullptr) {                                                                        \
-        return scalar_impl::reduce_max<T>(in, n, validity, sel, sel_len);                          \
+        return scalar_impl::reduce_max<T>(in, {n, validity, sel, sel_len});                        \
       }                                                                                            \
       return dense_minmax<T, false, true>(in, n, validity).max;                                    \
     }                                                                                              \
@@ -515,10 +515,10 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
   MinMaxSummary<T> k6_compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,       \
                                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {       \
     if constexpr (std::is_integral_v<T>) {                                                         \
-      return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                           \
+      return scalar_impl::compute_sma<T>(in, {n, validity, sel, sel_len});                         \
     } else {                                                                                       \
       if (sel != nullptr) {                                                                        \
-        return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                         \
+        return scalar_impl::compute_sma<T>(in, {n, validity, sel, sel_len});                       \
       }                                                                                            \
       const MinMax<T> mm = dense_minmax<T, true, true>(in, n, validity);                           \
       return MinMaxSummary<T>{mm.min, mm.max, n - valid_count(validity, n)};                       \
@@ -530,14 +530,14 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
   S k6_reduce_sum_wrap(const T* in, std::int64_t n, const std::uint8_t* validity,                  \
                        const std::uint32_t* sel, std::int64_t sel_len) noexcept {                  \
     if (sel != nullptr) {                                                                          \
-      return scalar_impl::reduce_sum_wrap<T>(in, n, validity, sel, sel_len);                       \
+      return scalar_impl::reduce_sum_wrap<T>(in, {n, validity, sel, sel_len});                     \
     }                                                                                              \
     return dense_sum_wrap_int<T>(in, n, validity);                                                 \
   }                                                                                                \
   bool k6_reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validity,            \
                              const std::uint32_t* sel, std::int64_t sel_len,                       \
                              S* out_sum) noexcept {                                                \
-    return scalar_impl::reduce_sum_checked<T>(in, n, validity, sel, sel_len, out_sum);             \
+    return scalar_impl::reduce_sum_checked<T>(in, {n, validity, sel, sel_len}, out_sum);           \
   }
 
 #define QUIVER_K6_FLOAT_DEFINE(T)                                                                  \
@@ -545,7 +545,7 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
   T k6_reduce_sum_wrap(const T* in, std::int64_t n, const std::uint8_t* validity,                  \
                        const std::uint32_t* sel, std::int64_t sel_len) noexcept {                  \
     if (sel != nullptr) {                                                                          \
-      return scalar_impl::reduce_sum_wrap<T>(in, n, validity, sel, sel_len);                       \
+      return scalar_impl::reduce_sum_wrap<T>(in, {n, validity, sel, sel_len});                     \
     }                                                                                              \
     return dense_sum_float<T>(in, n, validity);                                                    \
   }
