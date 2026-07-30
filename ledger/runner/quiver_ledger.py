@@ -26,6 +26,7 @@ import pathlib
 import random
 import re
 import shlex
+import string
 import subprocess
 import sys
 
@@ -252,16 +253,27 @@ def build_entry(name: str, reps: list, ctx: dict) -> tuple[dict, bool]:
     return entry, publishable
 
 
-def run_identity(sha: str) -> str:
-    """The canonical name of a run: `<date>-<commit>`.
+def run_identity(machine: dict, sha: str) -> str:
+    """The canonical name of a run: `<date>-<commit>`, plus a `-b`, `-c`, ... suffix when that
+    slot is already taken under this machine's uarch directory.
 
-    entry_id is built from THIS, never from the output directory name. community-run writes to
-    the literal `submission`, so deriving identity from the directory made every bundle from one
-    machine mint identical ids — and because the ids are baked into entries.json, renaming the
-    directory at append time cannot repair them. The identity is reproducible (same commit, same
-    day, same id) and independent of `--output`.
+    NOT replacement semantics. REQ-LEDGER-010 makes results append-only — "corrections add
+    superseding entries with notes, never edit history" — and the committed ledger relies on it:
+    apple-m2 has runs through `-j` at one commit, and 20260703-4ec273e2904d overlaps its `-b`
+    sibling on 7 benchmarks. Dropping the suffix would mint identical entry_ids for genuinely
+    different runs, which is exactly the collision this identity exists to prevent.
+
+    Derived from the canonical destination, never from `--output`: a community-run bundle written
+    to `submission/` still carries the identity of the slot it belongs in.
     """
-    return f"{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d')}-{sha}"
+    base = f"{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d')}-{sha}"
+    uarch_dir = REPO / "ledger" / "results" / machine["uarch_dir"]
+    if not (uarch_dir / base).exists():
+        return base
+    for suffix in string.ascii_lowercase[1:]:  # -b, -c, ... matching the committed convention
+        if not (uarch_dir / f"{base}-{suffix}").exists():
+            return f"{base}-{suffix}"
+    raise RunAborted(f"more than 25 runs already exist for {base} under {machine['uarch_dir']}")
 
 
 def resolve_out_dir(args: argparse.Namespace, machine: dict, run_id: str) -> pathlib.Path:
@@ -317,7 +329,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"{len(jobs)} benchmark configurations × {args.reps} repetitions")
 
         sha, _ = environment.git_state(REPO)
-        run_id = run_identity(sha)
+        run_id = run_identity(machine, sha)
         out_dir = resolve_out_dir(args, machine, run_id)
         (out_dir / "raw").mkdir(parents=True, exist_ok=True)
         samples, gb_ver = collect_samples(jobs, args, out_dir / "raw")
@@ -333,7 +345,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         # caught; entries must quote those authoritative values, not the pre-run snapshot used
         # only to name the output directory.
         # The manifest's commit is authoritative (post-run), so the identity follows it.
-        run_id = run_identity(manifest["library_commit"])
+        run_id = run_identity(machine, manifest["library_commit"])
         ctx = {"machine": machine, "args": args, "out_dir": out_dir, "run_id": run_id,
                "sha": manifest["library_commit"],
                "lib_version": library_version(),

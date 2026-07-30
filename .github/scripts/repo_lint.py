@@ -308,6 +308,35 @@ def check_lane_a_submission() -> None:
     _bundle_extra_errors(sub)
 
 
+def check_machine_uarch_uniqueness() -> None:
+    """REQ-LEDGER-010 stores results at `ledger/results/<uarch>/`, and entry_id is
+    `<uarch_dir>-<run_id>-<benchmark>` — neither carries machine_id. Two registered machines
+    sharing a uarch_dir would therefore write into the same results tree and, at the same commit
+    on the same day, mint identical entry_ids for different hardware.
+
+    Changing the id format would invalidate every committed id and each `qle:` reference
+    (REQ-LEDGER-015), so uniqueness is guaranteed here instead: one registered machine per
+    uarch_dir. Registration is a reviewed, committed act, so this is enforceable at lint time.
+    """
+    owner: dict[str, str] = {}
+    for path in sorted((ROOT / "ledger" / "machines").glob("*.json")):
+        try:
+            machine = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            err(f"REQ-LEDGER-007: {path.relative_to(ROOT)} is not readable JSON ({exc})")
+            continue
+        uarch_dir = machine.get("uarch_dir", "")
+        machine_id = machine.get("machine_id", path.stem)
+        if not uarch_dir:
+            err(f"REQ-LEDGER-007: {path.relative_to(ROOT)} has no uarch_dir")
+        elif uarch_dir in owner:
+            err(f"REQ-LEDGER-015: machines '{owner[uarch_dir]}' and '{machine_id}' both claim "
+                f"uarch_dir '{uarch_dir}' — entry_id carries no machine_id, so they would mint "
+                f"colliding ids; give each registered machine its own uarch_dir")
+        else:
+            owner[uarch_dir] = machine_id
+
+
 def check_source_scans(manifest: dict) -> None:
     # --- Source scans (vacuous while no production code exists) ------------------------------
     src_globs = ["include/**/*.h", "src/**/*.h", "src/**/*.cpp"]
@@ -421,6 +450,7 @@ def main() -> int:
     check_source_scans(manifest)
     check_autovec_baseline_coverage()
     check_lane_a_submission()
+    check_machine_uarch_uniqueness()
     check_ledger_refs(manifest)
     check_release_status(manifest)
 

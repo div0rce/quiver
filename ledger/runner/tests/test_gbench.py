@@ -15,6 +15,7 @@ import argparse
 import json
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -225,25 +226,46 @@ class TestRunIdentity(unittest.TestCase):
     commit and day, and independent of --output.
     """
 
-    def test_identity_is_date_and_commit(self):
-        rid = quiver_ledger.run_identity("abc123def456")
-        self.assertTrue(rid.endswith("-abc123def456"))
-        self.assertRegex(rid, r"^\d{8}-abc123def456$")
+    def setUp(self):
+        self.uarch = f"testuarch{id(self)}"
+        self.results = quiver_ledger.REPO / "ledger" / "results" / self.uarch
+        self.machine = {"uarch_dir": self.uarch}
 
-    def test_identity_ignores_output_directory(self):
-        """Two submissions from the same machine at the SAME commit and day are the same run."""
-        self.assertEqual(quiver_ledger.run_identity("deadbeef"),
-                         quiver_ledger.run_identity("deadbeef"))
+    def tearDown(self):
+        if self.results.exists():
+            shutil.rmtree(self.results)
+
+    def test_identity_is_date_and_commit(self):
+        rid = quiver_ledger.run_identity(self.machine, "abc123def456")
+        self.assertRegex(rid, r"^\d{8}-abc123def456$")
 
     def test_different_commits_are_different_runs(self):
         """Distinct commits must never share an identity, whatever the directory is called."""
-        self.assertNotEqual(quiver_ledger.run_identity("aaaaaaaaaaaa"),
-                            quiver_ledger.run_identity("bbbbbbbbbbbb"))
+        self.assertNotEqual(quiver_ledger.run_identity(self.machine, "aaaaaaaaaaaa"),
+                            quiver_ledger.run_identity(self.machine, "bbbbbbbbbbbb"))
+
+    def test_second_run_at_one_commit_gets_a_suffix(self):
+        """REQ-LEDGER-010 is append-only: a repeat run is a NEW publishable run, not a
+        replacement. apple-m2 carries runs through -j at one commit, and 20260703-4ec273e2904d
+        overlaps its -b sibling on 7 benchmarks — dropping the suffix would collide them."""
+        first = quiver_ledger.run_identity(self.machine, "cafebabe1234")
+        (self.results / first).mkdir(parents=True)
+        second = quiver_ledger.run_identity(self.machine, "cafebabe1234")
+        self.assertEqual(second, f"{first}-b")
+        (self.results / second).mkdir()
+        self.assertEqual(quiver_ledger.run_identity(self.machine, "cafebabe1234"), f"{first}-c")
+
+    def test_suffix_reaches_the_entry_id(self):
+        """The suffix must survive into the id, which is where collisions actually bite."""
+        first = quiver_ledger.run_identity(self.machine, "cafebabe1234")
+        (self.results / first).mkdir(parents=True)
+        second = quiver_ledger.run_identity(self.machine, "cafebabe1234")
+        self.assertNotEqual(f"{self.uarch}-{first}-bm-x", f"{self.uarch}-{second}-bm-x")
 
     def test_canonical_destination_is_named_for_the_identity(self):
         args = argparse.Namespace(out=None)
-        machine = {"uarch_dir": "intel-coffee-lake"}
-        out = quiver_ledger.resolve_out_dir(args, machine, "20260730-deadbeef")
+        out = quiver_ledger.resolve_out_dir(args, {"uarch_dir": "intel-coffee-lake"},
+                                            "20260730-deadbeef")
         self.assertEqual(out.name, "20260730-deadbeef")
         self.assertEqual(out.parent.name, "intel-coffee-lake")
 
