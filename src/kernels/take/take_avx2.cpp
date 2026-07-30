@@ -27,47 +27,65 @@ namespace {
 // family doc; both branches below stay compiled either way.
 constexpr bool kUseGatherTake = false;
 
+// Contract checks for the gather path; compiled out when asserts are off.
 template <class T>
-void take_gather(scalar_impl::Source<T> src, scalar_impl::IndexRun indices, T* out) noexcept {
-  const T* values = src.values;
-  const std::int64_t values_len = src.len;
-  const std::uint32_t* idx = indices.idx;
-  const std::int64_t idx_len = indices.len;
-  static_assert(sizeof(T) == 4 || sizeof(T) == 8, "gather path is 32/64-bit lanes only");
+QUIVER_FORCE_INLINE void assert_gather_indices(scalar_impl::Source<T> src,
+                                               scalar_impl::IndexRun indices) noexcept {
 #if defined(QUIVER_ENABLE_ASSERTS)
-  for (std::int64_t j = 0; j < idx_len; ++j) {
-    QUIVER_ASSERT(idx[j] < static_cast<std::uint64_t>(values_len),
+  for (std::int64_t j = 0; j < indices.len; ++j) {
+    QUIVER_ASSERT(indices.idx[j] < static_cast<std::uint64_t>(src.len),
                   "take: index out of bounds [REQ-K5-002]");
-    QUIVER_ASSERT(idx[j] < (1u << 31), "take(gather): vpgatherd* sign-extends 32-bit indices");
+    QUIVER_ASSERT(indices.idx[j] < (1u << 31),
+                  "take(gather): vpgatherd* sign-extends 32-bit indices");
   }
 #else
-  (void)values_len;
+  (void)src;
+  (void)indices;
 #endif
-  std::int64_t j = 0;
-  if constexpr (sizeof(T) == 4) {
-    for (; j + 8 <= idx_len; j += 8) {
-      const __m256i vidx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(idx + j));
-      if constexpr (std::is_same_v<T, float>) {
-        _mm256_storeu_ps(out + j, _mm256_i32gather_ps(values, vidx, 4));
-      } else {
-        _mm256_storeu_si256(reinterpret_cast<__m256i*>(out + j),
-                            _mm256_i32gather_epi32(reinterpret_cast<const int*>(values), vidx, 4));
-      }
-    }
+}
+
+// One block of 8 32-bit lanes.
+template <class T>
+QUIVER_FORCE_INLINE void gather_block32(const T* values, const std::uint32_t* idx,
+                                        T* out) noexcept {
+  const __m256i vidx = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(idx));
+  if constexpr (std::is_same_v<T, float>) {
+    _mm256_storeu_ps(out, _mm256_i32gather_ps(values, vidx, 4));
   } else {
-    for (; j + 4 <= idx_len; j += 4) {
-      const __m128i vidx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(idx + j));
-      if constexpr (std::is_same_v<T, double>) {
-        _mm256_storeu_pd(out + j, _mm256_i32gather_pd(values, vidx, 8));
-      } else {
-        _mm256_storeu_si256(
-            reinterpret_cast<__m256i*>(out + j),
-            _mm256_i32gather_epi64(reinterpret_cast<const long long*>(values), vidx, 8));
-      }
+    _mm256_storeu_si256(reinterpret_cast<__m256i*>(out),
+                        _mm256_i32gather_epi32(reinterpret_cast<const int*>(values), vidx, 4));
+  }
+}
+
+// One block of 4 64-bit lanes, addressed by 32-bit indices.
+template <class T>
+QUIVER_FORCE_INLINE void gather_block64(const T* values, const std::uint32_t* idx,
+                                        T* out) noexcept {
+  const __m128i vidx = _mm_loadu_si128(reinterpret_cast<const __m128i*>(idx));
+  if constexpr (std::is_same_v<T, double>) {
+    _mm256_storeu_pd(out, _mm256_i32gather_pd(values, vidx, 8));
+  } else {
+    _mm256_storeu_si256(
+        reinterpret_cast<__m256i*>(out),
+        _mm256_i32gather_epi64(reinterpret_cast<const long long*>(values), vidx, 8));
+  }
+}
+
+template <class T>
+void take_gather(scalar_impl::Source<T> src, scalar_impl::IndexRun indices, T* out) noexcept {
+  static_assert(sizeof(T) == 4 || sizeof(T) == 8, "gather path is 32/64-bit lanes only");
+  assert_gather_indices(src, indices);
+  constexpr std::int64_t kW = sizeof(T) == 4 ? 8 : 4;
+  std::int64_t j = 0;
+  for (; j + kW <= indices.len; j += kW) {
+    if constexpr (sizeof(T) == 4) {
+      gather_block32(src.values, indices.idx + j, out + j);
+    } else {
+      gather_block64(src.values, indices.idx + j, out + j);
     }
   }
-  for (; j < idx_len; ++j) {
-    out[j] = values[idx[j]];
+  for (; j < indices.len; ++j) {  // scalar tail
+    out[j] = src.values[indices.idx[j]];
   }
 }
 
