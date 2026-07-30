@@ -97,7 +97,7 @@ void hash64_i64(const std::int64_t* in, std::int64_t n, std::uint64_t seed,
 
 void unpack_for_u32(const std::uint8_t* packed, std::int64_t n, int bit_width, std::uint32_t base,
                     std::uint32_t* out) noexcept {
-  impl::unpack<std::uint32_t>(packed, n, bit_width, base, out);
+  impl::unpack<std::uint32_t>({packed, n, bit_width}, base, out);
 }
 
 void arith_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n,

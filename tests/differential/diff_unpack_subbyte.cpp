@@ -67,7 +67,7 @@ void run_padded_case(std::int64_t n, int w, Rng& rng, const char* label) {
   fill_random(packed.data(), packed.size(), rng);
   const auto base = static_cast<Out>(rng.next());
   std::vector<Out> got(static_cast<std::size_t>(n) + 1, Out{0xAB});
-  quiver::detail::neon::unpack_subbyte_candidate<Out>(packed.data(), n, w, base, got.data());
+  quiver::detail::neon::unpack_subbyte_candidate<Out>({packed.data(), n, w}, base, got.data());
   expect_matches_oracle<Out>({packed.data(), n, w, base}, got.data(), label);
 }
 
@@ -80,7 +80,7 @@ void run_bounded_case(std::int64_t n, int w, Rng& rng) {
   fill_random(packed.data(), static_cast<std::size_t>(nbytes), rng);
   GuardedBuffer<Out> got(n, Guard::kEnd);
   const auto base = static_cast<Out>(rng.next());
-  quiver::detail::neon::unpack_subbyte_candidate<Out>(packed.data(), n, w, base, got.data());
+  quiver::detail::neon::unpack_subbyte_candidate<Out>({packed.data(), n, w}, base, got.data());
   // Correctness under the tight allocation too (reads must have been in-bounds to be correct).
   expect_matches_oracle<Out>({packed.data(), n, w, base}, got.data(), "bounded");
 }

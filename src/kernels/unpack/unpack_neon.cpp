@@ -133,8 +133,10 @@ QUIVER_FORCE_INLINE void subbyte_store8(uint32x4_t lo, uint32x4_t hi, Out base, 
 // exact-byte gather. No byte past ceil(n*w/8) is read (REQ-K8-002 / REQ-SEC-004). Bit-identical to
 // scalar_impl::unpack.
 template <class Out>
-void unpack_subbyte_core(const std::uint8_t* packed, std::int64_t n, int w, Out base,
-                         Out* out) noexcept {
+void unpack_subbyte_core(scalar_impl::PackedStream in, Out base, Out* out) noexcept {
+  const std::uint8_t* packed = in.packed;
+  const std::int64_t n = in.n;
+  const int w = in.bit_width;
   const std::uint32_t mask = (1u << static_cast<unsigned>(w)) - 1u;
   const uint32x4_t vmask = vdupq_n_u32(mask);
   const std::int32_t sh[4] = {0, -w, -2 * w, -3 * w};  // per-lane right shifts j*w
@@ -163,8 +165,10 @@ void unpack_subbyte_core(const std::uint8_t* packed, std::int64_t n, int w, Out 
 }
 
 template <class Out>
-void unpack_impl(const std::uint8_t* packed, std::int64_t n, int bit_width, Out base,
-                 Out* out) noexcept {
+void unpack_impl(scalar_impl::PackedStream in, Out base, Out* out) noexcept {
+  const std::uint8_t* packed = in.packed;
+  const std::int64_t n = in.n;
+  const int bit_width = in.bit_width;
   switch (bit_width) {
   case 8:
     unpack_bytes<Out, 1>(packed, n, base, out);
@@ -192,11 +196,11 @@ void unpack_impl(const std::uint8_t* packed, std::int64_t n, int bit_width, Out 
   }
 #if QUIVER_K8_SUBBYTE_VECTOR
   if (bit_width >= 1 && bit_width <= 7) {  // shipped default: vectorized sub-byte unpack
-    unpack_subbyte_core<Out>(packed, n, bit_width, base, out);
+    unpack_subbyte_core<Out>({packed, n, bit_width}, base, out);
     return;
   }
 #endif
-  scalar_impl::unpack<Out>(packed, n, bit_width, base, out);  // generic path (w=0, irregular w)
+  scalar_impl::unpack<Out>({packed, n, bit_width}, base, out);  // generic path (w=0, irregular w)
 }
 
 }  // namespace
@@ -205,7 +209,7 @@ void unpack_impl(const std::uint8_t* packed, std::int64_t n, int bit_width, Out 
 #define QUIVER_K8_DEFINE(T)                                                                        \
   void k8_unpack(const std::uint8_t* packed, std::int64_t n, int bit_width, T base,                \
                  T* out) noexcept {                                                                \
-    unpack_impl<T>(packed, n, bit_width, base, out);                                               \
+    unpack_impl<T>({packed, n, bit_width}, base, out);                                             \
   }
 
 QUIVER_K8_DEFINE(std::uint8_t)
@@ -220,18 +224,17 @@ QUIVER_K8_DEFINE(std::uint64_t)
 // exercises the candidate's correctness and bounds without changing what the shipped k8_unpack
 // runs.
 template <class Out>
-void unpack_subbyte_candidate(const std::uint8_t* packed, std::int64_t n, int bit_width, Out base,
-                              Out* out) noexcept {
-  unpack_subbyte_core<Out>(packed, n, bit_width, base, out);
+void unpack_subbyte_candidate(scalar_impl::PackedStream in, Out base, Out* out) noexcept {
+  unpack_subbyte_core<Out>(in, base, out);
 }
-template void unpack_subbyte_candidate<std::uint8_t>(const std::uint8_t*, std::int64_t, int,
-                                                     std::uint8_t, std::uint8_t*) noexcept;
-template void unpack_subbyte_candidate<std::uint16_t>(const std::uint8_t*, std::int64_t, int,
-                                                      std::uint16_t, std::uint16_t*) noexcept;
-template void unpack_subbyte_candidate<std::uint32_t>(const std::uint8_t*, std::int64_t, int,
-                                                      std::uint32_t, std::uint32_t*) noexcept;
-template void unpack_subbyte_candidate<std::uint64_t>(const std::uint8_t*, std::int64_t, int,
-                                                      std::uint64_t, std::uint64_t*) noexcept;
+template void unpack_subbyte_candidate<std::uint8_t>(scalar_impl::PackedStream, std::uint8_t,
+                                                     std::uint8_t*) noexcept;
+template void unpack_subbyte_candidate<std::uint16_t>(scalar_impl::PackedStream, std::uint16_t,
+                                                      std::uint16_t*) noexcept;
+template void unpack_subbyte_candidate<std::uint32_t>(scalar_impl::PackedStream, std::uint32_t,
+                                                      std::uint32_t*) noexcept;
+template void unpack_subbyte_candidate<std::uint64_t>(scalar_impl::PackedStream, std::uint64_t,
+                                                      std::uint64_t*) noexcept;
 
 }  // namespace detail::neon
 QUIVER_END_NAMESPACE
