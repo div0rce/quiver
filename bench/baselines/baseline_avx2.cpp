@@ -70,7 +70,7 @@ std::int64_t bitmap_to_selvec(const std::uint8_t* selection, std::int64_t n,
 
 void mask_combine(quiver::MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
                   std::uint8_t* out) noexcept {
-  impl::mask_combine(op, a, b, n, out);
+  impl::mask_combine(op, {a, b}, n, out);
 }
 
 void dict_decode_i64_u32(const std::int64_t* dict, std::int64_t dict_len,
@@ -80,14 +80,14 @@ void dict_decode_i64_u32(const std::int64_t* dict, std::int64_t dict_len,
 
 std::int64_t sum_wrap_i64(const std::int64_t* in, std::int64_t n,
                           const std::uint8_t* validity) noexcept {
-  return impl::reduce_sum_wrap<std::int64_t>(in, n, validity, nullptr, 0);
+  return impl::reduce_sum_wrap<std::int64_t>(in, {n, validity, nullptr, 0});
 }
 
 double sum_wrap_f64(const double* in, std::int64_t n, const std::uint8_t* validity) noexcept {
   // The reference float sum is a STRICT sequential fold; the honest autovec baseline keeps
   // those semantics — if the compiler cannot vectorize it without reassociation, that IS the
   // published comparison (Charter T7; ADR-013).
-  return impl::reduce_sum_wrap<double>(in, n, validity, nullptr, 0);
+  return impl::reduce_sum_wrap<double>(in, {n, validity, nullptr, 0});
 }
 
 void hash64_i64(const std::int64_t* in, std::int64_t n, std::uint64_t seed,
