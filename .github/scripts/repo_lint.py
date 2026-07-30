@@ -251,6 +251,35 @@ def check_autovec_baseline_coverage() -> None:
                 f"variant, so its AVX2 entries have no equal-ISA pair (ADR-011)")
 
 
+def check_lane_a_submission() -> None:
+    """A Lane A hardware submission is `submission/` at the root (CONTRIBUTING.md), so the tree
+    lint must admit it — but admitting it must not make it a free-for-all directory. Check the
+    shape the runner's community-run emits: the artifacts a reviewer needs to trust the numbers.
+
+    Content validity (QLS-1 schema, deviations, duplicate entry_ids) is `quiver_ledger.py
+    validate`'s job, which also covers this directory; here we only enforce that the bundle is
+    complete and carries nothing else.
+    """
+    sub = ROOT / "submission"
+    if not sub.exists():
+        return  # no submission in flight: nothing to check
+    if not sub.is_dir():
+        err("REQ-REPO-001: 'submission' must be the Lane A bundle directory, not a file")
+        return
+    required = {"manifest.json", "entries.json", "rejected_noisy.json", "raw",
+                "commands.txt", "git-status.txt", "checksums.txt"}
+    present = {p.name for p in sub.iterdir()}
+    for missing in sorted(required - present):
+        err(f"REQ-LEDGER-013: submission/ is missing '{missing}' — a Lane A bundle is the "
+            f"complete community-run output (CONTRIBUTING.md)")
+    for extra in sorted(present - required):
+        err(f"REQ-REPO-001: submission/{extra} is not part of a community-run bundle "
+            f"(open a PR containing only the generated directory, CONTRIBUTING.md)")
+    if (sub / "raw").is_dir() and not any((sub / "raw").iterdir()):
+        err("REQ-LEDGER-013: submission/raw/ is empty — raw per-repetition measurements are "
+            "the evidence a published entry rests on")
+
+
 def check_source_scans(manifest: dict) -> None:
     # --- Source scans (vacuous while no production code exists) ------------------------------
     src_globs = ["include/**/*.h", "src/**/*.h", "src/**/*.cpp"]
@@ -363,6 +392,7 @@ def main() -> int:
     check_include_graph(manifest)
     check_source_scans(manifest)
     check_autovec_baseline_coverage()
+    check_lane_a_submission()
     check_ledger_refs(manifest)
     check_release_status(manifest)
 

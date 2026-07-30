@@ -352,6 +352,10 @@ def validate_run_dir(run_dir: pathlib.Path) -> list[str]:
 
 def cmd_validate(args: argparse.Namespace) -> int:
     run_dirs = sorted(p.parent for p in (REPO / "ledger" / "results").glob("*/*/entries.json"))
+    # A Lane A bundle in flight lives at the repo root (CONTRIBUTING.md) and is reviewed before
+    # it is appended to ledger/results/, so it must face the same QLS-1 checks, not fewer.
+    if (REPO / "submission" / "entries.json").exists():
+        run_dirs.append(REPO / "submission")
     if not run_dirs and args.require_results:
         print("no committed results found", file=sys.stderr)
         return 1
