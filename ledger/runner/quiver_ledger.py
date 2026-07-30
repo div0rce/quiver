@@ -1,4 +1,4 @@
-#!/ usr / bin / env python3
+#!/usr/bin/env python3
 """Quiver ledger runner (MOD-LEDGER; PRD 11; ADR-020/021). Python >= 3.11, stdlib only
 (REQ-INT-004).
 
@@ -25,6 +25,7 @@ import json
 import pathlib
 import random
 import re
+import shlex
 import subprocess
 import sys
 
@@ -171,16 +172,24 @@ def collect_samples(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path
 
 
 def collect_metrics(reps: list, machine_flags: list[str]) -> dict[str, list[float]]:
-    """Per-metric sample vectors, including only metrics every repetition reported."""
-    optional = {"values_per_s": "items_per_second", "bytes_per_s": "bytes_per_second",
-                "cycles_per_value": "cycles_per_value"}
+    """Per-metric sample vectors.
+
+    cycles_per_value is PMU-derived and shares attach_pmu's failure mode with ipc and
+    branch_miss_pct, so it gets the same tolerance build_pmu has: summarize the repetitions that
+    did measure rather than discarding all ten because one perf_event_open failed transiently.
+    The throughput metrics stay all-or-nothing — a missing items/bytes rate means the benchmark
+    does not report one at all, not that a counter dropped out.
+    """
     metrics = {"ns_per_batch": [r.real_time_ns for r in reps]}
-    if "no_pmu" in machine_flags:
-        optional.pop("cycles_per_value")
-    for metric, attr in optional.items():
+    for metric, attr in (("values_per_s", "items_per_second"),
+                         ("bytes_per_s", "bytes_per_second")):
         values = [getattr(r, attr) for r in reps]
         if all(v is not None for v in values):
             metrics[metric] = values
+    if "no_pmu" not in machine_flags:
+        measured = [r.cycles_per_value for r in reps if r.cycles_per_value is not None]
+        if measured:
+            metrics["cycles_per_value"] = measured
     return metrics
 
 
@@ -293,7 +302,11 @@ def cmd_run(args: argparse.Namespace) -> int:
             deviations)
         (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
-        ctx = {"machine": machine, "args": args, "out_dir": out_dir, "sha": sha,
+        # The manifest re-derives commit and deviations AFTER the run so a mid-run edit is
+        # caught; entries must quote those authoritative values, not the pre-run snapshot used
+        # only to name the output directory.
+        ctx = {"machine": machine, "args": args, "out_dir": out_dir,
+               "sha": manifest["library_commit"],
                "lib_version": library_version(),
                "git_dirty": "dirty" if "git tree dirty" in manifest["deviations"] else "clean",
                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")}
@@ -302,7 +315,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(str(exc), file=sys.stderr)
         return 2
 
-    write_results(out_dir, entries, rejected, deviations)
+    write_results(out_dir, entries, rejected, manifest["deviations"])
     return 0
 
 
@@ -354,15 +367,17 @@ def reproduction_command(args: argparse.Namespace) -> str:
     alone?" — so record EVERY argument that changes the result, defaults included. --seed drives
     the bootstrap CIs (ADR-020), so omitting it silently changed the reported interval;
     --allow-deviations marks the bundle investigation-only."""
-    parts = ["python3 ledger/runner/quiver_ledger.py community-run",
-             f"--machine {args.machine}", f"--output {args.output}"]
+    parts = ["python3", "ledger/runner/quiver_ledger.py", "community-run",
+             "--machine", str(args.machine), "--output", str(args.output)]
     if args.filter:
-        parts.append(f"--filter '{args.filter}'")
-    parts += [f"--reps {args.reps}", f"--min-time {args.min_time}", f"--seed {args.seed}",
-              f"--build-dir {args.build_dir}"]
+        parts += ["--filter", str(args.filter)]
+    parts += ["--reps", str(args.reps), "--min-time", str(args.min_time),
+              "--seed", str(args.seed), "--build-dir", str(args.build_dir)]
     if args.allow_deviations:
         parts.append("--allow-deviations")
-    return " ".join(parts) + "\n"
+    # shlex.join quotes only what needs it, and escapes embedded quotes — a filter regex or a
+    # path containing a space must survive copy-paste for T2 reproduction to mean anything.
+    return shlex.join(parts) + "\n"
 
 
 def write_provenance(out_dir: pathlib.Path, args: argparse.Namespace) -> int:

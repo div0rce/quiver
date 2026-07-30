@@ -13,6 +13,7 @@ __pycache__/
 *.pyc
 
 # Editor/IDE and local agent tooling
+.claude/
 .vscode/
 .idea/
 .serena/

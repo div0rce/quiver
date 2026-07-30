@@ -30,6 +30,7 @@
     "tools"
   ],
   "allowed_toplevel_local": [
+    ".claude",
     ".idea",
     ".serena",
     ".venv",
