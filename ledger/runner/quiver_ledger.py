@@ -223,7 +223,7 @@ def build_entry(name: str, reps: list, ctx: dict) -> tuple[dict, bool]:
     entry = {
         # Keyed by the run DIRECTORY name so supplementary runs at the same commit
         # (e.g. <date>-<sha>-b) can never collide with the main run's ids.
-        "entry_id": f"{machine['uarch_dir']}-{ctx['out_dir'].name}-{entry_slug(name)}",
+        "entry_id": f"{machine['uarch_dir']}-{ctx['run_id']}-{entry_slug(name)}",
         "schema": schema_check.SCHEMA_VERSION,
         "methodology": schema_check.METHODOLOGY_VERSION,
         "benchmark": name,
@@ -252,11 +252,24 @@ def build_entry(name: str, reps: list, ctx: dict) -> tuple[dict, bool]:
     return entry, publishable
 
 
-def resolve_out_dir(args: argparse.Namespace, machine: dict, sha: str) -> pathlib.Path:
+def run_identity(sha: str) -> str:
+    """The canonical name of a run: `<date>-<commit>`.
+
+    entry_id is built from THIS, never from the output directory name. community-run writes to
+    the literal `submission`, so deriving identity from the directory made every bundle from one
+    machine mint identical ids — and because the ids are baked into entries.json, renaming the
+    directory at append time cannot repair them. The identity is reproducible (same commit, same
+    day, same id) and independent of `--output`.
+    """
+    return f"{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d')}-{sha}"
+
+
+def resolve_out_dir(args: argparse.Namespace, machine: dict, run_id: str) -> pathlib.Path:
+    """Where results are written. The canonical destination is named for the run identity; an
+    explicit --output only moves the files, it does not change what the run IS."""
     if args.out:
         return pathlib.Path(args.out)
-    date = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d")
-    return REPO / "ledger" / "results" / machine["uarch_dir"] / f"{date}-{sha}"
+    return REPO / "ledger" / "results" / machine["uarch_dir"] / run_id
 
 
 def write_results(out_dir: pathlib.Path, entries: list, rejected: list,
@@ -304,13 +317,14 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"{len(jobs)} benchmark configurations × {args.reps} repetitions")
 
         sha, _ = environment.git_state(REPO)
-        out_dir = resolve_out_dir(args, machine, sha)
+        run_id = run_identity(sha)
+        out_dir = resolve_out_dir(args, machine, run_id)
         (out_dir / "raw").mkdir(parents=True, exist_ok=True)
         samples, gb_ver = collect_samples(jobs, args, out_dir / "raw")
 
         manifest = environment.build_manifest(
             environment.RunContext(repo=REPO, build_dir=build_dir, out_dir=out_dir,
-                                   machine=machine, gb_version=gb_ver,
+                                   run_id=run_id, machine=machine, gb_version=gb_ver,
                                    repetition_seed=args.seed),
             deviations)
         (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
@@ -318,7 +332,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         # The manifest re-derives commit and deviations AFTER the run so a mid-run edit is
         # caught; entries must quote those authoritative values, not the pre-run snapshot used
         # only to name the output directory.
-        ctx = {"machine": machine, "args": args, "out_dir": out_dir,
+        # The manifest's commit is authoritative (post-run), so the identity follows it.
+        run_id = run_identity(manifest["library_commit"])
+        ctx = {"machine": machine, "args": args, "out_dir": out_dir, "run_id": run_id,
                "sha": manifest["library_commit"],
                "lib_version": library_version(),
                "git_dirty": "dirty" if "git tree dirty" in manifest["deviations"] else "clean",
@@ -332,24 +348,60 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
-def validate_run_dir(run_dir: pathlib.Path) -> list[str]:
-    """Every QLS-1 problem in one committed run directory (REQ-LEDGER-013/-015)."""
-    problems: list[str] = []
-    manifest = json.loads((run_dir / "manifest.json").read_text())
+def _load_json(path: pathlib.Path, expect: type) -> tuple[object | None, list[str]]:
+    """(document, problems). A malformed artifact is a VALIDATION FAILURE, never a traceback:
+    `validate` is the gate a reviewer runs on someone else's bundle, so it must survive a
+    truncated, unreadable or wrong-shaped file and say which one it was."""
+    label = f"{path.parent.name}/{path.name}"
+    if not path.exists():
+        return None, [f"{label}: missing"]
+    if not path.is_file():
+        return None, [f"{label}: not a regular file"]
+    try:
+        doc = json.loads(path.read_text())
+    except OSError as exc:
+        return None, [f"{label}: unreadable ({exc.strerror})"]
+    except json.JSONDecodeError as exc:
+        return None, [f"{label}: invalid JSON at line {exc.lineno} column {exc.colno}"]
+    if not isinstance(doc, expect):
+        return None, [f"{label}: top-level JSON is {type(doc).__name__}, expected "
+                      f"{expect.__name__}"]
+    return doc, []
+
+
+def _manifest_problems(run_dir: pathlib.Path) -> list[str]:
+    manifest, problems = _load_json(run_dir / "manifest.json", dict)
+    if manifest is None:
+        return problems
     problems += [f"{run_dir}/manifest.json: {e}" for e in schema_check.validate_manifest(manifest)]
-    if manifest["deviations"]:
+    if manifest.get("deviations"):
         problems.append(f"{run_dir}: committed run has manifest deviations "
                         f"(non-publishable, REQ-LEDGER-013)")
+    return problems
 
-    entries = json.loads((run_dir / "entries.json").read_text())
+
+def _entry_problems(run_dir: pathlib.Path, index: int, entry: object,
+                    seen: set[str]) -> list[str]:
+    if not isinstance(entry, dict):
+        return [f"{run_dir}/entries.json [{index}]: entry is {type(entry).__name__}, "
+                f"expected object"]
+    entry_id = entry.get("entry_id", "?")
+    problems = [f"{run_dir}/entries.json [{entry_id}]: {e}"
+                for e in schema_check.validate_entry(entry)]
+    if entry_id in seen:
+        problems.append(f"{run_dir}: duplicate entry_id {entry_id}")
+    seen.add(entry_id)
+    return problems
+
+
+def validate_run_dir(run_dir: pathlib.Path) -> list[str]:
+    """Every QLS-1 problem in one run directory (REQ-LEDGER-013/-015)."""
+    problems = _manifest_problems(run_dir)
+    entries, entry_problems = _load_json(run_dir / "entries.json", list)
+    problems += entry_problems
     seen: set[str] = set()
-    for entry in entries:
-        entry_id = entry.get("entry_id", "?")
-        problems += [f"{run_dir}/entries.json [{entry_id}]: {e}"
-                     for e in schema_check.validate_entry(entry)]
-        if entry_id in seen:
-            problems.append(f"{run_dir}: duplicate entry_id {entry_id}")
-        seen.add(entry_id)
+    for index, entry in enumerate(entries or []):
+        problems += _entry_problems(run_dir, index, entry, seen)
     return problems
 
 
@@ -365,8 +417,10 @@ def cross_run_id_collisions(run_dirs: list[pathlib.Path]) -> list[str]:
     owner: dict[str, pathlib.Path] = {}
     problems: list[str] = []
     for run_dir in run_dirs:
-        entries = json.loads((run_dir / "entries.json").read_text())
-        for entry in entries:
+        entries, _ = _load_json(run_dir / "entries.json", list)  # malformed: reported elsewhere
+        for entry in entries or []:
+            if not isinstance(entry, dict):
+                continue
             entry_id = entry.get("entry_id", "?")
             if entry_id in owner:
                 problems.append(f"{run_dir}: entry_id {entry_id} already published by "

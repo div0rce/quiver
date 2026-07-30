@@ -120,7 +120,12 @@ void bm_checked_add_i64(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
+    // DoNotOptimize keeps the returned count; ClobberMemory additionally forces the value and
+    // overflow-bitmap STORES to stay inside the timed region, which is most of a guarded op's
+    // work. Both sides of the avx2/autovec-avx2 verdict pair carry it, so the comparison stays
+    // fair (REQ-BENCH-002 pairs are within-family).
     benchmark::DoNotOptimize(run_checked());
+    benchmark::ClobberMemory();
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
@@ -151,6 +156,7 @@ void bm_saturating_add_i64(benchmark::State& state) {
   for (auto _ : state) {
     run_saturating();
     benchmark::DoNotOptimize(out.data());
+    benchmark::ClobberMemory();
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }

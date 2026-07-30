@@ -1,0 +1,21 @@
+{
+  "cpu_model": "Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz",
+  "machine_id": "intel-i9-9900k",
+  "uarch": "Intel Coffee Lake Refresh (Skylake-derived core)",
+  "core_used": "OS-scheduled on an idle machine; no cgroup isolation",
+  "pinning": "none",
+  "frequency_governor": "performance",
+  "turbo_boost": "disabled (measured: no_turbo=1)",
+  "smt": "on",
+  "aslr": "full",
+  "os": "Linux 7.0.0-28-generic",
+  "kernel": "#28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 01:01:36 UTC 2026",
+  "compiler": "clang version 18.1.8 (https://github.com/conda-forge/clangdev-feedstock 3c15221e001c9fe87fcc807876aa06d599616b01)",
+  "compiler_flags": "-O3 -DNDEBUG [Release]",
+  "lto": "OFF",
+  "google_benchmark_version": "v0.7.0-17-g373ec8ee",
+  "library_commit": "373ec8eec66b",
+  "timestamp_utc": "2026-07-30T19:35:27+00:00",
+  "repetition_seed": 20260703,
+  "deviations": []
+}

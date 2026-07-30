@@ -144,6 +144,7 @@ class RunContext:
     repo: pathlib.Path
     build_dir: pathlib.Path
     out_dir: pathlib.Path
+    run_id: str
     machine: dict[str, Any]
     gb_version: str
     repetition_seed: int
@@ -161,6 +162,10 @@ def build_manifest(ctx: RunContext, deviations: list[str]) -> dict[str, Any]:
     return {
         "cpu_model": cpu_model(),
         "machine_id": ctx.machine["machine_id"],
+        # Canonical identity of this run, and therefore the directory name it belongs under in
+        # ledger/results/. Independent of --output, so a `submission/` bundle still says where
+        # it goes and entry_ids stay stable across the move.
+        "run_id": ctx.run_id,
         "uarch": ctx.machine["uarch"],
         "core_used": ctx.machine.get("core_policy", "OS-scheduled (no pinning control)"),
         "pinning": ctx.machine.get("pinning", "none"),

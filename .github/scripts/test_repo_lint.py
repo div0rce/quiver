@@ -95,52 +95,8 @@ def _complete(sub):
     (sub / "raw" / "rep0.json").write_text("{}")
 
 
-def main() -> int:
-    print("repo_lint allow-list self-tests:")
-
-    root = new_repo()
-    check("baseline tree is clean", run(root), expect=None)
-
-    # Repository entries stay exact-match; unknown names are still rejected.
-    root = new_repo()
-    (root / "node_modules").mkdir()
-    check("unknown entry rejected", run(root), expect="unexpected top-level entry 'node_modules'")
-
-    # Developer-local globs accept tool-chosen names ...
-    root = new_repo()
-    (root / "cmake-build-relwithdebinfo").mkdir()
-    check("cmake-build-* glob accepted", run(root), expect=None)
-
-    # ... without over-matching neighbouring names.
-    root = new_repo()
-    (root / "cmake-buildX-evil").mkdir()
-    check("glob does not over-match", run(root),
-          expect="unexpected top-level entry 'cmake-buildX-evil'")
-
-    # The conventional virtualenv name is tolerated (it is in .gitignore).
-    root = new_repo()
-    (root / "venv").mkdir()
-    check("venv accepted", run(root), expect=None)
-
-    # A developer-local pattern must be a directory: `.gitignore` ignores `.idea/`, not `.idea`.
-    root = new_repo()
-    (root / ".idea").write_text("")
-    check("file matching a local pattern rejected", run(root), expect="not a real directory")
-
-    # A developer-local tree must actually be gitignored.
-    root = new_repo(ignores="build/\n")
-    (root / ".idea").mkdir()
-    check("non-gitignored local tree rejected", run(root), expect="is not gitignored")
-
-    # A developer-local tree may never hold committed content, even force-added.
-    root = new_repo()
-    (root / ".serena").mkdir()
-    (root / ".serena" / "leaked.txt").write_text("secret\n")
-    subprocess.run(["git", "-C", str(root), "add", "-f", ".serena/leaked.txt"], check=True)
-    subprocess.run(["git", "-C", str(root), "commit", "-qm", "leak"], check=True)
-    check("committed content in a local tree rejected", run(root),
-          expect="may never hold committed content")
-
+def submission_cases() -> None:
+    """Shape rules for a Lane A bundle (CONTRIBUTING.md)."""
     print("\nlane A submission shape:")
     check_submission("complete bundle accepted", _complete, expect=None)
 
@@ -187,6 +143,56 @@ def main() -> int:
     mod.check_lane_a_submission()
     check("submission as a file rejected", list(mod.errors),
           expect="must be the Lane A bundle directory, not a file")
+
+
+
+def main() -> int:
+    print("repo_lint allow-list self-tests:")
+
+    root = new_repo()
+    check("baseline tree is clean", run(root), expect=None)
+
+    # Repository entries stay exact-match; unknown names are still rejected.
+    root = new_repo()
+    (root / "node_modules").mkdir()
+    check("unknown entry rejected", run(root), expect="unexpected top-level entry 'node_modules'")
+
+    # Developer-local globs accept tool-chosen names ...
+    root = new_repo()
+    (root / "cmake-build-relwithdebinfo").mkdir()
+    check("cmake-build-* glob accepted", run(root), expect=None)
+
+    # ... without over-matching neighbouring names.
+    root = new_repo()
+    (root / "cmake-buildX-evil").mkdir()
+    check("glob does not over-match", run(root),
+          expect="unexpected top-level entry 'cmake-buildX-evil'")
+
+    # The conventional virtualenv name is tolerated (it is in .gitignore).
+    root = new_repo()
+    (root / "venv").mkdir()
+    check("venv accepted", run(root), expect=None)
+
+    # A developer-local pattern must be a directory: `.gitignore` ignores `.idea/`, not `.idea`.
+    root = new_repo()
+    (root / ".idea").write_text("")
+    check("file matching a local pattern rejected", run(root), expect="not a real directory")
+
+    # A developer-local tree must actually be gitignored.
+    root = new_repo(ignores="build/\n")
+    (root / ".idea").mkdir()
+    check("non-gitignored local tree rejected", run(root), expect="is not gitignored")
+
+    # A developer-local tree may never hold committed content, even force-added.
+    root = new_repo()
+    (root / ".serena").mkdir()
+    (root / ".serena" / "leaked.txt").write_text("secret\n")
+    subprocess.run(["git", "-C", str(root), "add", "-f", ".serena/leaked.txt"], check=True)
+    subprocess.run(["git", "-C", str(root), "commit", "-qm", "leak"], check=True)
+    check("committed content in a local tree rejected", run(root),
+          expect="may never hold committed content")
+
+    submission_cases()
 
     if failures:
         print("\nrepo_lint allow-list self-tests: FAIL", file=sys.stderr)

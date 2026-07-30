@@ -1,0 +1,2025 @@
+[
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-arith-add-autovec-avx2-i64-n-4096-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith/add/autovec-avx2/i64/n=4096/4096",
+    "family": "arith",
+    "api": "add",
+    "variant": "autovec-avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 950.104662665432,
+        "min": 924.8589914911877,
+        "ci95_lo": 934.0871767054055,
+        "ci95_hi": 1038.9216989025715,
+        "cv": 0.05553393494190331
+      },
+      "values_per_s": {
+        "median": 4311467787.751375,
+        "min": 3830736139.174741,
+        "ci95_lo": 3942726749.2320414,
+        "ci95_hi": 4385463410.929154,
+        "cv": 0.05357173981837527
+      },
+      "cycles_per_value": {
+        "median": 0.8331766066490158,
+        "min": 0.8111660664320411,
+        "ci95_lo": 0.8191101839187148,
+        "ci95_hi": 0.9111668300062578,
+        "cv": 0.05557685335790435
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 1.1348831826612074,
+        "min": 1.0083069827596596,
+        "ci95_lo": 1.0377443944532114,
+        "ci95_hi": 1.1543722668325864,
+        "cv": 0.0535716890482751
+      },
+      "branch_miss_pct": {
+        "median": 0.37606251175230154,
+        "min": 0.37601902581110075,
+        "ci95_lo": 0.37604624014429705,
+        "ci95_hi": 0.3760793076373658,
+        "cv": 6.786998354217305e-05
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-arith-guarded-checked-add-avx2-i64-n-4096-ovf-0-4096-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/checked_add/avx2/i64/n=4096/ovf=0/4096/0",
+    "family": "arith_guarded",
+    "api": "checked_add",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "ovf": 0
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1968.2670266491655,
+        "min": 1807.5665058237903,
+        "ci95_lo": 1817.9666792142305,
+        "ci95_hi": 2747.4836168614015,
+        "cv": 0.2752364553886117
+      },
+      "values_per_s": {
+        "median": 2081031998.4487796,
+        "min": 1234458288.4251966,
+        "ci95_lo": 1490789286.7525287,
+        "ci95_hi": 2253743256.3356614,
+        "cv": 0.22166086118760847
+      },
+      "cycles_per_value": {
+        "median": 1.7261898271512925,
+        "min": 1.5834370962832593,
+        "ci95_lo": 1.5940691059905454,
+        "ci95_hi": 2.4097988499565,
+        "cv": 0.2754020823847847
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.035651509787839,
+        "min": 1.2076965253118048,
+        "ci95_lo": 1.4581801645074972,
+        "ci95_hi": 2.204370429960554,
+        "cv": 0.2216786235091483
+      },
+      "branch_miss_pct": {
+        "median": 0.06473270939798219,
+        "min": 0.0646611832010298,
+        "ci95_lo": 0.06467549399691386,
+        "ci95_hi": 0.06482370892256938,
+        "cv": 0.0012822088504375812
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-arith-guarded-checked-add-avx2-i64-n-4096-ovf-1-4096-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/checked_add/avx2/i64/n=4096/ovf=1/4096/1",
+    "family": "arith_guarded",
+    "api": "checked_add",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "ovf": 1
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1895.1754053829738,
+        "min": 1805.7209086325831,
+        "ci95_lo": 1817.4906431932877,
+        "ci95_hi": 2721.0135865118855,
+        "cv": 0.3238156350438303
+      },
+      "values_per_s": {
+        "median": 2163346773.6627464,
+        "min": 1120876148.918011,
+        "ci95_lo": 1629530464.719029,
+        "ci95_hi": 2253724587.5677977,
+        "cv": 0.22436866096335054
+      },
+      "cycles_per_value": {
+        "median": 1.6618656751892977,
+        "min": 1.5834046138424243,
+        "ci95_lo": 1.5939306724786086,
+        "ci95_hi": 2.386474779831007,
+        "cv": 0.32391125012181
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.1163858468427543,
+        "min": 1.096263059810712,
+        "ci95_lo": 1.5938630568619265,
+        "ci95_hi": 2.204561960277436,
+        "cv": 0.22441482218098782
+      },
+      "branch_miss_pct": {
+        "median": 0.0646971898485532,
+        "min": 0.06466461495500354,
+        "ci95_lo": 0.06467231049709986,
+        "ci95_hi": 0.06474550231615582,
+        "cv": 0.0009259728950884513
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-arith-guarded-checked-add-avx2-i64-n-4096-ovf-500-4096-500",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/checked_add/avx2/i64/n=4096/ovf=500/4096/500",
+    "family": "arith_guarded",
+    "api": "checked_add",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "ovf": 500
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1584.0300206566485,
+        "min": 1533.9118927193372,
+        "ci95_lo": 1538.8592372821686,
+        "ci95_hi": 2346.9791169659693,
+        "cv": 0.2652476720023978
+      },
+      "values_per_s": {
+        "median": 2585868431.444232,
+        "min": 1487291616.2062068,
+        "ci95_lo": 1745349821.0049152,
+        "ci95_hi": 2661711119.8037066,
+        "cv": 0.21605793150864122
+      },
+      "cycles_per_value": {
+        "median": 1.3892574052029163,
+        "min": 1.3453156496462237,
+        "ci95_lo": 1.3495627501698206,
+        "ci95_hi": 2.0581634012926036,
+        "cv": 0.2652766384883313
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.5294011617628525,
+        "min": 1.4547534138090155,
+        "ci95_lo": 1.7073085839257869,
+        "ci95_hi": 2.603757353211951,
+        "cv": 0.21608724527586343
+      },
+      "branch_miss_pct": {
+        "median": 0.06468262996715951,
+        "min": 0.0646638274456037,
+        "ci95_lo": 0.06467862552280881,
+        "ci95_hi": 0.06469159705041953,
+        "cv": 0.00015526986043141823
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-arith-guarded-checked-add-avx2-i64-n-65536-ovf-0-65536-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/checked_add/avx2/i64/n=65536/ovf=0/65536/0",
+    "family": "arith_guarded",
+    "api": "checked_add",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "ovf": 0
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 41576.3510251081,
+        "min": 38012.54341655602,
+        "ci95_lo": 39872.05408934067,
+        "ci95_hi": 51686.177719524094,
+        "cv": 0.14697284351495637
+      },
+      "values_per_s": {
+        "median": 1576367968.5397596,
+        "min": 1166227248.1514404,
+        "ci95_lo": 1267970689.4496422,
+        "ci95_hi": 1644330956.8158407,
+        "cv": 0.13488884726449582
+      },
+      "cycles_per_value": {
+        "median": 2.277752202954706,
+        "min": 2.0819095603140663,
+        "ci95_lo": 2.1847104654232505,
+        "ci95_hi": 2.831984541277594,
+        "cv": 0.14703317513400796
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 1.5370042358153662,
+        "min": 1.1370299644663657,
+        "ci95_lo": 1.2361913320715678,
+        "ci95_hi": 1.603092150895708,
+        "cv": 0.1349339734428181
+      },
+      "branch_miss_pct": {
+        "median": 0.013851781866829938,
+        "min": 0.012213603618251382,
+        "ci95_lo": 0.013711652399187856,
+        "ci95_hi": 0.014999629261234897,
+        "cv": 0.062258863261237016
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-arith-guarded-checked-add-avx2-i64-n-65536-ovf-1-65536-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/checked_add/avx2/i64/n=65536/ovf=1/65536/1",
+    "family": "arith_guarded",
+    "api": "checked_add",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "ovf": 1
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 50934.4219866812,
+        "min": 40493.66569198712,
+        "ci95_lo": 47106.57632226601,
+        "ci95_hi": 53788.36730783161,
+        "cv": 0.09694335316468408
+      },
+      "values_per_s": {
+        "median": 1286963412.785029,
+        "min": 1169290433.780106,
+        "ci95_lo": 1219551901.5462754,
+        "ci95_hi": 1397393915.539034,
+        "cv": 0.10642173772366575
+      },
+      "cycles_per_value": {
+        "median": 2.7903860330066563,
+        "min": 2.218579680852006,
+        "ci95_lo": 2.5802904293733357,
+        "ci95_hi": 2.9471977491084926,
+        "cv": 0.0969669680018302
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 1.2548776194269569,
+        "min": 1.1402572951337702,
+        "ci95_lo": 1.1889685048012733,
+        "ci95_hi": 1.3626986952303848,
+        "cv": 0.10642749006760764
+      },
+      "branch_miss_pct": {
+        "median": 0.014230905701347937,
+        "min": 0.00889895171253966,
+        "ci95_lo": 0.013430901352668338,
+        "ci95_hi": 0.015082623820551462,
+        "cv": 0.13454382448843907
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-arith-guarded-checked-add-avx2-i64-n-65536-ovf-500-65536-500",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/checked_add/avx2/i64/n=65536/ovf=500/65536/500",
+    "family": "arith_guarded",
+    "api": "checked_add",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "ovf": 500
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 57065.16281834876,
+        "min": 44313.376172549244,
+        "ci95_lo": 45186.41381638324,
+        "ci95_hi": 63734.40688098151,
+        "cv": 0.16235436647002
+      },
+      "values_per_s": {
+        "median": 1149153947.4251456,
+        "min": 1003723154.8717624,
+        "ci95_lo": 1028313802.9366454,
+        "ci95_hi": 1450480283.3604972,
+        "cv": 0.1666915153247072
+      },
+      "cycles_per_value": {
+        "median": 3.126704813630776,
+        "min": 2.428041607234685,
+        "ci95_lo": 2.475580760010149,
+        "ci95_hi": 3.49179621005277,
+        "cv": 0.16235201199912533
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 1.120357084570664,
+        "min": 0.9786605187046704,
+        "ci95_lo": 1.0026002930553017,
+        "ci95_hi": 1.4142461503444084,
+        "cv": 0.1666870977819572
+      },
+      "branch_miss_pct": {
+        "median": 0.01419392399095999,
+        "min": 0.013480990254278794,
+        "ci95_lo": 0.013554692430777879,
+        "ci95_hi": 0.014726711910687178,
+        "cv": 0.04192806241131366
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-arith-guarded-saturating-add-scalar-i64-n-4096-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_arith_guarded/saturating_add/scalar/i64/n=4096/4096",
+    "family": "arith_guarded",
+    "api": "saturating_add",
+    "variant": "scalar",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 3561.986731739139,
+        "min": 3398.627063900767,
+        "ci95_lo": 3445.08910902013,
+        "ci95_hi": 3651.761295864442,
+        "cv": 0.1086826172379121
+      },
+      "values_per_s": {
+        "median": 1150845557.0896955,
+        "min": 862812176.4716825,
+        "ci95_lo": 1121795221.9146624,
+        "ci95_hi": 1189039590.8683167,
+        "cv": 0.08832156023465015
+      },
+      "cycles_per_value": {
+        "median": 3.1229542059835564,
+        "min": 2.9805316584186214,
+        "ci95_lo": 3.021301569111661,
+        "ci95_hi": 3.202640252352338,
+        "cv": 0.10859335783991629
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 3.52748471889376,
+        "min": 2.6455563146579775,
+        "ci95_lo": 3.4383066284063872,
+        "ci95_hi": 3.6448335795097186,
+        "cv": 0.08825480367728687
+      },
+      "branch_miss_pct": {
+        "median": 0.04859660935470672,
+        "min": 0.048584745571251926,
+        "ci95_lo": 0.04858734690984097,
+        "ci95_hi": 0.04867797846219486,
+        "cv": 0.0027906557010263853
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-filter-bitmap-avx2-i64-n-4096-sel-50-pat-uniform-4096-50-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/avx2/i64/n=4096/sel=50/pat=uniform/4096/50/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 50,
+      "pat": "uniform"
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 1106.3202458504156,
+        "min": 972.2325759660697,
+        "ci95_lo": 1013.3196107324595,
+        "ci95_hi": 1179.1356927912364,
+        "cv": 0.08526595427493108
+      },
+      "values_per_s": {
+        "median": 3702610637.49587,
+        "min": 3261850703.9575043,
+        "ci95_lo": 3473662976.6033297,
+        "ci95_hi": 4048523756.635165,
+        "cv": 0.08588106777289176
+      },
+      "cycles_per_value": {
+        "median": 0.9701704907611071,
+        "min": 0.852477801035532,
+        "ci95_lo": 0.8882932613039622,
+        "ci95_hi": 1.0342602704181367,
+        "cv": 0.08546272654334393
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.973238279062813,
+        "min": 2.6187941098436385,
+        "ci95_lo": 2.7889723404028866,
+        "ci95_hi": 3.250908177537524,
+        "cv": 0.08594808268017949
+      },
+      "branch_miss_pct": {
+        "median": 0.19239183108767777,
+        "min": 0.19235507866579896,
+        "ci95_lo": 0.19236926341144434,
+        "ci95_hi": 0.19242751294992128,
+        "cv": 0.00030515566377666144
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-filter-bitmap-avx2-i64-n-4096-sel-90-pat-uniform-4096-90-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/avx2/i64/n=4096/sel=90/pat=uniform/4096/90/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 90,
+      "pat": "uniform"
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 882.5354981275602,
+        "min": 875.7685704450197,
+        "ci95_lo": 878.9391884618539,
+        "ci95_hi": 934.3175738852945,
+        "cv": 0.051223859746979156
+      },
+      "values_per_s": {
+        "median": 4641260426.191057,
+        "min": 4096199900.1913905,
+        "ci95_lo": 4395664656.106198,
+        "ci95_hi": 4660079646.390204,
+        "cv": 0.04814041272530469
+      },
+      "cycles_per_value": {
+        "median": 0.7740292966618456,
+        "min": 0.7680364950269628,
+        "ci95_lo": 0.7710294640345126,
+        "ci95_hi": 0.8195566672213483,
+        "cv": 0.051206982030369795
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 3.7266348977768162,
+        "min": 3.2888796684974024,
+        "ci95_lo": 3.5289589267426518,
+        "ci95_hi": 3.7411317826079658,
+        "cv": 0.04813618566894881
+      },
+      "branch_miss_pct": {
+        "median": 0.1923472629648052,
+        "min": 0.19233745633055446,
+        "ci95_lo": 0.19234255209679244,
+        "ci95_hi": 0.19237368637061938,
+        "cv": 0.0001521725368933527
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-filter-bitmap-avx2-i64-n-65536-sel-50-pat-uniform-65536-50-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/avx2/i64/n=65536/sel=50/pat=uniform/65536/50/0",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "sel": 50,
+      "pat": "uniform"
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 21012.07137491754,
+        "min": 20320.34263880117,
+        "ci95_lo": 20627.599703036438,
+        "ci95_hi": 22761.019827471086,
+        "cv": 0.05065118332241416
+      },
+      "values_per_s": {
+        "median": 3119078272.598295,
+        "min": 2813859313.971114,
+        "ci95_lo": 2879259046.8762565,
+        "ci95_hi": 3177257376.190472,
+        "cv": 0.04938540879501393
+      },
+      "cycles_per_value": {
+        "median": 1.151229935753224,
+        "min": 1.1131922329239308,
+        "ci95_lo": 1.130050425649929,
+        "ci95_hi": 1.2473097760445235,
+        "cv": 0.05055477787754876
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.4979014382493716,
+        "min": 2.2532581744844395,
+        "ci95_lo": 2.305439539004859,
+        "ci95_hi": 2.5446626298337875,
+        "cv": 0.04945103766117736
+      },
+      "branch_miss_pct": {
+        "median": 0.012236723378557184,
+        "min": 0.009329121784183145,
+        "ci95_lo": 0.011792972156835824,
+        "ci95_hi": 0.0122903104104711,
+        "cv": 0.0805427703452953
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-filter-bitmap-autovec-avx2-i64-n-4096-sel-10-pat-clustered-4096-10-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec-avx2/i64/n=4096/sel=10/pat=clustered/4096/10/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec-avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 10,
+      "pat": "clustered"
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 3052.2226650784473,
+        "min": 3044.695175512995,
+        "ci95_lo": 3046.324499354363,
+        "ci95_hi": 3092.391877094705,
+        "cv": 0.05770508886641401
+      },
+      "values_per_s": {
+        "median": 1341994050.986415,
+        "min": 1130744120.093062,
+        "ci95_lo": 1324727322.587443,
+        "ci95_hi": 1344611680.2075248,
+        "cv": 0.050582117794657856
+      },
+      "cycles_per_value": {
+        "median": 2.67609545445716,
+        "min": 2.6702094016454954,
+        "ci95_lo": 2.671697897788346,
+        "ci95_hi": 2.7120393902412383,
+        "cv": 0.057737863803481865
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 4.112657513797326,
+        "min": 3.46395787663438,
+        "ci95_lo": 4.0586132631830765,
+        "ci95_hi": 4.1194272952517625,
+        "cv": 0.05061206807301708
+      },
+      "branch_miss_pct": {
+        "median": 0.048709207902126725,
+        "min": 0.04870015755223189,
+        "ci95_lo": 0.0487029488446219,
+        "ci95_hi": 0.0487234559389394,
+        "cv": 0.0007755412979747349
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-filter-bitmap-autovec-avx2-i64-n-4096-sel-99-pat-clustered-4096-99-1",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_filter/bitmap/autovec-avx2/i64/n=4096/sel=99/pat=clustered/4096/99/1",
+    "family": "filter",
+    "api": "bitmap",
+    "variant": "autovec-avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 4096,
+      "sel": 99,
+      "pat": "clustered"
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 3087.2174040925665,
+        "min": 3004.7480784684817,
+        "ci95_lo": 3005.2369449296802,
+        "ci95_hi": 3167.2628265562835,
+        "cv": 0.08355407265553118
+      },
+      "values_per_s": {
+        "median": 1326829336.1981025,
+        "min": 1056949910.0527947,
+        "ci95_lo": 1293689679.5293508,
+        "ci95_hi": 1363103767.5378332,
+        "cv": 0.07095300422919079
+      },
+      "cycles_per_value": {
+        "median": 2.7075105726243462,
+        "min": 2.634870187052795,
+        "ci95_lo": 2.635396351026981,
+        "ci95_hi": 2.777813399898352,
+        "cv": 0.08371609216859478
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 4.064938869798013,
+        "min": 3.2377274781381997,
+        "ci95_lo": 3.963277157702201,
+        "ci95_hi": 4.176170311767546,
+        "cv": 0.07100098418325473
+      },
+      "branch_miss_pct": {
+        "median": 0.04870441483453127,
+        "min": 0.04870144767183483,
+        "ci95_lo": 0.04870259854019075,
+        "ci95_hi": 0.04870937867194341,
+        "cv": 0.00029997531018353463
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-hash-combine-avx2-u64-n-4096-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_hash/combine/avx2/u64/n=4096/4096",
+    "family": "hash",
+    "api": "combine",
+    "variant": "avx2",
+    "element_type": "u64",
+    "axes": {
+      "n": 4096
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 4270.9209179342015,
+        "min": 4150.321621276557,
+        "ci95_lo": 4199.859646125478,
+        "ci95_hi": 4714.770938976724,
+        "cv": 0.06070653390539839
+      },
+      "values_per_s": {
+        "median": 959096656.3286893,
+        "min": 852714019.2190572,
+        "ci95_lo": 868841291.8740742,
+        "ci95_hi": 975417262.8333932,
+        "cv": 0.05814169643049626
+      },
+      "cycles_per_value": {
+        "median": 3.7453231411053443,
+        "min": 3.6405275229723184,
+        "ci95_lo": 3.6830550714325305,
+        "ci95_hi": 4.134569551129305,
+        "cv": 0.06073297944473847
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.3384006040897405,
+        "min": 2.078900911656939,
+        "ci95_lo": 2.1182529087794237,
+        "ci95_hi": 2.3782076769756024,
+        "cv": 0.058160849984232446
+      },
+      "branch_miss_pct": {
+        "median": 0.09709286759568223,
+        "min": 0.09704100104005972,
+        "ci95_lo": 0.09706863180482352,
+        "ci95_hi": 0.09717881444107665,
+        "cv": 0.0010992337019364265
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-hash-combine-avx2-u64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_hash/combine/avx2/u64/n=65536/65536",
+    "family": "hash",
+    "api": "combine",
+    "variant": "avx2",
+    "element_type": "u64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 84349.29169859756,
+        "min": 75790.8796913398,
+        "ci95_lo": 76522.73668132811,
+        "ci95_hi": 89390.10189234329,
+        "cv": 0.07637656141547186
+      },
+      "values_per_s": {
+        "median": 779214337.6834888,
+        "min": 729240904.1251897,
+        "ci95_lo": 733161588.9219577,
+        "ci95_hi": 856462333.0328093,
+        "cv": 0.07697072164269177
+      },
+      "cycles_per_value": {
+        "median": 4.621023971039927,
+        "min": 4.152446982613199,
+        "ci95_lo": 4.192601612135449,
+        "ci95_hi": 4.8974712003705525,
+        "cv": 0.07641805762402024
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 1.8991181377442508,
+        "min": 1.777393995011973,
+        "ci95_lo": 1.7867515244343415,
+        "ci95_hi": 2.0871316743499824,
+        "cv": 0.07701914923313345
+      },
+      "branch_miss_pct": {
+        "median": 0.008816992846739546,
+        "min": 0.007007821472957251,
+        "ci95_lo": 0.007090692161188549,
+        "ci95_hi": 0.010364315404478689,
+        "cv": 0.2089450509877585
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-hash-hash64-autovec-avx2-i64-n-65536-65536",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_hash/hash64/autovec-avx2/i64/n=65536/65536",
+    "family": "hash",
+    "api": "hash64",
+    "variant": "autovec-avx2",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 69742.31102180055,
+        "min": 63127.84706413137,
+        "ci95_lo": 64042.51036203992,
+        "ci95_hi": 74509.3788520011,
+        "cv": 0.0770559114169233
+      },
+      "values_per_s": {
+        "median": 943343940.3506984,
+        "min": 875704474.1206216,
+        "ci95_lo": 879551021.9560661,
+        "ci95_hi": 1023363461.1996192,
+        "cv": 0.0773703534461021
+      },
+      "cycles_per_value": {
+        "median": 3.8191040071941833,
+        "min": 3.4587404288429533,
+        "ci95_lo": 3.5086484072606403,
+        "ci95_hi": 4.082778476629956,
+        "cv": 0.07718607821847889
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 1.8229141131270477,
+        "min": 1.6920555988178223,
+        "ci95_lo": 1.6994813231604697,
+        "ci95_hi": 1.9776937630840754,
+        "cv": 0.07741631018790066
+      },
+      "branch_miss_pct": {
+        "median": 0.026211502517058415,
+        "min": 0.025582598079789708,
+        "ci95_lo": 0.025923947496722492,
+        "ci95_hi": 0.026877499747463493,
+        "cv": 0.2482242756290338
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-mask-and-avx2-bitmap-n-1048576-1048576",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_mask/and/avx2/bitmap/n=1048576/1048576",
+    "family": "mask",
+    "api": "and",
+    "variant": "avx2",
+    "element_type": "bitmap",
+    "axes": {
+      "n": 1048576
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 7108.862229922588,
+        "min": 6729.888626787095,
+        "ci95_lo": 6944.732390220207,
+        "ci95_hi": 7612.722933023176,
+        "cv": 0.05927759085425945
+      },
+      "values_per_s": {
+        "median": 147504993564.91077,
+        "min": 128772454461.35052,
+        "ci95_lo": 137737536697.1722,
+        "ci95_hi": 150993103640.84204,
+        "cv": 0.05655777794034856
+      },
+      "cycles_per_value": {
+        "median": 0.024346679405167312,
+        "min": 0.02304802668570201,
+        "ci95_lo": 0.023785789162923,
+        "ci95_hi": 0.02607754934275728,
+        "cv": 0.05931299932631969
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 0.6044944546086499,
+        "min": 0.5277461885145848,
+        "ci95_lo": 0.5643607600252407,
+        "ci95_hi": 0.618736822666468,
+        "cv": 0.056580621807422814
+      },
+      "branch_miss_pct": {
+        "median": 0.09664323497111874,
+        "min": 0.09660558609380732,
+        "ci95_lo": 0.09662870479863839,
+        "ci95_hi": 0.09671451905489366,
+        "cv": 0.00048257069169635203
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-pipeline-cmp-select-take-sum-avx2-i32-n-65536-sel-50-65536-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_pipeline/cmp_select_take_sum/avx2/i32/n=65536/sel=50/65536/50",
+    "family": "pipeline",
+    "api": "cmp_select_take_sum",
+    "variant": "avx2",
+    "element_type": "i32",
+    "axes": {
+      "n": 65536,
+      "sel": 50
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 48427.54965080126,
+        "min": 47686.15384559618,
+        "ci95_lo": 48202.04883198126,
+        "ci95_hi": 51766.98536300725,
+        "cv": 0.06061594030897533
+      },
+      "values_per_s": {
+        "median": 1353369118.4978108,
+        "min": 1168733880.9172685,
+        "ci95_lo": 1270573150.325508,
+        "ci95_hi": 1359657409.158597,
+        "cv": 0.05649814703733441
+      },
+      "cycles_per_value": {
+        "median": 2.6529720913932455,
+        "min": 2.613011355516387,
+        "ci95_lo": 2.6407988400469415,
+        "ci95_hi": 2.8357991346067517,
+        "cv": 0.060676874072116666
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.652460448633898,
+        "min": 2.290104532231584,
+        "ci95_lo": 2.490264855436064,
+        "ci95_hi": 2.6646863111787393,
+        "cv": 0.056529215503121975
+      },
+      "branch_miss_pct": {
+        "median": 0.017590480623070066,
+        "min": 0.01666636554224818,
+        "ci95_lo": 0.016960930766220815,
+        "ci95_hi": 0.01841179217987778,
+        "cv": 0.045109847448852367
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-reduce-sum-wrap-scalar-i64-n-65536-nulls-0-65536-0",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_reduce/sum_wrap/scalar/i64/n=65536/nulls=0/65536/0",
+    "family": "reduce",
+    "api": "sum_wrap",
+    "variant": "scalar",
+    "element_type": "i64",
+    "axes": {
+      "n": 65536,
+      "nulls": 0
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 13242.567124678504,
+        "min": 12217.82259886761,
+        "ci95_lo": 12262.419975801366,
+        "ci95_hi": 13952.138438752067,
+        "cv": 0.05768551097640634
+      },
+      "values_per_s": {
+        "median": 4949121825.585686,
+        "min": 4655387632.013404,
+        "ci95_lo": 4697404881.08488,
+        "ci95_hi": 5346258887.558552,
+        "cv": 0.05867440256184769
+      },
+      "cycles_per_value": {
+        "median": 0.7255770123539935,
+        "min": 0.6695222777524548,
+        "ci95_lo": 0.6715952507040118,
+        "ci95_hi": 0.7644531174123376,
+        "cv": 0.05764503952146979
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.4126641795488757,
+        "min": 2.269563282530477,
+        "ci95_lo": 2.289938535093451,
+        "ci95_hi": 2.606555773537433,
+        "cv": 0.0585946266854335
+      },
+      "branch_miss_pct": {
+        "median": 0.006265108758139536,
+        "min": 0.006109325918090179,
+        "ci95_lo": 0.006194484279413888,
+        "ci95_hi": 0.006793174775852877,
+        "cv": 0.0921579524331684
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-select-bitmap-to-selvec-avx2-u32-n-4096-density-10-4096-10",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/avx2/u32/n=4096/density=10/4096/10",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "avx2",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 10
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 456.42028826158,
+        "min": 455.87590240275597,
+        "ci95_lo": 455.97579475988965,
+        "ci95_hi": 458.7124914811689,
+        "cv": 0.10369911816950872
+      },
+      "values_per_s": {
+        "median": 8975058722.940289,
+        "min": 6702012806.154502,
+        "ci95_lo": 8929736520.21793,
+        "ci95_hi": 8983897693.799822,
+        "cv": 0.08203221667293781
+      },
+      "cycles_per_value": {
+        "median": 0.40029947316287884,
+        "min": 0.3998771171602498,
+        "ci95_lo": 0.3999125991874107,
+        "ci95_hi": 0.40237746911750427,
+        "cv": 0.10304880067972719
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 3.617288742481835,
+        "min": 2.7038388913034797,
+        "ci95_lo": 3.5986856143318144,
+        "ci95_hi": 3.6207880157137935,
+        "cv": 0.08177864092035109
+      },
+      "branch_miss_pct": {
+        "median": 0.37741611034130135,
+        "min": 0.3773807128336974,
+        "ci95_lo": 0.3773963965442697,
+        "ci95_hi": 0.37751188102019984,
+        "cv": 0.001842314100402169
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-select-bitmap-to-selvec-avx2-u32-n-4096-density-50-4096-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/avx2/u32/n=4096/density=50/4096/50",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "avx2",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 50
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 472.3606554728291,
+        "min": 464.7204375676171,
+        "ci95_lo": 464.7819238298746,
+        "ci95_hi": 536.3456162598196,
+        "cv": 0.10122303989790234
+      },
+      "values_per_s": {
+        "median": 8671911071.010979,
+        "min": 6835672643.945844,
+        "ci95_lo": 7637215598.2889185,
+        "ci95_hi": 8812565263.752935,
+        "cv": 0.09175078997838788
+      },
+      "cycles_per_value": {
+        "median": 0.4142613461798455,
+        "min": 0.4076096257872157,
+        "ci95_lo": 0.40766826181521715,
+        "ci95_hi": 0.4704097405032496,
+        "cv": 0.10125261815206857
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 3.49537549553947,
+        "min": 2.7548223246653696,
+        "ci95_lo": 3.0781651566328283,
+        "ci95_hi": 3.5519045741627155,
+        "cv": 0.0917759593044684
+      },
+      "branch_miss_pct": {
+        "median": 0.3774661342602774,
+        "min": 0.3774064512629586,
+        "ci95_lo": 0.3774234035799466,
+        "ci95_hi": 0.37752004414255647,
+        "cv": 0.006430314129323968
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-select-bitmap-to-selvec-avx2-u32-n-4096-density-90-4096-90",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/avx2/u32/n=4096/density=90/4096/90",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "avx2",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 90
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 449.8801430296111,
+        "min": 449.43979199083276,
+        "ci95_lo": 449.48180577691926,
+        "ci95_hi": 492.420679536336,
+        "cv": 0.06854158557718068
+      },
+      "values_per_s": {
+        "median": 9105280738.406548,
+        "min": 7579640847.315515,
+        "ci95_lo": 8318317258.142776,
+        "ci95_hi": 9112882334.664932,
+        "cv": 0.0633160888818152
+      },
+      "cycles_per_value": {
+        "median": 0.394588162422381,
+        "min": 0.39419476810486415,
+        "ci95_lo": 0.39426857347024763,
+        "ci95_hi": 0.43193789128187754,
+        "cv": 0.0684750947267801
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 3.669646251175492,
+        "min": 3.0548286013874923,
+        "ci95_lo": 3.3523310475448893,
+        "ci95_hi": 3.672620232302025,
+        "cv": 0.06329284723060331
+      },
+      "branch_miss_pct": {
+        "median": 0.37741059556314704,
+        "min": 0.37738131075526676,
+        "ci95_lo": 0.37739808643347184,
+        "ci95_hi": 0.3774334123242705,
+        "cv": 0.00019593042665635202
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-select-bitmap-to-selvec-avx2-u32-n-4096-density-99-4096-99",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/avx2/u32/n=4096/density=99/4096/99",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "avx2",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "density": 99
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 448.39813436732754,
+        "min": 448.2162780074014,
+        "ci95_lo": 448.28559639465607,
+        "ci95_hi": 476.58703473222795,
+        "cv": 0.07975138413569179
+      },
+      "values_per_s": {
+        "median": 9135189391.57317,
+        "min": 7337948851.783965,
+        "ci95_lo": 8623961538.338581,
+        "ci95_hi": 9137047439.45147,
+        "cv": 0.06987918603669513
+      },
+      "cycles_per_value": {
+        "median": 0.39326591802849564,
+        "min": 0.3931856693869873,
+        "ci95_lo": 0.3932073198774854,
+        "ci95_hi": 0.4179563077915845,
+        "cv": 0.07972905364445824
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 3.681983848430554,
+        "min": 2.957313485218287,
+        "ci95_lo": 3.4759322147574805,
+        "ci95_hi": 3.682532500472585,
+        "cv": 0.06987901058702498
+      },
+      "branch_miss_pct": {
+        "median": 0.37743545020736047,
+        "min": 0.3773969546935625,
+        "ci95_lo": 0.3774187050279375,
+        "ci95_hi": 0.3781380557026123,
+        "cv": 0.0031796605115972307
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-select-bitmap-to-selvec-avx2-u32-n-65536-density-50-65536-50",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_select/bitmap_to_selvec/avx2/u32/n=65536/density=50/65536/50",
+    "family": "select",
+    "api": "bitmap_to_selvec",
+    "variant": "avx2",
+    "element_type": "u32",
+    "axes": {
+      "n": 65536,
+      "density": 50
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 7728.312631709207,
+        "min": 7490.322082041508,
+        "ci95_lo": 7574.032707383948,
+        "ci95_hi": 9374.772604410025,
+        "cv": 0.1760404194000791
+      },
+      "values_per_s": {
+        "median": 8480111445.9265,
+        "min": 5592133746.553774,
+        "ci95_lo": 7128842381.939028,
+        "ci95_hi": 8652948820.11566,
+        "cv": 0.1448989403916361
+      },
+      "cycles_per_value": {
+        "median": 0.4235933593940404,
+        "min": 0.41051545025282804,
+        "ci95_lo": 0.4151275009008186,
+        "ci95_hi": 0.5137181292144872,
+        "cv": 0.1759329121378845
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 3.3952527099957184,
+        "min": 2.2391075657942277,
+        "ci95_lo": 2.8544639157472247,
+        "ci95_hi": 3.4643738841592064,
+        "cv": 0.14483950948095667
+      },
+      "branch_miss_pct": {
+        "median": 0.024395062679527367,
+        "min": 0.024378018634669988,
+        "ci95_lo": 0.02438290645453056,
+        "ci95_hi": 0.024400455955975005,
+        "cv": 0.07263020320613035
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-take-dict-decode-avx2-i64-u32-n-65536-dict-4kib-65536-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_take/dict_decode/avx2/i64_u32/n=65536/dict=4KiB/65536/4096",
+    "family": "take",
+    "api": "dict_decode",
+    "variant": "avx2",
+    "element_type": "i64_u32",
+    "axes": {
+      "n": 65536,
+      "dict": "4KiB"
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 31262.911202700405,
+        "min": 30024.40772539448,
+        "ci95_lo": 30039.111284537183,
+        "ci95_hi": 33013.68232189997,
+        "cv": 0.05170935838486716
+      },
+      "values_per_s": {
+        "median": 2101193762.78001,
+        "min": 1941512075.2924008,
+        "ci95_lo": 1985514644.8607788,
+        "ci95_hi": 2181755228.432033,
+        "cv": 0.051276845420249496
+      },
+      "cycles_per_value": {
+        "median": 1.711214609197865,
+        "min": 1.6448915309660423,
+        "ci95_lo": 1.6458164331785663,
+        "ci95_hi": 1.8084793458324866,
+        "cv": 0.05181778042309664
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.4873036201405676,
+        "min": 2.2977101024805364,
+        "ci95_lo": 2.3502702553885673,
+        "ci95_hi": 2.58255714983008,
+        "cv": 0.05135834752947414
+      },
+      "branch_miss_pct": {
+        "median": 0.006162645312401294,
+        "min": 0.00613178829518244,
+        "ci95_lo": 0.00614023737130626,
+        "ci95_hi": 0.006195606684866014,
+        "cv": 0.029011766077432482
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-take-dict-decode-autovec-avx2-i64-u32-n-65536-dict-4kib-65536-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_take/dict_decode/autovec-avx2/i64_u32/n=65536/dict=4KiB/65536/4096",
+    "family": "take",
+    "api": "dict_decode",
+    "variant": "autovec-avx2",
+    "element_type": "i64_u32",
+    "axes": {
+      "n": 65536,
+      "dict": "4KiB"
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 31871.03047691324,
+        "min": 30108.81932785181,
+        "ci95_lo": 30256.780436371224,
+        "ci95_hi": 33831.06842348036,
+        "cv": 0.054411655877601856
+      },
+      "values_per_s": {
+        "median": 2059505025.9668984,
+        "min": 1928178801.8320208,
+        "ci95_lo": 1937118398.5454562,
+        "ci95_hi": 2166380497.7145405,
+        "cv": 0.05438228068499064
+      },
+      "cycles_per_value": {
+        "median": 1.7455207574897165,
+        "min": 1.6496354894700394,
+        "ci95_lo": 1.6572646104280386,
+        "ci95_hi": 1.8539331720230428,
+        "cv": 0.054519295901257925
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.437641745595635,
+        "min": 2.2826544592681777,
+        "ci95_lo": 2.292565187242554,
+        "ci95_hi": 2.564629585327081,
+        "cv": 0.0543871793026219
+      },
+      "branch_miss_pct": {
+        "median": 0.006124840156299348,
+        "min": 0.006114957467419261,
+        "ci95_lo": 0.006117853371385683,
+        "ci95_hi": 0.006131971747124873,
+        "cv": 0.042120601337539004
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-take-dict-decode-scalar-i64-u32-n-65536-dict-4kib-65536-4096",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_take/dict_decode/scalar/i64_u32/n=65536/dict=4KiB/65536/4096",
+    "family": "take",
+    "api": "dict_decode",
+    "variant": "scalar",
+    "element_type": "i64_u32",
+    "axes": {
+      "n": 65536,
+      "dict": "4KiB"
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 30395.956467882024,
+        "min": 30183.027476295465,
+        "ci95_lo": 30229.706896335854,
+        "ci95_hi": 33723.01037366454,
+        "cv": 0.05646703786441373
+      },
+      "values_per_s": {
+        "median": 2156441208.058466,
+        "min": 1935083483.4820588,
+        "ci95_lo": 1943455060.549109,
+        "ci95_hi": 2168014013.4991193,
+        "cv": 0.055270151803575654
+      },
+      "cycles_per_value": {
+        "median": 1.664796022806509,
+        "min": 1.6537581456778259,
+        "ci95_lo": 1.6562145224384879,
+        "ci95_hi": 1.8476121771669014,
+        "cv": 0.056518564970386174
+      }
+    },
+    "metrics": [
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 2.5531221359079237,
+        "min": 2.290184535109727,
+        "ci95_lo": 2.30050017779622,
+        "ci95_hi": 2.5663433018447623,
+        "cv": 0.05531508527438401
+      },
+      "branch_miss_pct": {
+        "median": 0.006136152633074313,
+        "min": 0.0061122916343715515,
+        "ci95_lo": 0.0061225443716679505,
+        "ci95_hi": 0.008055405399205098,
+        "cv": 0.3046015465748733
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  },
+  {
+    "entry_id": "intel-coffee-lake-submission-bm-unpack-unpack-for-avx2-u32-n-4096-w-32-4096-32",
+    "schema": "QLS-1",
+    "methodology": "QLM-1",
+    "benchmark": "BM_unpack/unpack_for/avx2/u32/n=4096/w=32/4096/32",
+    "family": "unpack",
+    "api": "unpack_for",
+    "variant": "avx2",
+    "element_type": "u32",
+    "axes": {
+      "n": 4096,
+      "w": 32
+    },
+    "machine_id": "intel-i9-9900k",
+    "manifest_ref": "manifest.json",
+    "library_version": "0.7.0",
+    "git_commit": "373ec8eec66b",
+    "git_dirty": "clean",
+    "timestamp_utc": "2026-07-30T19:35:27+00:00",
+    "repetitions": 10,
+    "bootstrap_seed": 20260703,
+    "results": {
+      "ns_per_batch": {
+        "median": 306.54980304071535,
+        "min": 299.1527606906213,
+        "ci95_lo": 303.1402188958301,
+        "ci95_hi": 314.4275681553701,
+        "cv": 0.05220651300989477
+      },
+      "values_per_s": {
+        "median": 13362163533.270407,
+        "min": 11553420904.101204,
+        "ci95_lo": 13034574796.257568,
+        "ci95_hi": 13513139301.34408,
+        "cv": 0.04750135241522555
+      },
+      "bytes_per_s": {
+        "median": 53448654133.08163,
+        "min": 46213683616.404816,
+        "ci95_lo": 52138299185.03027,
+        "ci95_hi": 54052557205.37632,
+        "cv": 0.04750135241522555
+      },
+      "cycles_per_value": {
+        "median": 0.2688639525532017,
+        "min": 0.262359820743824,
+        "ci95_lo": 0.2658758751538587,
+        "ci95_hi": 0.27575990978075626,
+        "cv": 0.052279599159796
+      }
+    },
+    "metrics": [
+      "bytes_per_s",
+      "cycles_per_value",
+      "ns_per_batch",
+      "values_per_s"
+    ],
+    "pmu": {
+      "status": "available",
+      "repetitions_measured": 10,
+      "ipc": {
+        "median": 1.3239327152090774,
+        "min": 1.1446182089865746,
+        "ci95_lo": 1.2915184397328225,
+        "ci95_hi": 1.338902992736039,
+        "cv": 0.04754098322901826
+      },
+      "branch_miss_pct": {
+        "median": 0.7248313952010559,
+        "min": 0.7247290164617419,
+        "ci95_lo": 0.7247416519531723,
+        "ci95_hi": 0.7248717378141932,
+        "cv": 0.004297276010038308
+      }
+    },
+    "flags": [
+      "noisy"
+    ],
+    "notes": ""
+  }
+]

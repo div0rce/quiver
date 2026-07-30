@@ -254,37 +254,24 @@ def check_autovec_baseline_coverage() -> None:
                 f"variant, so its AVX2 entries have no equal-ISA pair (ADR-011)")
 
 
-def check_lane_a_submission() -> None:
-    """A Lane A hardware submission is `submission/` at the root (CONTRIBUTING.md), so the tree
-    lint must admit it — but admitting it must not make it a free-for-all directory. Check the
-    shape the runner's community-run emits: the artifacts a reviewer needs to trust the numbers.
+_BUNDLE_FILES = ("manifest.json", "entries.json", "rejected_noisy.json",
+                 "commands.txt", "git-status.txt", "checksums.txt")
 
-    Content validity (QLS-1 schema, deviations, duplicate entry_ids) is `quiver_ledger.py
-    validate`'s job, which also covers this directory; here we only enforce that the bundle is
-    complete and carries nothing else.
-    """
-    sub = ROOT / "submission"
-    if not sub.exists():
-        return  # no submission in flight: nothing to check
-    if not sub.is_dir():
-        err("REQ-REPO-001: 'submission' must be the Lane A bundle directory, not a file")
-        return
-    # Types matter, not just names: a plain file called `raw` would satisfy a name-only check
-    # while carrying no evidence, and a directory called `manifest.json` would pass here and then
-    # crash the ledger validator's read_text().
-    files = {"manifest.json", "entries.json", "rejected_noisy.json",
-             "commands.txt", "git-status.txt", "checksums.txt"}
-    present = {p.name for p in sub.iterdir()}
-    for extra in sorted(present - files - {"raw"}):
-        err(f"REQ-REPO-001: submission/{extra} is not part of a community-run bundle "
-            f"(open a PR containing only the generated directory, CONTRIBUTING.md)")
-    for name in sorted(files):
+
+def _bundle_file_errors(sub: pathlib.Path) -> None:
+    """The six flat artifacts, each of which must exist AND be a regular file — a directory named
+    manifest.json would satisfy a name-only check and then break the ledger validator."""
+    for name in _BUNDLE_FILES:
         path = sub / name
         if not path.exists():
             err(f"REQ-LEDGER-013: submission/ is missing '{name}' — a Lane A bundle is the "
                 f"complete community-run output (CONTRIBUTING.md)")
         elif not path.is_file():
             err(f"REQ-LEDGER-013: submission/{name} must be a regular file")
+
+
+def _bundle_raw_errors(sub: pathlib.Path) -> None:
+    """raw/ carries the per-repetition evidence a published entry rests on."""
     raw = sub / "raw"
     if not raw.exists():
         err("REQ-LEDGER-013: submission/ is missing 'raw' — a Lane A bundle is the complete "
@@ -294,6 +281,31 @@ def check_lane_a_submission() -> None:
     elif not any(raw.iterdir()):
         err("REQ-LEDGER-013: submission/raw/ is empty — raw per-repetition measurements are "
             "the evidence a published entry rests on")
+
+
+def _bundle_extra_errors(sub: pathlib.Path) -> None:
+    """"a PR containing only the generated directory" (CONTRIBUTING.md) — nothing smuggled in."""
+    for extra in sorted({p.name for p in sub.iterdir()} - set(_BUNDLE_FILES) - {"raw"}):
+        err(f"REQ-REPO-001: submission/{extra} is not part of a community-run bundle "
+            f"(open a PR containing only the generated directory, CONTRIBUTING.md)")
+
+
+def check_lane_a_submission() -> None:
+    """A Lane A hardware submission is `submission/` at the root (CONTRIBUTING.md), so the tree
+    lint must admit it — but admitting it must not make it a free-for-all directory.
+
+    Shape only. Content validity (QLS-1 schema, deviations, duplicate entry_ids) belongs to
+    `quiver_ledger.py validate`, which also covers this directory.
+    """
+    sub = ROOT / "submission"
+    if not sub.exists():
+        return  # no submission in flight: nothing to check
+    if not sub.is_dir():
+        err("REQ-REPO-001: 'submission' must be the Lane A bundle directory, not a file")
+        return
+    _bundle_file_errors(sub)
+    _bundle_raw_errors(sub)
+    _bundle_extra_errors(sub)
 
 
 def check_source_scans(manifest: dict) -> None:

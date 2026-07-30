@@ -1,0 +1,1 @@
+python3 ledger/runner/quiver_ledger.py community-run --machine intel-i9-9900k --output submission --reps 10 --min-time 0.1s --seed 20260703 --build-dir /home/div0rce/repos/quiver/build/bench
