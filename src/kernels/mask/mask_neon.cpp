@@ -88,28 +88,32 @@ namespace {
 // inputs). The remainder (<64 whole bytes plus the tail bits) delegates to the scalar core on
 // the byte-aligned suffix -- 64 bytes is exactly 512 bits, so the suffix view is exact and the
 // result stays bit-identical by construction (REQ-KERNEL-002).
+// A 64-byte block reduced to one vector. all() is decided by the first zero bit, any() by the
+// first set bit, so each scanner reports whether this block already settles the query.
+QUIVER_FORCE_INLINE bool all_block_fails(const std::uint8_t* p) noexcept {
+  uint8x16_t acc = vld1q_u8(p);
+  acc = vandq_u8(acc, vld1q_u8(p + 16));
+  acc = vandq_u8(acc, vld1q_u8(p + 32));
+  acc = vandq_u8(acc, vld1q_u8(p + 48));
+  return vminvq_u8(acc) != 0xFF;
+}
+
+QUIVER_FORCE_INLINE bool any_block_succeeds(const std::uint8_t* p) noexcept {
+  uint8x16_t acc = vld1q_u8(p);
+  acc = vorrq_u8(acc, vld1q_u8(p + 16));
+  acc = vorrq_u8(acc, vld1q_u8(p + 32));
+  acc = vorrq_u8(acc, vld1q_u8(p + 48));
+  return vmaxvq_u8(acc) != 0;
+}
+
 QUIVER_FORCE_INLINE std::int64_t query_blocks(const std::uint8_t* a, std::int64_t n, bool want_all,
                                               bool& verdict) noexcept {
   const std::int64_t full_bytes = n >> 3;
   std::int64_t i = 0;
   for (; i + 64 <= full_bytes; i += 64) {
-    uint8x16_t acc = vld1q_u8(a + i);
-    if (want_all) {
-      acc = vandq_u8(acc, vld1q_u8(a + i + 16));
-      acc = vandq_u8(acc, vld1q_u8(a + i + 32));
-      acc = vandq_u8(acc, vld1q_u8(a + i + 48));
-      if (vminvq_u8(acc) != 0xFF) {
-        verdict = false;  // some bit in this block is 0: all() fails here
-        return -1;
-      }
-    } else {
-      acc = vorrq_u8(acc, vld1q_u8(a + i + 16));
-      acc = vorrq_u8(acc, vld1q_u8(a + i + 32));
-      acc = vorrq_u8(acc, vld1q_u8(a + i + 48));
-      if (vmaxvq_u8(acc) != 0) {
-        verdict = true;  // some bit in this block is 1: any() succeeds here
-        return -1;
-      }
+    if (want_all ? all_block_fails(a + i) : any_block_succeeds(a + i)) {
+      verdict = !want_all;  // all() failed, or any() succeeded — either way it is settled
+      return -1;
     }
   }
   return i;  // bytes consumed; caller finishes on the suffix
