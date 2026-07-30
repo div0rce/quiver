@@ -70,7 +70,7 @@ void register_benchmarks() {
   // Dict-size sweep across cache levels (QLM-1 dict_size axis; mandatory per PRD 08 §4).
   for (const std::int64_t dict_bytes : {4 << 10, 32 << 10, 256 << 10, 8 << 20, 64 << 20}) {
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("take", "dict_decode", variant, "i64_u32",
+        quiver::bench::bench_name({"take", "dict_decode", variant, "i64_u32"},
                                   "n=65536/dict=" + std::to_string(dict_bytes >> 10) + "KiB"),
         bm_dict_decode<false>)
         ->Args({65536, dict_bytes});
@@ -80,7 +80,7 @@ void register_benchmarks() {
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
     for (const std::int64_t dict_bytes : {4 << 10, 32 << 10, 256 << 10, 8 << 20, 64 << 20}) {
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("take", "dict_decode", "autovec-avx2", "i64_u32",
+          quiver::bench::bench_name({"take", "dict_decode", "autovec-avx2", "i64_u32"},
                                     "n=65536/dict=" + std::to_string(dict_bytes >> 10) + "KiB"),
           bm_dict_decode<true>)
           ->Args({65536, dict_bytes});

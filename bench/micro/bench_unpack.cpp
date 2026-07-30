@@ -69,7 +69,7 @@ void register_benchmarks() {
   for (const std::int64_t n : {4096, 65536}) {
     for (const int w : {1, 4, 7, 8, 16, 24, 32}) {  // bit_width axis (QLM-1)
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("unpack", "unpack_for", variant, "u32",
+          quiver::bench::bench_name({"unpack", "unpack_for", variant, "u32"},
                                     "n=" + std::to_string(n) + "/w=" + std::to_string(w)),
           bm_unpack_u32<false>)
           ->Args({n, w});
@@ -81,7 +81,7 @@ void register_benchmarks() {
     for (const std::int64_t n : {4096, 65536}) {
       for (const int w : {1, 4, 7, 8, 16, 24, 32}) {
         benchmark::RegisterBenchmark(
-            quiver::bench::bench_name("unpack", "unpack_for", "autovec-avx2", "u32",
+            quiver::bench::bench_name({"unpack", "unpack_for", "autovec-avx2", "u32"},
                                       "n=" + std::to_string(n) + "/w=" + std::to_string(w)),
             bm_unpack_u32<true>)
             ->Args({n, w});

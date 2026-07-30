@@ -74,7 +74,7 @@ void register_benchmarks() {
     for (const int pct : {1, 10, 50, 90, 99}) {
       for (const int clustered : {0, 1}) {
         benchmark::RegisterBenchmark(
-            quiver::bench::bench_name("filter", "bitmap", variant, "i64",
+            quiver::bench::bench_name({"filter", "bitmap", variant, "i64"},
                                       "n=" + std::to_string(n) + "/sel=" + std::to_string(pct) +
                                           (clustered ? "/pat=clustered" : "/pat=uniform")),
             bm_filter_bitmap<false>)
@@ -89,7 +89,7 @@ void register_benchmarks() {
       for (const int pct : {1, 10, 50, 90, 99}) {
         for (const int clustered : {0, 1}) {
           benchmark::RegisterBenchmark(
-              quiver::bench::bench_name("filter", "bitmap", "autovec-avx2", "i64",
+              quiver::bench::bench_name({"filter", "bitmap", "autovec-avx2", "i64"},
                                         "n=" + std::to_string(n) + "/sel=" + std::to_string(pct) +
                                             (clustered ? "/pat=clustered" : "/pat=uniform")),
               bm_filter_bitmap<true>)

@@ -66,13 +66,15 @@ void bm_warmup_cost(benchmark::State& state) {
 
 void register_benchmarks() {
   for (const std::int64_t n : {1, 64, 4096}) {
-    benchmark::RegisterBenchmark(quiver::bench::bench_name("dispatch", "compare_gt", "dispatched",
-                                                           "i64", "n=" + std::to_string(n)),
-                                 bm_call_path<true>)
+    benchmark::RegisterBenchmark(
+        quiver::bench::bench_name({"dispatch", "compare_gt", "dispatched", "i64"},
+                                  "n=" + std::to_string(n)),
+        bm_call_path<true>)
         ->Args({n});
-    benchmark::RegisterBenchmark(quiver::bench::bench_name("dispatch", "compare_gt", "direct",
-                                                           "i64", "n=" + std::to_string(n)),
-                                 bm_call_path<false>)
+    benchmark::RegisterBenchmark(
+        quiver::bench::bench_name({"dispatch", "compare_gt", "direct", "i64"},
+                                  "n=" + std::to_string(n)),
+        bm_call_path<false>)
         ->Args({n});
   }
   benchmark::RegisterBenchmark("BM_dispatch/warmup/steady/none/n=1", bm_warmup_cost);

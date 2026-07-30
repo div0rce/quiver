@@ -119,15 +119,15 @@ void register_benchmarks() {
   for (const std::int64_t n : {4096, 65536}) {
     for (const int permille : {0, 1, 500}) {  // overflow_density axis: 0, 0.1%, 50%
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("arith_guarded", "checked_add", variant, "i64",
+          quiver::bench::bench_name({"arith_guarded", "checked_add", variant, "i64"},
                                     "n=" + std::to_string(n) + "/ovf=" + std::to_string(permille)),
           bm_checked_add_i64)
           ->Args({n, permille});
     }
-    benchmark::RegisterBenchmark(quiver::bench::bench_name("arith_guarded", "saturating_add",
-                                                           variant, "i64",
-                                                           "n=" + std::to_string(n)),
-                                 bm_saturating_add_i64)
+    benchmark::RegisterBenchmark(
+        quiver::bench::bench_name({"arith_guarded", "saturating_add", variant, "i64"},
+                                  "n=" + std::to_string(n)),
+        bm_saturating_add_i64)
         ->Args({n});
   }
 }

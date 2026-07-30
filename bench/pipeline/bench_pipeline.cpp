@@ -77,7 +77,7 @@ void register_benchmarks() {
   for (const std::int64_t n : {1024, 4096, 65536}) {
     for (const int pct : {1, 10, 50, 90, 99}) {
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("pipeline", "cmp_select_take_sum", variant, "i32",
+          quiver::bench::bench_name({"pipeline", "cmp_select_take_sum", variant, "i32"},
                                     "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),
           bm_pipeline_sum_gt)
           ->Args({n, pct});
