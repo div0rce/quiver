@@ -50,17 +50,24 @@ QUIVER_FORCE_INLINE T arith_one(ArithOp op, T a, T b) noexcept {
   }
 }
 
+// The left-hand batch an elementwise op reads: the values and how many there are.
 template <class T>
-void arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {
-  for (std::int64_t i = 0; i < n; ++i) {
-    out[i] = arith_one(op, a[i], b[i]);
+struct ArithBatch {
+  const T* a;
+  std::int64_t n;
+};
+
+template <class T>
+void arith(ArithOp op, ArithBatch<T> lhs, const T* b, T* out) noexcept {
+  for (std::int64_t i = 0; i < lhs.n; ++i) {
+    out[i] = arith_one(op, lhs.a[i], b[i]);
   }
 }
 
 template <class T>
-void arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {
-  for (std::int64_t i = 0; i < n; ++i) {
-    out[i] = arith_one(op, a[i], b);
+void arith_scalar_rhs(ArithOp op, ArithBatch<T> lhs, T b, T* out) noexcept {
+  for (std::int64_t i = 0; i < lhs.n; ++i) {
+    out[i] = arith_one(op, lhs.a[i], b);
   }
 }
 

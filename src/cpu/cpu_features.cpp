@@ -85,6 +85,40 @@ void read_brand_x86(char (&brand)[64]) noexcept {
   }
 }
 
+// The CPUID leaf-7 feature bits Quiver's tiers are built from.
+struct Leaf7Bits {
+  bool avx2;
+  bool bmi2;
+  bool f512;
+  bool dq512;
+  bool bw512;
+  bool vl512;
+  bool vbmi2;
+  bool vpopcntdq;
+};
+
+Leaf7Bits read_leaf7() noexcept {
+  const CpuidRegs l7 = cpuid_count(7, 0);
+  return {(l7.ebx & (1u << 5)) != 0,  (l7.ebx & (1u << 8)) != 0,  (l7.ebx & (1u << 16)) != 0,
+          (l7.ebx & (1u << 17)) != 0, (l7.ebx & (1u << 30)) != 0, (l7.ebx & (1u << 31)) != 0,
+          (l7.ecx & (1u << 6)) != 0,  (l7.ecx & (1u << 14)) != 0};
+}
+
+// Quiver's avx2 tier compiles with target("avx2,bmi2") and emits PDEP/PEXT, so the tier is
+// reported only when BOTH are present (REQ-DISP-004; docs/internals/cpu-detection.md).
+bool avx2_tier(const Leaf7Bits& b, bool ymm_state) noexcept {
+  return ymm_state && b.avx2 && b.bmi2;
+}
+
+// The AVX-512 base set Quiver targets is F+BW+DQ+VL (REQ-SIMD-004); reporting it also requires
+// the avx2 tier, which makes the ladder monotone by construction (REQ-DISP-004).
+bool avx512_tier(const Leaf7Bits& b, bool zmm_state, bool has_avx2_tier) noexcept {
+  if (!zmm_state || !has_avx2_tier) {
+    return false;
+  }
+  return b.f512 && b.bw512 && b.dq512 && b.vl512;
+}
+
 CpuFeatures detect_x86() noexcept {
   CpuFeatures f{};
   read_brand_x86(f.brand);
@@ -94,34 +128,21 @@ CpuFeatures detect_x86() noexcept {
     return f;  // pre-AVX2 hardware: scalar baseline only
   }
 
-  const CpuidRegs l1 = cpuid_count(1, 0);
+  // Both OSXSAVE and AVX must be set for the OS to be managing the extended state.
   constexpr unsigned kOsxsaveBit = 1u << 27;
   constexpr unsigned kAvxBit = 1u << 28;
-  if ((l1.ecx & kOsxsaveBit) == 0 || (l1.ecx & kAvxBit) == 0) {
+  constexpr unsigned kOsAvxBits = kOsxsaveBit | kAvxBit;
+  if ((cpuid_count(1, 0).ecx & kOsAvxBits) != kOsAvxBits) {
     return f;  // no OS-managed extended state: no AVX tiers (REQ-DISP-004)
   }
 
   const std::uint64_t xcr0 = xgetbv0();
-  const bool ymm_state = (xcr0 & 0x6u) == 0x6u;    // XMM+YMM
-  const bool zmm_state = (xcr0 & 0xE6u) == 0xE6u;  // + opmask, ZMM_Hi256, Hi16_ZMM
-
-  const CpuidRegs l7 = cpuid_count(7, 0);
-  const bool has_avx2 = (l7.ebx & (1u << 5)) != 0;
-  const bool has_bmi2 = (l7.ebx & (1u << 8)) != 0;
-  const bool has_512f = (l7.ebx & (1u << 16)) != 0;
-  const bool has_512dq = (l7.ebx & (1u << 17)) != 0;
-  const bool has_512bw = (l7.ebx & (1u << 30)) != 0;
-  const bool has_512vl = (l7.ebx & (1u << 31)) != 0;
-  const bool has_vbmi2 = (l7.ecx & (1u << 6)) != 0;
-  const bool has_vpopcntdq = (l7.ecx & (1u << 14)) != 0;
-
-  // Quiver's avx2 tier compiles with target("avx2,bmi2") and emits PDEP/PEXT, so the tier
-  // is reported only when BOTH are present (REQ-DISP-004; docs/internals/cpu-detection.md).
-  f.avx2 = ymm_state && has_avx2 && has_bmi2;
-  f.avx512 = zmm_state && has_512f && has_512bw && has_512dq && has_512vl;
-  f.avx512 = f.avx512 && f.avx2;  // monotone by construction (REQ-DISP-004)
-  f.avx512vbmi2 = f.avx512 && has_vbmi2;
-  f.avx512vpopcntdq = f.avx512 && has_vpopcntdq;
+  const Leaf7Bits b = read_leaf7();
+  f.avx2 = avx2_tier(b, (xcr0 & 0x6u) == 0x6u);  // XMM+YMM
+  // + opmask, ZMM_Hi256, Hi16_ZMM
+  f.avx512 = avx512_tier(b, (xcr0 & 0xE6u) == 0xE6u, f.avx2);
+  f.avx512vbmi2 = f.avx512 && b.vbmi2;
+  f.avx512vpopcntdq = f.avx512 && b.vpopcntdq;
   return f;
 }
 
@@ -159,6 +180,19 @@ CpuFeatures detect_fallback() noexcept {
 
 }  // namespace
 
+#if defined(QUIVER_TEST_SEAMS)
+// The QUIVER_TEST_FORCE_ISA values that select an AVX-512 profile (see the seam below).
+bool forces_avx512(const char* forced) noexcept {
+  constexpr const char* kProfiles[] = {"avx512", "avx512vbmi2", "avx512vpopcntdq"};
+  for (const char* name : kProfiles) {
+    if (std::strcmp(forced, name) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+#endif
+
 CpuFeatures detect_cpu_features() noexcept {
 #if defined(QUIVER_CPU_X86_64)
   CpuFeatures f = detect_x86();
@@ -173,13 +207,11 @@ CpuFeatures detect_cpu_features() noexcept {
   // reports no AVX-512 in CPUID (QEMU) exercise the AVX-512 dispatch path; the three values
   // mirror the SDE -skx (no VBMI2) and -spr (VBMI2/VPOPCNTDQ) profiles. Monotone.
   if (const char* forced = std::getenv("QUIVER_TEST_FORCE_ISA")) {
-    const bool vbmi2 = std::strcmp(forced, "avx512vbmi2") == 0;
-    const bool vpopcntdq = std::strcmp(forced, "avx512vpopcntdq") == 0;
-    if (std::strcmp(forced, "avx512") == 0 || vbmi2 || vpopcntdq) {
+    if (forces_avx512(forced)) {
       f.avx2 = true;
       f.avx512 = true;
-      f.avx512vbmi2 = vbmi2;
-      f.avx512vpopcntdq = vpopcntdq;
+      f.avx512vbmi2 = std::strcmp(forced, "avx512vbmi2") == 0;
+      f.avx512vpopcntdq = std::strcmp(forced, "avx512vpopcntdq") == 0;
     }
   }
 #endif

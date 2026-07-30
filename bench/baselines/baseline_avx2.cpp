@@ -55,7 +55,7 @@ namespace impl = ::quiver_autovec_avx2_impl::detail::scalar_impl;
 std::int64_t compare_bitmap_i64(quiver::CompareOp op, const std::int64_t* in, std::int64_t n,
                                 std::int64_t comparand, const std::uint8_t* validity,
                                 std::uint8_t* out) noexcept {
-  return impl::compare_bitmap<std::int64_t>(op, in, n, comparand, validity, out);
+  return impl::compare_bitmap<std::int64_t>(op, {in, n, validity}, comparand, out);
 }
 
 std::int64_t filter_bitmap_i64(const std::int64_t* in, std::int64_t n,
@@ -70,24 +70,24 @@ std::int64_t bitmap_to_selvec(const std::uint8_t* selection, std::int64_t n,
 
 void mask_combine(quiver::MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
                   std::uint8_t* out) noexcept {
-  impl::mask_combine(op, a, b, n, out);
+  impl::mask_combine(op, {a, b}, n, out);
 }
 
 void dict_decode_i64_u32(const std::int64_t* dict, std::int64_t dict_len,
                          const std::uint32_t* codes, std::int64_t n, std::int64_t* out) noexcept {
-  impl::dict_decode<std::int64_t, std::uint32_t>(dict, dict_len, codes, n, out);
+  impl::dict_decode<std::int64_t, std::uint32_t>({dict, dict_len}, codes, n, out);
 }
 
 std::int64_t sum_wrap_i64(const std::int64_t* in, std::int64_t n,
                           const std::uint8_t* validity) noexcept {
-  return impl::reduce_sum_wrap<std::int64_t>(in, n, validity, nullptr, 0);
+  return impl::reduce_sum_wrap<std::int64_t>(in, {n, validity, nullptr, 0});
 }
 
 double sum_wrap_f64(const double* in, std::int64_t n, const std::uint8_t* validity) noexcept {
   // The reference float sum is a STRICT sequential fold; the honest autovec baseline keeps
   // those semantics — if the compiler cannot vectorize it without reassociation, that IS the
   // published comparison (Charter T7; ADR-013).
-  return impl::reduce_sum_wrap<double>(in, n, validity, nullptr, 0);
+  return impl::reduce_sum_wrap<double>(in, {n, validity, nullptr, 0});
 }
 
 void hash64_i64(const std::int64_t* in, std::int64_t n, std::uint64_t seed,
@@ -97,12 +97,12 @@ void hash64_i64(const std::int64_t* in, std::int64_t n, std::uint64_t seed,
 
 void unpack_for_u32(const std::uint8_t* packed, std::int64_t n, int bit_width, std::uint32_t base,
                     std::uint32_t* out) noexcept {
-  impl::unpack<std::uint32_t>(packed, n, bit_width, base, out);
+  impl::unpack<std::uint32_t>({packed, n, bit_width}, base, out);
 }
 
 void arith_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n,
                std::int64_t* out) noexcept {
-  impl::arith<std::int64_t>(op, a, b, n, out);
+  impl::arith<std::int64_t>(op, {a, n}, b, out);
 }
 
 }  // namespace quiver::bench::autovec_avx2

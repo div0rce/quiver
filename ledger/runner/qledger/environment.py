@@ -8,6 +8,7 @@ investigation). Stdlib only (REQ-INT-004).
 
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import json
 import pathlib
@@ -23,14 +24,29 @@ def _run(cmd: list[str]) -> str:
         return ""
 
 
-def git_state(repo: pathlib.Path) -> tuple[str, str]:
-    """(short commit, 'clean'|'dirty'). The runner's own output under ledger/results/ is
-    excluded — a run must not flag itself dirty by writing its results (everything else,
-    including untracked source files, still counts: provenance)."""
+def git_state(repo: pathlib.Path, out_dir: pathlib.Path | None = None) -> tuple[str, str]:
+    """(short commit, 'clean'|'dirty'). The runner's own output is excluded — a run must not flag
+    itself dirty by writing its results. `ledger/results/` covers the default destination;
+    `out_dir` covers an explicit `--output` (community-run defaults to ./submission, inside the
+    repo). Everything else, including untracked source files, still counts: provenance."""
     sha = _run(["git", "-C", str(repo), "rev-parse", "--short=12", "HEAD"]) or "unknown"
-    status = _run(["git", "-C", str(repo), "status", "--porcelain", "--",
-                   ".", ":(exclude)ledger/results"])
+    specs = [".", ":(exclude)ledger/results"]
+    if out_dir is not None:
+        try:
+            specs.append(f":(exclude){out_dir.resolve().relative_to(repo.resolve()).as_posix()}")
+        except ValueError:
+            pass  # output lives outside the repo: nothing to exclude
+    status = _run(["git", "-C", str(repo), "status", "--porcelain", "--", *specs])
     return sha, ("dirty" if status else "clean")
+
+
+def _read_sysfs(path: pathlib.Path) -> str | None:
+    """Stripped contents of a sysfs/procfs knob, or None when it is absent or unreadable — the
+    four readers below all mean the same thing by both: the value could not be recorded."""
+    try:
+        return path.read_text().strip()
+    except OSError:
+        return None
 
 
 def cpu_model() -> str:
@@ -49,37 +65,41 @@ def frequency_governor() -> str:
     """Linux: the cpufreq governor (must be 'performance' for publishable runs).
     macOS exposes no governor control; that is the platform's normal state, recorded as such
     (not a deviation) — Apple entries are secondary-platform anyway (REQ-LEDGER-008)."""
-    gov_path = pathlib.Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
-    if gov_path.exists():
-        try:
-            return gov_path.read_text().strip()
-        except OSError:
-            return "unreadable"
+    gov = _read_sysfs(pathlib.Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"))
+    if gov is not None:
+        return gov
     if platform.system() == "Darwin":
         return "n/a (macOS: OS-managed DVFS, no user governor)"
     return "unknown"
 
 
 def smt_state() -> str:
-    smt = pathlib.Path("/sys/devices/system/cpu/smt/control")
-    if smt.exists():
-        try:
-            return smt.read_text().strip()
-        except OSError:
-            return "unreadable"
+    smt = _read_sysfs(pathlib.Path("/sys/devices/system/cpu/smt/control"))
+    if smt is not None:
+        return smt
     if platform.system() == "Darwin":
         return "n/a (Apple Silicon has no SMT)"
     return "unknown"
 
 
+def turbo_state(machine: dict[str, Any]) -> str:
+    """Measured turbo/boost state, not the machine file's intended policy. Copying the declared
+    policy meant a manifest kept asserting turbo was disabled after a reboot or a power-profile
+    daemon silently re-enabled it — the same way power-profiles-daemon reverts the governor."""
+    for path, on, off in ((pathlib.Path("/sys/devices/system/cpu/intel_pstate/no_turbo"),
+                           "0", "1"),
+                          (pathlib.Path("/sys/devices/system/cpu/cpufreq/boost"), "1", "0")):
+        value = _read_sysfs(path)
+        if value is not None:
+            state = {on: "enabled", off: "disabled"}.get(value, f"unknown ({value})")
+            return f"{state} (measured: {path.name}={value})"
+    return machine.get("turbo_boost", "platform-managed")  # macOS/Arm: no user control to read
+
+
 def aslr_state() -> str:
-    p = pathlib.Path("/proc/sys/kernel/randomize_va_space")
-    if p.exists():
-        try:
-            return {"0": "off", "1": "conservative", "2": "full"}.get(
-                p.read_text().strip(), "unknown")
-        except OSError:
-            return "unreadable"
+    value = _read_sysfs(pathlib.Path("/proc/sys/kernel/randomize_va_space"))
+    if value is not None:
+        return {"0": "off", "1": "conservative", "2": "full"}.get(value, "unknown")
     if platform.system() == "Darwin":
         return "on (macOS default, not user-controllable per-process here)"
     return "unknown"
@@ -117,22 +137,35 @@ def environment_checklist(repo: pathlib.Path, machine: dict[str, Any]) -> list[s
     return deviations
 
 
-def build_manifest(repo: pathlib.Path, build_dir: pathlib.Path, machine: dict[str, Any],
-                   gb_version: str, repetition_seed: int,
-                   deviations: list[str]) -> dict[str, Any]:
-    sha, dirty = git_state(repo)
-    comp, flags, lto = compiler_from_cache(build_dir)
+@dataclasses.dataclass(frozen=True)
+class RunContext:
+    """What a manifest needs to know about the run that produced it. Grouped because these
+    always travel together, and a seven-argument call site invites positional mistakes."""
+    repo: pathlib.Path
+    build_dir: pathlib.Path
+    out_dir: pathlib.Path
+    machine: dict[str, Any]
+    gb_version: str
+    repetition_seed: int
+
+
+def build_manifest(ctx: RunContext, deviations: list[str]) -> dict[str, Any]:
+    """Dirtiness is re-checked here, AFTER the run, so a tracked file edited mid-run is still
+    caught — a ~50-minute run is long enough for that to happen. `out_dir` is excluded so the
+    run's own output cannot mark it dirty."""
+    sha, dirty = git_state(ctx.repo, ctx.out_dir)
+    comp, flags, lto = compiler_from_cache(ctx.build_dir)
     devs = list(deviations)
     if dirty == "dirty":
         devs = devs if "git tree dirty" in devs else [*devs, "git tree dirty"]
     return {
         "cpu_model": cpu_model(),
-        "machine_id": machine["machine_id"],
-        "uarch": machine["uarch"],
-        "core_used": machine.get("core_policy", "OS-scheduled (no pinning control)"),
-        "pinning": machine.get("pinning", "none"),
+        "machine_id": ctx.machine["machine_id"],
+        "uarch": ctx.machine["uarch"],
+        "core_used": ctx.machine.get("core_policy", "OS-scheduled (no pinning control)"),
+        "pinning": ctx.machine.get("pinning", "none"),
         "frequency_governor": frequency_governor(),
-        "turbo_boost": machine.get("turbo_boost", "platform-managed"),
+        "turbo_boost": turbo_state(ctx.machine),
         "smt": smt_state(),
         "aslr": aslr_state(),
         "os": f"{platform.system()} {platform.release()}",
@@ -140,10 +173,10 @@ def build_manifest(repo: pathlib.Path, build_dir: pathlib.Path, machine: dict[st
         "compiler": comp,
         "compiler_flags": flags,
         "lto": lto,
-        "google_benchmark_version": gb_version,
+        "google_benchmark_version": ctx.gb_version,
         "library_commit": sha,
         "timestamp_utc": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
-        "repetition_seed": repetition_seed,
+        "repetition_seed": ctx.repetition_seed,
         "deviations": devs,
     }
 

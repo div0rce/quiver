@@ -119,10 +119,10 @@ void fold_participants(const T* in, std::int64_t n, const Participation& p, Fold
     for (std::int64_t i = 0; i < n; ++i) {
       fold(in[i], valid(p.validity, i));
     }
-  } else {
-    for (std::int64_t j = 0; j < p.sel_len; ++j) {
-      fold(in[p.sel[j]], valid(p.validity, static_cast<std::int64_t>(p.sel[j])));
-    }
+    return;
+  }
+  for (std::int64_t j = 0; j < p.sel_len; ++j) {
+    fold(in[p.sel[j]], valid(p.validity, static_cast<std::int64_t>(p.sel[j])));
   }
 }
 
@@ -205,38 +205,73 @@ quiver::SumType<T> sum_expected(const T* in, std::int64_t n, const Participation
 // (sum_expected) on every backend. NaN results must be compared as a CLASS (both-NaN ⇒
 // match): IEEE add propagates the payload of whichever operand the hardware sees first, and
 // C++ does not pin FP operand order, so payloads are not reproducible by any oracle.
+// Per-backend blocking shape: w lanes per accumulator, a accumulators.
+struct BlockShape {
+  int w;
+  int a;
+};
+
+// The dense batch a blocked-sum oracle reads.
 template <class T>
-T sum_blocked_expected(const T* in, std::int64_t n, const std::uint8_t* validity, int w, int a) {
-  static_assert(std::is_floating_point_v<T>, "blocked-sum policy applies to floats only");
-  std::vector<T> acc(static_cast<std::size_t>(w) * static_cast<std::size_t>(a), T{0});
-  const std::int64_t block = static_cast<std::int64_t>(w) * a;
+struct DenseBatch {
+  const T* in;
+  std::int64_t n;
+  const std::uint8_t* validity;
+};
+
+// One w*a-element block added elementwise; invalid lanes contribute -0.0, the exact neutral.
+template <class T>
+void blocked_add_block(std::vector<T>& acc, const DenseBatch<T>& b, std::int64_t base,
+                       BlockShape s) {
+  for (int k = 0; k < s.a; ++k) {
+    for (int lane = 0; lane < s.w; ++lane) {
+      const std::int64_t idx = base + static_cast<std::int64_t>(k) * s.w + lane;
+      acc[static_cast<std::size_t>(k * s.w + lane)] += valid(b.validity, idx) ? b.in[idx] : T{-0.0};
+    }
+  }
+}
+
+// Runs the whole-block phase; returns the index where the sequential tail begins.
+template <class T>
+std::int64_t blocked_accumulate(std::vector<T>& acc, const DenseBatch<T>& b, BlockShape s) {
+  const std::int64_t block = static_cast<std::int64_t>(s.w) * s.a;
   std::int64_t i = 0;
-  for (; i + block <= n; i += block) {
-    for (int k = 0; k < a; ++k) {
-      for (int lane = 0; lane < w; ++lane) {
-        const std::int64_t idx = i + static_cast<std::int64_t>(k) * w + lane;
-        acc[static_cast<std::size_t>(k * w + lane)] += valid(validity, idx) ? in[idx] : T{-0.0};
-      }
-    }
+  for (; i + block <= b.n; i += block) {
+    blocked_add_block(acc, b, i, s);
   }
-  for (int step = a / 2; step >= 1; step /= 2) {  // frozen combine: (0+2),(1+3), then +
+  return i;
+}
+
+// The ADR-013 frozen pairwise order: (0+2),(1+3), then +, lanewise.
+template <class T>
+void blocked_combine(std::vector<T>& acc, BlockShape s) {
+  for (int step = s.a / 2; step >= 1; step /= 2) {
     for (int k = 0; k < step; ++k) {
-      for (int lane = 0; lane < w; ++lane) {
-        acc[static_cast<std::size_t>(k * w + lane)] +=
-            acc[static_cast<std::size_t>((k + step) * w + lane)];
+      for (int lane = 0; lane < s.w; ++lane) {
+        acc[static_cast<std::size_t>(k * s.w + lane)] +=
+            acc[static_cast<std::size_t>((k + step) * s.w + lane)];
       }
     }
   }
-  T s = T{0};
-  for (int lane = 0; lane < w; ++lane) {
-    s += acc[static_cast<std::size_t>(lane)];
+}
+
+template <class T>
+T sum_blocked_expected(const T* in, std::int64_t n, const std::uint8_t* validity, BlockShape s) {
+  static_assert(std::is_floating_point_v<T>, "blocked-sum policy applies to floats only");
+  const DenseBatch<T> b{in, n, validity};
+  std::vector<T> acc(static_cast<std::size_t>(s.w) * static_cast<std::size_t>(s.a), T{0});
+  std::int64_t i = blocked_accumulate(acc, b, s);
+  blocked_combine(acc, s);
+  T sum = T{0};
+  for (int lane = 0; lane < s.w; ++lane) {  // strict low->high lane fold, starting from +0.0
+    sum += acc[static_cast<std::size_t>(lane)];
   }
-  for (; i < n; ++i) {
+  for (; i < n; ++i) {  // sequential valid-only tail
     if (valid(validity, i)) {
-      s += in[i];
+      sum += in[i];
     }
   }
-  return s;
+  return sum;
 }
 
 // --- K7: independent qhash64 transcription (ADR-012's formula, written from the ADR text,
@@ -335,61 +370,104 @@ T arith_wrap_expected(quiver::ArithOp op, T a, T b) {
 
 // Overflow oracle via long double / __int128-free wide math: use the (2x-width or 128-bit)
 // exact value where available; for 64-bit rely on the division-based check.
+// Narrower than 64-bit: the exact value fits a doubled-width type, so compare it to the bounds.
+template <class T>
+bool overflows_wide(quiver::ArithOp op, T a, T b) {
+  using W = std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>;
+  const W wa = static_cast<W>(a);
+  const W wb = static_cast<W>(b);
+  W exact;
+  switch (op) {
+  case quiver::ArithOp::kAdd:
+    exact = wa + wb;
+    break;
+  case quiver::ArithOp::kSub:
+    exact = wa - wb;
+    break;
+  default:
+    exact = wa * wb;
+    break;
+  }
+  return exact < static_cast<W>(std::numeric_limits<T>::min()) ||
+         exact > static_cast<W>(std::numeric_limits<T>::max());
+}
+
+template <class T>
+bool add_overflows_signed(T a, T b) {
+  return (b > 0 && a > std::numeric_limits<T>::max() - b) ||
+         (b < 0 && a < std::numeric_limits<T>::min() - b);
+}
+
+template <class T>
+bool sub_overflows_signed(T a, T b) {
+  return (b < 0 && a > std::numeric_limits<T>::max() + b) ||
+         (b > 0 && a < std::numeric_limits<T>::min() + b);
+}
+
+// Division-based, so it stays independent of the kernel's own overflow tricks.
+template <class T>
+bool mul_overflows_signed(T a, T b) {
+  if (a == 0 || b == 0) {
+    return false;
+  }
+  if (a == T{-1}) {
+    return b == std::numeric_limits<T>::min();
+  }
+  if (b == T{-1}) {
+    return a == std::numeric_limits<T>::min();
+  }
+  return a > 0 ? (b > 0 ? a > std::numeric_limits<T>::max() / b
+                        : b < std::numeric_limits<T>::min() / a)
+               : (b > 0 ? a < std::numeric_limits<T>::min() / b
+                        : a < std::numeric_limits<T>::max() / b);
+}
+
+template <class T>
+bool overflows_signed64(quiver::ArithOp op, T a, T b) {
+  switch (op) {
+  case quiver::ArithOp::kAdd:
+    return add_overflows_signed(a, b);
+  case quiver::ArithOp::kSub:
+    return sub_overflows_signed(a, b);
+  default:
+    return mul_overflows_signed(a, b);
+  }
+}
+
+template <class T>
+bool overflows_unsigned64(quiver::ArithOp op, T a, T b) {
+  switch (op) {
+  case quiver::ArithOp::kAdd:
+    return a > std::numeric_limits<T>::max() - b;
+  case quiver::ArithOp::kSub:
+    return b > a;
+  default:
+    return b != 0 && a > std::numeric_limits<T>::max() / b;
+  }
+}
+
 template <class T>
 bool arith_overflows_expected(quiver::ArithOp op, T a, T b) {
   static_assert(std::is_integral_v<T>);
   if constexpr (sizeof(T) < 8) {
-    using W = std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>;
-    const W wide = static_cast<W>(a) + W{0};
-    W exact;
-    switch (op) {
-    case quiver::ArithOp::kAdd:
-      exact = wide + static_cast<W>(b);
-      break;
-    case quiver::ArithOp::kSub:
-      exact = wide - static_cast<W>(b);
-      break;
-    default:
-      exact = wide * static_cast<W>(b);
-      break;
-    }
-    return exact < static_cast<W>(std::numeric_limits<T>::min()) ||
-           exact > static_cast<W>(std::numeric_limits<T>::max());
+    return overflows_wide(op, a, b);
+  } else if constexpr (std::is_signed_v<T>) {
+    return overflows_signed64(op, a, b);
   } else {
-    // 64-bit: check per op with division/boundary logic (independent of the kernel's tricks).
-    if constexpr (std::is_signed_v<T>) {
-      switch (op) {
-      case quiver::ArithOp::kAdd:
-        return (b > 0 && a > std::numeric_limits<T>::max() - b) ||
-               (b < 0 && a < std::numeric_limits<T>::min() - b);
-      case quiver::ArithOp::kSub:
-        return (b < 0 && a > std::numeric_limits<T>::max() + b) ||
-               (b > 0 && a < std::numeric_limits<T>::min() + b);
-      default:
-        if (a == 0 || b == 0) {
-          return false;
-        }
-        if (a == T{-1}) {
-          return b == std::numeric_limits<T>::min();
-        }
-        if (b == T{-1}) {
-          return a == std::numeric_limits<T>::min();
-        }
-        return a > 0 ? (b > 0 ? a > std::numeric_limits<T>::max() / b
-                              : b < std::numeric_limits<T>::min() / a)
-                     : (b > 0 ? a < std::numeric_limits<T>::min() / b
-                              : a < std::numeric_limits<T>::max() / b);
-      }
-    } else {
-      switch (op) {
-      case quiver::ArithOp::kAdd:
-        return a > std::numeric_limits<T>::max() - b;
-      case quiver::ArithOp::kSub:
-        return b > a;
-      default:
-        return b != 0 && a > std::numeric_limits<T>::max() / b;
-      }
-    }
+    return overflows_unsigned64(op, a, b);
+  }
+}
+
+// Which bound an overflowing signed op saturates to.
+template <class T>
+T saturate_bound_signed(quiver::ArithOp op, T a, T b) {
+  switch (op) {
+  case quiver::ArithOp::kAdd:
+    return a < 0 ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
+  case quiver::ArithOp::kSub:
+    return a < b ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
+  default:
+    return (a < 0) != (b < 0) ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
   }
 }
 
@@ -399,14 +477,7 @@ T arith_saturate_expected(quiver::ArithOp op, T a, T b) {
     return arith_wrap_expected(op, a, b);
   }
   if constexpr (std::is_signed_v<T>) {
-    switch (op) {
-    case quiver::ArithOp::kAdd:
-      return a < 0 ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
-    case quiver::ArithOp::kSub:
-      return a < b ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
-    default:
-      return (a < 0) != (b < 0) ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max();
-    }
+    return saturate_bound_signed(op, a, b);
   } else {
     return op == quiver::ArithOp::kSub ? std::numeric_limits<T>::min()
                                        : std::numeric_limits<T>::max();

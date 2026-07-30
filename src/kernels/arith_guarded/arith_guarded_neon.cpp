@@ -19,33 +19,6 @@ namespace detail::neon {
 
 namespace {
 
-// Byte-image helpers: all lane arithmetic on the raw 128-bit block (wrapping is modular).
-template <class T>
-QUIVER_FORCE_INLINE uint8x16_t add_wrap(uint8x16_t a, uint8x16_t b) noexcept {
-  if constexpr (sizeof(T) == 1) {
-    return vaddq_u8(a, b);
-  } else if constexpr (sizeof(T) == 2) {
-    return vreinterpretq_u8_u16(vaddq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
-  } else if constexpr (sizeof(T) == 4) {
-    return vreinterpretq_u8_u32(vaddq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
-  } else {
-    return vreinterpretq_u8_u64(vaddq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
-  }
-}
-
-template <class T>
-QUIVER_FORCE_INLINE uint8x16_t sub_wrap(uint8x16_t a, uint8x16_t b) noexcept {
-  if constexpr (sizeof(T) == 1) {
-    return vsubq_u8(a, b);
-  } else if constexpr (sizeof(T) == 2) {
-    return vreinterpretq_u8_u16(vsubq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
-  } else if constexpr (sizeof(T) == 4) {
-    return vreinterpretq_u8_u32(vsubq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
-  } else {
-    return vreinterpretq_u8_u64(vsubq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
-  }
-}
-
 QUIVER_FORCE_INLINE uint8x16_t and_bytes(uint8x16_t a, uint8x16_t b) noexcept {
   return vandq_u8(a, b);
 }
@@ -53,54 +26,149 @@ QUIVER_FORCE_INLINE uint8x16_t xor_bytes(uint8x16_t a, uint8x16_t b) noexcept {
   return veorq_u8(a, b);
 }
 
-// Sign lane mask at T's width from the byte image.
-template <class T>
-QUIVER_FORCE_INLINE uint8x16_t sign_mask(uint8x16_t v) noexcept {
-  if constexpr (sizeof(T) == 1) {
-    return vcltq_s8(vreinterpretq_s8_u8(v), vdupq_n_s8(0));
-  } else if constexpr (sizeof(T) == 2) {
-    return vreinterpretq_u8_u16(vcltq_s16(vreinterpretq_s16_u8(v), vdupq_n_s16(0)));
-  } else if constexpr (sizeof(T) == 4) {
-    return vreinterpretq_u8_u32(vcltq_s32(vreinterpretq_s32_u8(v), vdupq_n_s32(0)));
-  } else {
-    return vreinterpretq_u8_u64(vcltq_s64(vreinterpretq_s64_u8(v), vdupq_n_s64(0)));
-  }
-}
+// The raw 128-bit block viewed at one lane width. Everything the guarded kernels need per
+// width lives here, so the reinterpret ladder is written once per width instead of once per
+// operation: wrapping add/sub (modular on the byte image), unsigned lane compare, the sign
+// mask, and the native saturating forms (sqadd/uqadd/sqsub/uqsub — all widths on A64).
+template <int Bytes>
+struct AgLanes;
 
-// Unsigned lane compare a < b at T's width.
-template <class T>
-QUIVER_FORCE_INLINE uint8x16_t ult_mask(uint8x16_t a, uint8x16_t b) noexcept {
-  if constexpr (sizeof(T) == 1) {
+template <>
+struct AgLanes<1> {
+  static QUIVER_FORCE_INLINE uint8x16_t add(uint8x16_t a, uint8x16_t b) noexcept {
+    return vaddq_u8(a, b);
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t sub(uint8x16_t a, uint8x16_t b) noexcept {
+    return vsubq_u8(a, b);
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t ult(uint8x16_t a, uint8x16_t b) noexcept {
     return vcltq_u8(a, b);
-  } else if constexpr (sizeof(T) == 2) {
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t negative(uint8x16_t v) noexcept {
+    return vcltq_s8(vreinterpretq_s8_u8(v), vdupq_n_s8(0));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qadd_signed(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_s8(vqaddq_s8(vreinterpretq_s8_u8(a), vreinterpretq_s8_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qsub_signed(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_s8(vqsubq_s8(vreinterpretq_s8_u8(a), vreinterpretq_s8_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qadd_unsigned(uint8x16_t a, uint8x16_t b) noexcept {
+    return vqaddq_u8(a, b);
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qsub_unsigned(uint8x16_t a, uint8x16_t b) noexcept {
+    return vqsubq_u8(a, b);
+  }
+};
+
+template <>
+struct AgLanes<2> {
+  static QUIVER_FORCE_INLINE uint8x16_t add(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u16(vaddq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t sub(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u16(vsubq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t ult(uint8x16_t a, uint8x16_t b) noexcept {
     return vreinterpretq_u8_u16(vcltq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
-  } else if constexpr (sizeof(T) == 4) {
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t negative(uint8x16_t v) noexcept {
+    return vreinterpretq_u8_u16(vcltq_s16(vreinterpretq_s16_u8(v), vdupq_n_s16(0)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qadd_signed(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_s16(vqaddq_s16(vreinterpretq_s16_u8(a), vreinterpretq_s16_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qsub_signed(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_s16(vqsubq_s16(vreinterpretq_s16_u8(a), vreinterpretq_s16_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qadd_unsigned(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u16(vqaddq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qsub_unsigned(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u16(vqsubq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
+  }
+};
+
+template <>
+struct AgLanes<4> {
+  static QUIVER_FORCE_INLINE uint8x16_t add(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u32(vaddq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t sub(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u32(vsubq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t ult(uint8x16_t a, uint8x16_t b) noexcept {
     return vreinterpretq_u8_u32(vcltq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
-  } else {
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t negative(uint8x16_t v) noexcept {
+    return vreinterpretq_u8_u32(vcltq_s32(vreinterpretq_s32_u8(v), vdupq_n_s32(0)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qadd_signed(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_s32(vqaddq_s32(vreinterpretq_s32_u8(a), vreinterpretq_s32_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qsub_signed(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_s32(vqsubq_s32(vreinterpretq_s32_u8(a), vreinterpretq_s32_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qadd_unsigned(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u32(vqaddq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qsub_unsigned(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u32(vqsubq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
+  }
+};
+
+template <>
+struct AgLanes<8> {
+  static QUIVER_FORCE_INLINE uint8x16_t add(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u64(vaddq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t sub(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u64(vsubq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t ult(uint8x16_t a, uint8x16_t b) noexcept {
     return vreinterpretq_u8_u64(vcltq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
   }
-}
+  static QUIVER_FORCE_INLINE uint8x16_t negative(uint8x16_t v) noexcept {
+    return vreinterpretq_u8_u64(vcltq_s64(vreinterpretq_s64_u8(v), vdupq_n_s64(0)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qadd_signed(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_s64(vqaddq_s64(vreinterpretq_s64_u8(a), vreinterpretq_s64_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qsub_signed(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_s64(vqsubq_s64(vreinterpretq_s64_u8(a), vreinterpretq_s64_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qadd_unsigned(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u64(vqaddq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
+  }
+  static QUIVER_FORCE_INLINE uint8x16_t qsub_unsigned(uint8x16_t a, uint8x16_t b) noexcept {
+    return vreinterpretq_u8_u64(vqsubq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
+  }
+};
+
+template <class T>
+using AgW = AgLanes<static_cast<int>(sizeof(T))>;
 
 template <class T>
 QUIVER_FORCE_INLINE uint8x16_t checked_block(ArithOp op, uint8x16_t a, uint8x16_t b,
                                              uint8x16_t* overflow) noexcept {
+  using W = AgW<T>;
   if constexpr (std::is_signed_v<T>) {
     if (op == ArithOp::kAdd) {
-      const uint8x16_t r = add_wrap<T>(a, b);
-      *overflow = sign_mask<T>(and_bytes(xor_bytes(a, r), xor_bytes(b, r)));
+      const uint8x16_t r = W::add(a, b);
+      *overflow = W::negative(and_bytes(xor_bytes(a, r), xor_bytes(b, r)));
       return r;
     }
-    const uint8x16_t r = sub_wrap<T>(a, b);
-    *overflow = sign_mask<T>(and_bytes(xor_bytes(a, b), xor_bytes(a, r)));
+    const uint8x16_t r = W::sub(a, b);
+    *overflow = W::negative(and_bytes(xor_bytes(a, b), xor_bytes(a, r)));
     return r;
   } else {
     if (op == ArithOp::kAdd) {
-      const uint8x16_t r = add_wrap<T>(a, b);
-      *overflow = ult_mask<T>(r, a);
+      const uint8x16_t r = W::add(a, b);
+      *overflow = W::ult(r, a);
       return r;
     }
-    const uint8x16_t r = sub_wrap<T>(a, b);
-    *overflow = ult_mask<T>(a, b);
+    const uint8x16_t r = W::sub(a, b);
+    *overflow = W::ult(a, b);
     return r;
   }
 }
@@ -128,45 +196,11 @@ QUIVER_FORCE_INLINE std::uint32_t mask_bits(uint8x16_t m) noexcept {
 // Native saturating add/sub at T's width (sqadd/uqadd/sqsub/uqsub — all widths on A64).
 template <class T>
 QUIVER_FORCE_INLINE uint8x16_t saturating_block(ArithOp op, uint8x16_t a, uint8x16_t b) noexcept {
-  constexpr bool kSigned = std::is_signed_v<T>;
-  if constexpr (sizeof(T) == 1) {
-    if (op == ArithOp::kAdd) {
-      return kSigned
-                 ? vreinterpretq_u8_s8(vqaddq_s8(vreinterpretq_s8_u8(a), vreinterpretq_s8_u8(b)))
-                 : vqaddq_u8(a, b);
-    }
-    return kSigned ? vreinterpretq_u8_s8(vqsubq_s8(vreinterpretq_s8_u8(a), vreinterpretq_s8_u8(b)))
-                   : vqsubq_u8(a, b);
-  } else if constexpr (sizeof(T) == 2) {
-    if (op == ArithOp::kAdd) {
-      return kSigned ? vreinterpretq_u8_s16(
-                           vqaddq_s16(vreinterpretq_s16_u8(a), vreinterpretq_s16_u8(b)))
-                     : vreinterpretq_u8_u16(
-                           vqaddq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
-    }
-    return kSigned
-               ? vreinterpretq_u8_s16(vqsubq_s16(vreinterpretq_s16_u8(a), vreinterpretq_s16_u8(b)))
-               : vreinterpretq_u8_u16(vqsubq_u16(vreinterpretq_u16_u8(a), vreinterpretq_u16_u8(b)));
-  } else if constexpr (sizeof(T) == 4) {
-    if (op == ArithOp::kAdd) {
-      return kSigned ? vreinterpretq_u8_s32(
-                           vqaddq_s32(vreinterpretq_s32_u8(a), vreinterpretq_s32_u8(b)))
-                     : vreinterpretq_u8_u32(
-                           vqaddq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
-    }
-    return kSigned
-               ? vreinterpretq_u8_s32(vqsubq_s32(vreinterpretq_s32_u8(a), vreinterpretq_s32_u8(b)))
-               : vreinterpretq_u8_u32(vqsubq_u32(vreinterpretq_u32_u8(a), vreinterpretq_u32_u8(b)));
+  using W = AgW<T>;
+  if constexpr (std::is_signed_v<T>) {
+    return op == ArithOp::kAdd ? W::qadd_signed(a, b) : W::qsub_signed(a, b);
   } else {
-    if (op == ArithOp::kAdd) {
-      return kSigned ? vreinterpretq_u8_s64(
-                           vqaddq_s64(vreinterpretq_s64_u8(a), vreinterpretq_s64_u8(b)))
-                     : vreinterpretq_u8_u64(
-                           vqaddq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
-    }
-    return kSigned
-               ? vreinterpretq_u8_s64(vqsubq_s64(vreinterpretq_s64_u8(a), vreinterpretq_s64_u8(b)))
-               : vreinterpretq_u8_u64(vqsubq_u64(vreinterpretq_u64_u8(a), vreinterpretq_u64_u8(b)));
+    return op == ArithOp::kAdd ? W::qadd_unsigned(a, b) : W::qsub_unsigned(a, b);
   }
 }
 
@@ -194,64 +228,109 @@ struct ag_ScalarRhs {
   T tail(std::int64_t) const noexcept { return b; }
 };
 
+// The left-hand batch a guarded op reads.
+template <class T>
+struct AgBatch {
+  const T* a;
+  std::int64_t n;
+};
+
+// Where a checked op writes: values, plus the optional per-element overflow bitmap.
+template <class T>
+struct AgCheckedOut {
+  T* out;
+  std::uint8_t* overflow_bits;
+};
+
 // Vectorized checked add/sub over 8-element-aligned groups (>= one bitmap byte per group).
+// Holding the per-call invariants keeps each step small enough to read on its own.
 template <class T, class LoadB>
-std::int64_t checked_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n, T* out,
-                                 std::uint8_t* overflow_bits) noexcept {
-  constexpr std::int64_t kW = static_cast<std::int64_t>(16 / sizeof(T));
-  constexpr std::int64_t kGroup = (kW < 8) ? 8 : kW;
-  std::int64_t count = 0;
-  std::int64_t i = 0;
-  for (; i + kGroup <= n; i += kGroup) {
-    std::uint32_t bits = 0;
-    for (std::int64_t v = 0; v < kGroup; v += kW) {
-      const uint8x16_t va = vld1q_u8(reinterpret_cast<const std::uint8_t*>(a + i + v));
-      uint8x16_t ov;
-      const uint8x16_t r = checked_block<T>(op, va, load_b(i + v), &ov);
-      vst1q_u8(reinterpret_cast<std::uint8_t*>(out + i + v), r);
-      bits |= mask_bits<T>(ov) << v;
-    }
-    count += std::popcount(bits);
-    if (overflow_bits != nullptr) {
-      std::memcpy(overflow_bits + (i >> 3), &bits, kGroup / 8);
+struct AgCheckedRun {
+  static constexpr std::int64_t kW = static_cast<std::int64_t>(16 / sizeof(T));
+  static constexpr std::int64_t kGroup = (kW < 8) ? 8 : kW;
+
+  ArithOp op;
+  AgBatch<T> in;
+  LoadB load_b;
+  AgCheckedOut<T> sink;
+
+  std::int64_t tail_start() const noexcept { return in.n / kGroup * kGroup; }
+
+  void store_byte(std::int64_t idx, std::uint8_t byte) const noexcept {
+    if (sink.overflow_bits != nullptr) {
+      sink.overflow_bits[idx] = byte;
     }
   }
-  if (i < n) {  // scalar tail with byte assembly (ADR-015/ADR-016)
-    std::int64_t byte_idx = i >> 3;
+
+  // One kGroup-element group; returns its overflow mask, LSB-first.
+  std::uint32_t group(std::int64_t i) const noexcept {
+    std::uint32_t bits = 0;
+    for (std::int64_t v = 0; v < kGroup; v += kW) {
+      const uint8x16_t va = vld1q_u8(reinterpret_cast<const std::uint8_t*>(in.a + i + v));
+      uint8x16_t ov;
+      const uint8x16_t r = checked_block<T>(op, va, load_b(i + v), &ov);
+      vst1q_u8(reinterpret_cast<std::uint8_t*>(sink.out + i + v), r);
+      bits |= mask_bits<T>(ov) << v;
+    }
+    return bits;
+  }
+
+  std::int64_t blocks() const noexcept {
+    std::int64_t count = 0;
+    for (std::int64_t i = 0; i + kGroup <= in.n; i += kGroup) {
+      const std::uint32_t bits = group(i);
+      count += std::popcount(bits);
+      if (sink.overflow_bits != nullptr) {
+        std::memcpy(sink.overflow_bits + (i >> 3), &bits, kGroup / 8);
+      }
+    }
+    return count;
+  }
+
+  // Scalar tail with byte assembly (ADR-015/ADR-016).
+  std::int64_t tail() const noexcept {
+    std::int64_t count = 0;
+    std::int64_t byte_idx = tail_start() >> 3;
     std::uint8_t byte = 0;
     int k = 0;
-    for (; i < n; ++i) {
+    for (std::int64_t i = tail_start(); i < in.n; ++i) {
       T r;
-      const bool ov = scalar_impl::checked_one(op, a[i], load_b.tail(i), &r);
-      out[i] = r;
+      const bool ov = scalar_impl::checked_one(op, in.a[i], load_b.tail(i), &r);
+      sink.out[i] = r;
       count += ov ? 1 : 0;
       byte = static_cast<std::uint8_t>(byte | (static_cast<std::uint8_t>(ov) << k));
       if (++k == 8) {
-        if (overflow_bits != nullptr) {
-          overflow_bits[byte_idx] = byte;
-        }
-        ++byte_idx;
+        store_byte(byte_idx++, byte);
         byte = 0;
         k = 0;
       }
     }
-    if (k != 0 && overflow_bits != nullptr) {
-      overflow_bits[byte_idx] = byte;
+    if (k != 0) {
+      store_byte(byte_idx, byte);
     }
+    return count;
   }
+};
+
+template <class T, class LoadB>
+std::int64_t checked_addsub_impl(ArithOp op, AgBatch<T> in, LoadB load_b,
+                                 AgCheckedOut<T> sink) noexcept {
+  const AgCheckedRun<T, LoadB> run{op, in, load_b, sink};
+  std::int64_t count = run.blocks();
+  count += run.tail();
   return count;
 }
 
 template <class T, class LoadB>
-void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n, T* out) noexcept {
+void saturating_addsub_impl(ArithOp op, AgBatch<T> in, LoadB load_b, T* out) noexcept {
   constexpr std::int64_t kW = static_cast<std::int64_t>(16 / sizeof(T));
   std::int64_t i = 0;
-  for (; i + kW <= n; i += kW) {
-    const uint8x16_t va = vld1q_u8(reinterpret_cast<const std::uint8_t*>(a + i));
+  for (; i + kW <= in.n; i += kW) {
+    const uint8x16_t va = vld1q_u8(reinterpret_cast<const std::uint8_t*>(in.a + i));
     vst1q_u8(reinterpret_cast<std::uint8_t*>(out + i), saturating_block<T>(op, va, load_b(i)));
   }
-  for (; i < n; ++i) {
-    out[i] = scalar_impl::saturate_one(op, a[i], load_b.tail(i));
+  for (; i < in.n; ++i) {
+    out[i] = scalar_impl::saturate_one(op, in.a[i], load_b.tail(i));
   }
 }
 
@@ -262,31 +341,31 @@ void saturating_addsub_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n
   std::int64_t k10_arith_checked(ArithOp op, const T* a, const T* b, std::int64_t n, T* out,       \
                                  std::uint8_t* overflow_bits) noexcept {                           \
     if (op == ArithOp::kMul) {                                                                     \
-      return scalar_impl::arith_checked<T>(op, a, b, n, out, overflow_bits);                       \
+      return scalar_impl::arith_checked<T>(op, {a, n}, b, {out, overflow_bits});                   \
     }                                                                                              \
-    return checked_addsub_impl<T>(op, a, ag_BatchRhs<T>{b}, n, out, overflow_bits);                \
+    return checked_addsub_impl<T>(op, {a, n}, ag_BatchRhs<T>{b}, {out, overflow_bits});            \
   }                                                                                                \
   std::int64_t k10_arith_checked_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out,   \
                                             std::uint8_t* overflow_bits) noexcept {                \
     if (op == ArithOp::kMul) {                                                                     \
-      return scalar_impl::arith_checked_scalar_rhs<T>(op, a, b, n, out, overflow_bits);            \
+      return scalar_impl::arith_checked_scalar_rhs<T>(op, {a, n}, b, {out, overflow_bits});        \
     }                                                                                              \
-    return checked_addsub_impl<T>(op, a, ag_ScalarRhs<T>{b}, n, out, overflow_bits);               \
+    return checked_addsub_impl<T>(op, {a, n}, ag_ScalarRhs<T>{b}, {out, overflow_bits});           \
   }                                                                                                \
   void k10_arith_saturating(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept { \
     if (op == ArithOp::kMul) {                                                                     \
-      scalar_impl::arith_saturating<T>(op, a, b, n, out); /* REQ-K10-003 concession */             \
+      scalar_impl::arith_saturating<T>(op, {a, n}, b, out); /* REQ-K10-003 concession */           \
       return;                                                                                      \
     }                                                                                              \
-    saturating_addsub_impl<T>(op, a, ag_BatchRhs<T>{b}, n, out);                                   \
+    saturating_addsub_impl<T>(op, {a, n}, ag_BatchRhs<T>{b}, out);                                 \
   }                                                                                                \
   void k10_arith_saturating_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n,                \
                                        T* out) noexcept {                                          \
     if (op == ArithOp::kMul) {                                                                     \
-      scalar_impl::arith_saturating_scalar_rhs<T>(op, a, b, n, out);                               \
+      scalar_impl::arith_saturating_scalar_rhs<T>(op, {a, n}, b, out);                             \
       return;                                                                                      \
     }                                                                                              \
-    saturating_addsub_impl<T>(op, a, ag_ScalarRhs<T>{b}, n, out);                                  \
+    saturating_addsub_impl<T>(op, {a, n}, ag_ScalarRhs<T>{b}, out);                                \
   }
 
 QUIVER_K10_DEFINE(std::int8_t)

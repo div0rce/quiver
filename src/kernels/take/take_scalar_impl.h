@@ -15,9 +15,26 @@
 QUIVER_BEGIN_NAMESPACE
 namespace detail::scalar_impl {
 
+// A value source and its bound. A gather or decode is meaningless without knowing how far the
+// source extends, so the two travel together.
 template <class T>
-void take(const T* values, std::int64_t values_len, const std::uint32_t* idx, std::int64_t idx_len,
-          T* out) noexcept {
+struct Source {
+  const T* values;
+  std::int64_t len;
+};
+
+// A run of positions: gather indices, or a selection over codes.
+struct IndexRun {
+  const std::uint32_t* idx;
+  std::int64_t len;
+};
+
+template <class T>
+void take(Source<T> src, IndexRun indices, T* out) noexcept {
+  const T* values = src.values;
+  const std::int64_t values_len = src.len;
+  const std::uint32_t* idx = indices.idx;
+  const std::int64_t idx_len = indices.len;
 #if defined(QUIVER_ENABLE_ASSERTS)
   for (std::int64_t j = 0; j < idx_len; ++j) {
     QUIVER_ASSERT(idx[j] < static_cast<std::uint64_t>(values_len),
@@ -45,8 +62,9 @@ void take(const T* values, std::int64_t values_len, const std::uint32_t* idx, st
 }
 
 template <class T, class C>
-void dict_decode(const T* dict, std::int64_t dict_len, const C* codes, std::int64_t n,
-                 T* out) noexcept {
+void dict_decode(Source<T> dictionary, const C* codes, std::int64_t n, T* out) noexcept {
+  const T* dict = dictionary.values;
+  const std::int64_t dict_len = dictionary.len;
 #if defined(QUIVER_ENABLE_ASSERTS)
   for (std::int64_t i = 0; i < n; ++i) {
     QUIVER_ASSERT(static_cast<std::uint64_t>(codes[i]) < static_cast<std::uint64_t>(dict_len),
@@ -74,8 +92,11 @@ void dict_decode(const T* dict, std::int64_t dict_len, const C* codes, std::int6
 // Fused decode: out[j] = dict[codes[sel[j]]], packed; unselected code positions are never
 // read (REQ-K5-003 — validated by the guard-page decode test).
 template <class T, class C>
-void dict_decode_sel(const T* dict, std::int64_t dict_len, const C* codes, const std::uint32_t* sel,
-                     std::int64_t sel_len, T* out) noexcept {
+void dict_decode_sel(Source<T> dictionary, const C* codes, IndexRun selection, T* out) noexcept {
+  const T* dict = dictionary.values;
+  const std::int64_t dict_len = dictionary.len;
+  const std::uint32_t* sel = selection.idx;
+  const std::int64_t sel_len = selection.len;
   for (std::int64_t j = 0; j < sel_len; ++j) {
     const C code = codes[sel[j]];
     QUIVER_ASSERT(static_cast<std::uint64_t>(code) < static_cast<std::uint64_t>(dict_len),

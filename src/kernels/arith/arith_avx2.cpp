@@ -35,112 +35,139 @@ QUIVER_FORCE_INLINE __m256i mul8_lo(__m256i a, __m256i b) noexcept {
   return _mm256_or_si256(_mm256_and_si256(even, lo_mask), _mm256_slli_epi16(odd, 8));
 }
 
+// Integer arithmetic is sign-agnostic (wrapping add/sub and the low half of the product), so
+// one specialization per lane width covers all eight integer element types.
+template <int Bytes>
+struct ArIntOps;
+
+template <>
+struct ArIntOps<1> {
+  static QUIVER_FORCE_INLINE __m256i add(__m256i a, __m256i b) noexcept {
+    return _mm256_add_epi8(a, b);
+  }
+  static QUIVER_FORCE_INLINE __m256i sub(__m256i a, __m256i b) noexcept {
+    return _mm256_sub_epi8(a, b);
+  }
+  static QUIVER_FORCE_INLINE __m256i mul(__m256i a, __m256i b) noexcept { return mul8_lo(a, b); }
+};
+
+template <>
+struct ArIntOps<2> {
+  static QUIVER_FORCE_INLINE __m256i add(__m256i a, __m256i b) noexcept {
+    return _mm256_add_epi16(a, b);
+  }
+  static QUIVER_FORCE_INLINE __m256i sub(__m256i a, __m256i b) noexcept {
+    return _mm256_sub_epi16(a, b);
+  }
+  static QUIVER_FORCE_INLINE __m256i mul(__m256i a, __m256i b) noexcept {
+    return _mm256_mullo_epi16(a, b);
+  }
+};
+
+template <>
+struct ArIntOps<4> {
+  static QUIVER_FORCE_INLINE __m256i add(__m256i a, __m256i b) noexcept {
+    return _mm256_add_epi32(a, b);
+  }
+  static QUIVER_FORCE_INLINE __m256i sub(__m256i a, __m256i b) noexcept {
+    return _mm256_sub_epi32(a, b);
+  }
+  static QUIVER_FORCE_INLINE __m256i mul(__m256i a, __m256i b) noexcept {
+    return _mm256_mullo_epi32(a, b);
+  }
+};
+
+template <>
+struct ArIntOps<8> {
+  static QUIVER_FORCE_INLINE __m256i add(__m256i a, __m256i b) noexcept {
+    return _mm256_add_epi64(a, b);
+  }
+  static QUIVER_FORCE_INLINE __m256i sub(__m256i a, __m256i b) noexcept {
+    return _mm256_sub_epi64(a, b);
+  }
+  static QUIVER_FORCE_INLINE __m256i mul(__m256i a, __m256i b) noexcept {
+    return ar_mul64_lo(a, b);  // no vpmullq on AVX2: the 3x-vpmuludq decomposition
+  }
+};
+
+// One element type's vector view: the register type, its width, unaligned load/store, and the
+// three ops. Naming these once lets the kernel below be a single loop for every type.
 template <class T>
-QUIVER_FORCE_INLINE __m256i apply_op(ArithOp op, __m256i a, __m256i b) noexcept {
-  if constexpr (sizeof(T) == 1) {
-    switch (op) {
-    case ArithOp::kAdd:
-      return _mm256_add_epi8(a, b);
-    case ArithOp::kSub:
-      return _mm256_sub_epi8(a, b);
-    case ArithOp::kMul:
-      return mul8_lo(a, b);
-    }
-  } else if constexpr (sizeof(T) == 2) {
-    switch (op) {
-    case ArithOp::kAdd:
-      return _mm256_add_epi16(a, b);
-    case ArithOp::kSub:
-      return _mm256_sub_epi16(a, b);
-    case ArithOp::kMul:
-      return _mm256_mullo_epi16(a, b);
-    }
-  } else if constexpr (sizeof(T) == 4) {
-    switch (op) {
-    case ArithOp::kAdd:
-      return _mm256_add_epi32(a, b);
-    case ArithOp::kSub:
-      return _mm256_sub_epi32(a, b);
-    case ArithOp::kMul:
-      return _mm256_mullo_epi32(a, b);
-    }
-  } else {
-    switch (op) {
-    case ArithOp::kAdd:
-      return _mm256_add_epi64(a, b);
-    case ArithOp::kSub:
-      return _mm256_sub_epi64(a, b);
-    case ArithOp::kMul:
-      return ar_mul64_lo(a, b);
-    }
+struct ArOps {
+  using V = __m256i;
+  static constexpr std::int64_t kW = static_cast<std::int64_t>(32 / sizeof(T));
+  using I = ArIntOps<static_cast<int>(sizeof(T))>;
+  static QUIVER_FORCE_INLINE V load(const T* p) noexcept {
+    return _mm256_loadu_si256(reinterpret_cast<const __m256i*>(p));
+  }
+  static QUIVER_FORCE_INLINE void store(T* p, V v) noexcept {
+    _mm256_storeu_si256(reinterpret_cast<__m256i*>(p), v);
+  }
+  static QUIVER_FORCE_INLINE V add(V a, V b) noexcept { return I::add(a, b); }
+  static QUIVER_FORCE_INLINE V sub(V a, V b) noexcept { return I::sub(a, b); }
+  static QUIVER_FORCE_INLINE V mul(V a, V b) noexcept { return I::mul(a, b); }
+};
+
+template <>
+struct ArOps<float> {
+  using V = __m256;
+  static constexpr std::int64_t kW = 8;
+  static QUIVER_FORCE_INLINE V load(const float* p) noexcept { return _mm256_loadu_ps(p); }
+  static QUIVER_FORCE_INLINE void store(float* p, V v) noexcept { _mm256_storeu_ps(p, v); }
+  static QUIVER_FORCE_INLINE V add(V a, V b) noexcept { return _mm256_add_ps(a, b); }
+  static QUIVER_FORCE_INLINE V sub(V a, V b) noexcept { return _mm256_sub_ps(a, b); }
+  static QUIVER_FORCE_INLINE V mul(V a, V b) noexcept { return _mm256_mul_ps(a, b); }
+};
+
+template <>
+struct ArOps<double> {
+  using V = __m256d;
+  static constexpr std::int64_t kW = 4;
+  static QUIVER_FORCE_INLINE V load(const double* p) noexcept { return _mm256_loadu_pd(p); }
+  static QUIVER_FORCE_INLINE void store(double* p, V v) noexcept { _mm256_storeu_pd(p, v); }
+  static QUIVER_FORCE_INLINE V add(V a, V b) noexcept { return _mm256_add_pd(a, b); }
+  static QUIVER_FORCE_INLINE V sub(V a, V b) noexcept { return _mm256_sub_pd(a, b); }
+  static QUIVER_FORCE_INLINE V mul(V a, V b) noexcept { return _mm256_mul_pd(a, b); }
+};
+
+template <class T>
+QUIVER_FORCE_INLINE typename ArOps<T>::V apply_op(ArithOp op, typename ArOps<T>::V a,
+                                                  typename ArOps<T>::V b) noexcept {
+  using O = ArOps<T>;
+  switch (op) {
+  case ArithOp::kAdd:
+    return O::add(a, b);
+  case ArithOp::kSub:
+    return O::sub(a, b);
+  case ArithOp::kMul:
+    return O::mul(a, b);
   }
   return a;  // unreachable for in-contract op values
 }
 
+// The left-hand batch an arith op reads.
+template <class T>
+struct ArBatch {
+  const T* a;
+  std::int64_t n;
+};
+
 template <class T, class LoadB>
-void arith_impl(ArithOp op, const T* a, LoadB load_b, std::int64_t n, T* out) noexcept {
-  constexpr std::int64_t kW = static_cast<std::int64_t>(32 / sizeof(T));
+void arith_impl(ArithOp op, ArBatch<T> in, LoadB load_b, T* out) noexcept {
+  using O = ArOps<T>;
   std::int64_t i = 0;
-  if constexpr (std::is_same_v<T, float>) {
-    for (; i + 8 <= n; i += 8) {
-      const __m256 va = _mm256_loadu_ps(a + i);
-      const __m256 vb = load_b(i);
-      __m256 r;
-      switch (op) {
-      case ArithOp::kAdd:
-        r = _mm256_add_ps(va, vb);
-        break;
-      case ArithOp::kSub:
-        r = _mm256_sub_ps(va, vb);
-        break;
-      default:
-        r = _mm256_mul_ps(va, vb);
-        break;
-      }
-      _mm256_storeu_ps(out + i, r);
-    }
-  } else if constexpr (std::is_same_v<T, double>) {
-    for (; i + 4 <= n; i += 4) {
-      const __m256d va = _mm256_loadu_pd(a + i);
-      const __m256d vb = load_b(i);
-      __m256d r;
-      switch (op) {
-      case ArithOp::kAdd:
-        r = _mm256_add_pd(va, vb);
-        break;
-      case ArithOp::kSub:
-        r = _mm256_sub_pd(va, vb);
-        break;
-      default:
-        r = _mm256_mul_pd(va, vb);
-        break;
-      }
-      _mm256_storeu_pd(out + i, r);
-    }
-  } else {
-    for (; i + kW <= n; i += kW) {
-      const __m256i va = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(a + i));
-      const __m256i vb = load_b(i);
-      _mm256_storeu_si256(reinterpret_cast<__m256i*>(out + i), apply_op<T>(op, va, vb));
-    }
+  for (; i + O::kW <= in.n; i += O::kW) {
+    O::store(out + i, apply_op<T>(op, O::load(in.a + i), load_b(i)));
   }
-  for (; i < n; ++i) {  // scalar tail, identical arithmetic (floats: same IEEE op)
-    out[i] = scalar_impl::arith_one(op, a[i], load_b.tail(i));
+  for (; i < in.n; ++i) {  // scalar tail, identical arithmetic (floats: same IEEE op)
+    out[i] = scalar_impl::arith_one(op, in.a[i], load_b.tail(i));
   }
 }
 
 template <class T>
 struct ar_BatchRhs {
   const T* b;
-  auto operator()(std::int64_t i) const noexcept {
-    if constexpr (std::is_same_v<T, float>) {
-      return _mm256_loadu_ps(b + i);
-    } else if constexpr (std::is_same_v<T, double>) {
-      return _mm256_loadu_pd(b + i);
-    } else {
-      return _mm256_loadu_si256(reinterpret_cast<const __m256i*>(b + i));
-    }
-  }
+  typename ArOps<T>::V operator()(std::int64_t i) const noexcept { return ArOps<T>::load(b + i); }
   T tail(std::int64_t i) const noexcept { return b[i]; }
 };
 
@@ -170,10 +197,10 @@ struct ar_ScalarRhs {
 // NOLINTBEGIN(bugprone-macro-parentheses): T expands to type names inside declarators.
 #define QUIVER_K9_DEFINE(T)                                                                        \
   void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {             \
-    arith_impl<T>(op, a, ar_BatchRhs<T>{b}, n, out);                                               \
+    arith_impl<T>(op, {a, n}, ar_BatchRhs<T>{b}, out);                                             \
   }                                                                                                \
   void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {         \
-    arith_impl<T>(op, a, ar_ScalarRhs<T>{b}, n, out);                                              \
+    arith_impl<T>(op, {a, n}, ar_ScalarRhs<T>{b}, out);                                            \
   }
 
 QUIVER_K9_DEFINE(std::int8_t)

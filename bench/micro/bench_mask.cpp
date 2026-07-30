@@ -20,20 +20,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB001ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
-  state.SetItemsProcessed(state.iterations() * values);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-    state.counters["ipc"] =
-        c.cycles > 0 ? static_cast<double>(c.instructions) / static_cast<double>(c.cycles) : 0.0;
-    state.counters["branch_miss_pct"] =
-        c.branches > 0
-            ? 100.0 * static_cast<double>(c.branch_misses) / static_cast<double>(c.branches)
-            : 0.0;
-  }
-}
-
 template <bool kAutovec>
 void bm_mask_and(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
@@ -114,13 +100,13 @@ void register_benchmarks() {
   const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536, 1 << 20}) {
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("mask", "and", variant, "bitmap", "n=" + std::to_string(n)),
+        quiver::bench::bench_name({"mask", "and", variant, "bitmap"}, "n=" + std::to_string(n)),
         bm_mask_and<false>)
         ->Args({n});
   }
   for (const std::int64_t n : {65536, 1 << 20}) {
     for (const int exit_first : {0, 1}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("mask", "all", variant, "bitmap",
+      benchmark::RegisterBenchmark(quiver::bench::bench_name({"mask", "all", variant, "bitmap"},
                                                              "n=" + std::to_string(n) + "/exit=" +
                                                                  (exit_first ? "first" : "none")),
                                    bm_mask_all)
@@ -131,9 +117,10 @@ void register_benchmarks() {
   // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
     for (const std::int64_t n : {4096, 65536, 1 << 20}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("mask", "and", "autovec-avx2",
-                                                             "bitmap", "n=" + std::to_string(n)),
-                                   bm_mask_and<true>)
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name({"mask", "and", "autovec-avx2", "bitmap"},
+                                    "n=" + std::to_string(n)),
+          bm_mask_and<true>)
           ->Args({n});
     }
   }

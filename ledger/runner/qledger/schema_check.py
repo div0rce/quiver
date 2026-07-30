@@ -75,43 +75,56 @@ def _type_errors(obj: dict[str, Any], spec: dict[str, type | tuple[type, ...]],
     return errors
 
 
-def validate_entry(entry: dict[str, Any]) -> list[str]:
-    """Returns a list of violations; empty means valid (QLS-1)."""
-    errors = _type_errors(entry, ENTRY_REQUIRED, "entry")
-    if errors:
-        return errors
-    if entry["schema"] != SCHEMA_VERSION:
-        errors.append(f"entry: schema is '{entry['schema']}', expected '{SCHEMA_VERSION}'")
-    if entry["methodology"] != METHODOLOGY_VERSION:
-        errors.append(f"entry: methodology is '{entry['methodology']}', "
-                      f"expected '{METHODOLOGY_VERSION}'")
+def _vocabulary_errors(entry: dict[str, Any]) -> list[str]:
+    """Fields whose value must come from a fixed QLS-1 vocabulary."""
+    errors = []
+    for field, expected in (("schema", SCHEMA_VERSION), ("methodology", METHODOLOGY_VERSION)):
+        if entry[field] != expected:
+            errors.append(f"entry: {field} is '{entry[field]}', expected '{expected}'")
     if entry["variant"] not in VALID_VARIANTS:
         errors.append(f"entry: variant '{entry['variant']}' not in {sorted(VALID_VARIANTS)}")
-    for flag in entry["flags"]:
-        if flag not in VALID_FLAGS:
-            errors.append(f"entry: unknown flag '{flag}'")
+    errors += [f"entry: unknown flag '{f}'" for f in entry["flags"] if f not in VALID_FLAGS]
+    if entry["git_dirty"] not in ("clean", "dirty"):
+        errors.append("entry: git_dirty must be 'clean' or 'dirty'")
+    return errors
+
+
+def _result_errors(metric: str, res: Any) -> list[str]:
+    """One entry in `results`: a known metric mapping to a full set of numeric statistics."""
+    if metric not in VALID_METRICS:
+        return [f"entry: results contain unknown metric '{metric}'"]
+    if not isinstance(res, dict):
+        return [f"entry: results['{metric}'] is not an object"]
+    errors = []
+    missing = RESULT_FIELDS - res.keys()
+    if missing:
+        errors.append(f"entry: results['{metric}'] missing {sorted(missing)}")
+    errors += [f"entry: results['{metric}']['{k}'] is not a number"
+               for k in RESULT_FIELDS & res.keys() if not isinstance(res[k], (int, float))]
+    return errors
+
+
+def _metrics_errors(entry: dict[str, Any]) -> list[str]:
+    """`metrics` is the index of `results`: every listed metric must be known and present."""
+    errors = []
     for metric in entry["metrics"]:
         if metric not in VALID_METRICS:
             errors.append(f"entry: unknown metric '{metric}'")
         elif metric not in entry["results"]:
             errors.append(f"entry: metric '{metric}' listed but absent from results")
     for metric, res in entry["results"].items():
-        if metric not in VALID_METRICS:
-            errors.append(f"entry: results contain unknown metric '{metric}'")
-            continue
-        if not isinstance(res, dict):
-            errors.append(f"entry: results['{metric}'] is not an object")
-            continue
-        missing = RESULT_FIELDS - res.keys()
-        if missing:
-            errors.append(f"entry: results['{metric}'] missing {sorted(missing)}")
-        for k in RESULT_FIELDS & res.keys():
-            if not isinstance(res[k], (int, float)):
-                errors.append(f"entry: results['{metric}']['{k}'] is not a number")
+        errors += _result_errors(metric, res)
+    return errors
+
+
+def validate_entry(entry: dict[str, Any]) -> list[str]:
+    """Returns a list of violations; empty means valid (QLS-1)."""
+    errors = _type_errors(entry, ENTRY_REQUIRED, "entry")
+    if errors:
+        return errors
+    errors = _vocabulary_errors(entry) + _metrics_errors(entry)
     if entry["repetitions"] < 10:
         errors.append("entry: repetitions < 10 are unpublishable (REQ-LEDGER-004)")
-    if entry["git_dirty"] not in ("clean", "dirty"):
-        errors.append("entry: git_dirty must be 'clean' or 'dirty'")
     # pmu is nullable; when flags say no_pmu, cycles_per_value must be absent (REQ-LEDGER-008)
     if "no_pmu" in entry["flags"] and "cycles_per_value" in entry["results"]:
         errors.append("entry: no_pmu flag with cycles_per_value present (REQ-LEDGER-008)")

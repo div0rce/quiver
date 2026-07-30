@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   full-differential:
+    timeout-minutes: 90
     name: full differential sweep (QUIVER_NIGHTLY)
     runs-on: ${{ matrix.os }}
     strategy:
@@ -29,6 +30,8 @@ jobs:
         os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure + build (release)
         run: cmake --preset release && cmake --build --preset release -j 4
       - name: Full-axis test sweep
@@ -41,6 +44,8 @@ jobs:
     timeout-minutes: 350  # 9 families x 30 min fuzz (4.5 h) + per-family corpus merge + build
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Configure + build fuzz preset
         env: { CC: clang-18, CXX: clang++-18 }
         run: cmake --preset fuzz && cmake --build --preset fuzz -j 4
@@ -75,10 +80,13 @@ jobs:
   # ctest runs the same test at a smaller sample with the distinct-pair-aware band.
 
   msan:
+    timeout-minutes: 90
     name: MemorySanitizer (clang, instrumented libc++)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Cache MSan-instrumented libc++
         id: libcxx-cache
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
@@ -118,10 +126,13 @@ jobs:
           ctest --preset msan --output-on-failure
 
   leak-check:
+    timeout-minutes: 90
     name: LeakSanitizer (test binaries)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: ASan(+LSan) full sweep
         env: { CC: clang-18, CXX: clang++-18, ASAN_OPTIONS: "detect_leaks=1" }
         run: |
@@ -129,10 +140,13 @@ jobs:
           QUIVER_NIGHTLY=1 ctest --preset asan-ubsan --output-on-failure
 
   coverage:
+    timeout-minutes: 60
     name: coverage artifact (informational, REQ-TEST-013)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Build with coverage and run tests
         env:
           CC: clang-18
@@ -152,7 +166,9 @@ jobs:
             -instr-profile=/tmp/quiver.profdata \
             -ignore-filename-regex='/(tests|bench|examples)/' > coverage.lcov || true
       - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-        with: { name: coverage-report, path: coverage.txt }
+        # Keep the machine-readable lcov too: if the Codecov upload below is rejected, rate-limited
+        # or the service is down, the run's coverage is still recoverable from the artifact.
+        with: { name: coverage-report, path: "coverage.txt\ncoverage.lcov" }
       # REQ-TEST-013: coverage is diagnostic, not a quality gate — this step never fails the run.
       - name: Upload coverage to Codecov (informational)
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
@@ -163,10 +179,13 @@ jobs:
           fail_ci_if_error: false
 
   vectorization-report:
+    timeout-minutes: 30
     name: -Rpass-missed report (REQ-SIMD-009, informational)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - name: Compile scalar TUs with vectorization remarks
         env:
           CC: clang-18

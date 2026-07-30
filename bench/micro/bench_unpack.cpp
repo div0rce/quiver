@@ -21,16 +21,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB008ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values,
-                std::int64_t bytes) {
-  state.SetItemsProcessed(state.iterations() * values);
-  state.SetBytesProcessed(state.iterations() * bytes);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-  }
-}
-
 template <bool kAutovec>
 void bm_unpack_u32(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
@@ -79,7 +69,7 @@ void register_benchmarks() {
   for (const std::int64_t n : {4096, 65536}) {
     for (const int w : {1, 4, 7, 8, 16, 24, 32}) {  // bit_width axis (QLM-1)
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("unpack", "unpack_for", variant, "u32",
+          quiver::bench::bench_name({"unpack", "unpack_for", variant, "u32"},
                                     "n=" + std::to_string(n) + "/w=" + std::to_string(w)),
           bm_unpack_u32<false>)
           ->Args({n, w});
@@ -91,7 +81,7 @@ void register_benchmarks() {
     for (const std::int64_t n : {4096, 65536}) {
       for (const int w : {1, 4, 7, 8, 16, 24, 32}) {
         benchmark::RegisterBenchmark(
-            quiver::bench::bench_name("unpack", "unpack_for", "autovec-avx2", "u32",
+            quiver::bench::bench_name({"unpack", "unpack_for", "autovec-avx2", "u32"},
                                       "n=" + std::to_string(n) + "/w=" + std::to_string(w)),
             bm_unpack_u32<true>)
             ->Args({n, w});

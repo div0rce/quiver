@@ -132,7 +132,7 @@ TEST(Testkit, AlignedBufferHonorsOffsets) {
 TEST(Testkit, DivergenceDiagnosticNamesIndexSeedAndReq) {
   const std::int32_t a[8] = {0, 1, 2, 3, 4, 5, 6, 7};
   const std::int32_t b[8] = {0, 1, 2, 99, 4, 5, 6, 7};
-  const auto result = quiver_test::buffers_equal(a, b, 8, kSeed, "REQ-TEST-012");
+  const auto result = quiver_test::buffers_equal(a, b, 8, {kSeed, "REQ-TEST-012"});
   ASSERT_FALSE(result);
   const std::string msg = result.message();
   EXPECT_NE(msg.find("index 3"), std::string::npos);

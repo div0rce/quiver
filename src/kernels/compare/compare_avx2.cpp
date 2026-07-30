@@ -72,33 +72,66 @@ QUIVER_FORCE_INLINE __m256i bias_unsigned(__m256i v) noexcept {
   }
 }
 
-template <class T>
-QUIVER_FORCE_INLINE __m256i int_eq(__m256i a, __m256i b) noexcept {
-  if constexpr (sizeof(T) == 1) {
+// One integer lane width's compare instructions, named once here instead of re-derived inside
+// every operation.
+template <int Bytes>
+struct CmpIntOps;
+
+template <>
+struct CmpIntOps<1> {
+  static QUIVER_FORCE_INLINE __m256i eq(__m256i a, __m256i b) noexcept {
     return _mm256_cmpeq_epi8(a, b);
-  } else if constexpr (sizeof(T) == 2) {
+  }
+  static QUIVER_FORCE_INLINE __m256i gt(__m256i a, __m256i b) noexcept {
+    return _mm256_cmpgt_epi8(a, b);
+  }
+};
+
+template <>
+struct CmpIntOps<2> {
+  static QUIVER_FORCE_INLINE __m256i eq(__m256i a, __m256i b) noexcept {
     return _mm256_cmpeq_epi16(a, b);
-  } else if constexpr (sizeof(T) == 4) {
+  }
+  static QUIVER_FORCE_INLINE __m256i gt(__m256i a, __m256i b) noexcept {
+    return _mm256_cmpgt_epi16(a, b);
+  }
+};
+
+template <>
+struct CmpIntOps<4> {
+  static QUIVER_FORCE_INLINE __m256i eq(__m256i a, __m256i b) noexcept {
     return _mm256_cmpeq_epi32(a, b);
-  } else {
+  }
+  static QUIVER_FORCE_INLINE __m256i gt(__m256i a, __m256i b) noexcept {
+    return _mm256_cmpgt_epi32(a, b);
+  }
+};
+
+template <>
+struct CmpIntOps<8> {
+  static QUIVER_FORCE_INLINE __m256i eq(__m256i a, __m256i b) noexcept {
     return _mm256_cmpeq_epi64(a, b);
   }
+  static QUIVER_FORCE_INLINE __m256i gt(__m256i a, __m256i b) noexcept {
+    return _mm256_cmpgt_epi64(a, b);
+  }
+};
+
+template <class T>
+using CmpW = CmpIntOps<static_cast<int>(sizeof(T))>;
+
+template <class T>
+QUIVER_FORCE_INLINE __m256i int_eq(__m256i a, __m256i b) noexcept {
+  return CmpW<T>::eq(a, b);
 }
 
+// Unsigned orderings have no native AVX2 form: bias both operands into the signed domain first.
 template <class T>
 QUIVER_FORCE_INLINE __m256i int_gt(__m256i a, __m256i b) noexcept {
   if constexpr (std::is_unsigned_v<T>) {
-    a = bias_unsigned<T>(a);
-    b = bias_unsigned<T>(b);
-  }
-  if constexpr (sizeof(T) == 1) {
-    return _mm256_cmpgt_epi8(a, b);
-  } else if constexpr (sizeof(T) == 2) {
-    return _mm256_cmpgt_epi16(a, b);
-  } else if constexpr (sizeof(T) == 4) {
-    return _mm256_cmpgt_epi32(a, b);
+    return CmpW<T>::gt(bias_unsigned<T>(a), bias_unsigned<T>(b));
   } else {
-    return _mm256_cmpgt_epi64(a, b);
+    return CmpW<T>::gt(a, b);
   }
 }
 
@@ -124,49 +157,61 @@ QUIVER_FORCE_INLINE bool int_invert(CompareOp op) noexcept {
 
 // Float lane masks: ordered-quiet predicates match C++ operator truth tables exactly
 // (NaN lanes false except NEQ_UQ true; -0.0 == +0.0). imm8 must be constant -> switch.
-QUIVER_FORCE_INLINE __m256 f32_mask(CompareOp op, __m256 a, __m256 b) noexcept {
-  switch (op) {
-  case CompareOp::kEq:
-    return _mm256_cmp_ps(a, b, _CMP_EQ_OQ);
-  case CompareOp::kNe:
-    return _mm256_cmp_ps(a, b, _CMP_NEQ_UQ);
-  case CompareOp::kLt:
-    return _mm256_cmp_ps(a, b, _CMP_LT_OQ);
-  case CompareOp::kLe:
-    return _mm256_cmp_ps(a, b, _CMP_LE_OQ);
-  case CompareOp::kGt:
-    return _mm256_cmp_ps(a, b, _CMP_GT_OQ);
-  case CompareOp::kGe:
-    return _mm256_cmp_ps(a, b, _CMP_GE_OQ);
-  }
-  return _mm256_setzero_ps();  // unreachable for in-contract op values
-}
+// The two AVX2 float widths. The compare predicate is an immediate, so it is a template
+// parameter rather than an argument.
+template <class T>
+struct CmpFloatOps;
 
-QUIVER_FORCE_INLINE __m256d f64_mask(CompareOp op, __m256d a, __m256d b) noexcept {
+template <>
+struct CmpFloatOps<float> {
+  using V = __m256;
+  template <int Imm>
+  static QUIVER_FORCE_INLINE V cmp(V a, V b) noexcept {
+    return _mm256_cmp_ps(a, b, Imm);
+  }
+  static QUIVER_FORCE_INLINE V zero() noexcept { return _mm256_setzero_ps(); }
+};
+
+template <>
+struct CmpFloatOps<double> {
+  using V = __m256d;
+  template <int Imm>
+  static QUIVER_FORCE_INLINE V cmp(V a, V b) noexcept {
+    return _mm256_cmp_pd(a, b, Imm);
+  }
+  static QUIVER_FORCE_INLINE V zero() noexcept { return _mm256_setzero_pd(); }
+};
+
+// Ordered compares (NaN lanes false), except kNe which is the unordered form so that
+// NaN != x is true — exactly C++ `!=` semantics.
+template <class T>
+QUIVER_FORCE_INLINE typename CmpFloatOps<T>::V
+float_mask(CompareOp op, typename CmpFloatOps<T>::V a, typename CmpFloatOps<T>::V b) noexcept {
+  using F = CmpFloatOps<T>;
   switch (op) {
   case CompareOp::kEq:
-    return _mm256_cmp_pd(a, b, _CMP_EQ_OQ);
+    return F::template cmp<_CMP_EQ_OQ>(a, b);
   case CompareOp::kNe:
-    return _mm256_cmp_pd(a, b, _CMP_NEQ_UQ);
+    return F::template cmp<_CMP_NEQ_UQ>(a, b);
   case CompareOp::kLt:
-    return _mm256_cmp_pd(a, b, _CMP_LT_OQ);
+    return F::template cmp<_CMP_LT_OQ>(a, b);
   case CompareOp::kLe:
-    return _mm256_cmp_pd(a, b, _CMP_LE_OQ);
+    return F::template cmp<_CMP_LE_OQ>(a, b);
   case CompareOp::kGt:
-    return _mm256_cmp_pd(a, b, _CMP_GT_OQ);
+    return F::template cmp<_CMP_GT_OQ>(a, b);
   case CompareOp::kGe:
-    return _mm256_cmp_pd(a, b, _CMP_GE_OQ);
+    return F::template cmp<_CMP_GE_OQ>(a, b);
   }
-  return _mm256_setzero_pd();  // unreachable for in-contract op values
+  return F::zero();  // unreachable for in-contract op values
 }
 
 template <class T>
 QUIVER_FORCE_INLINE auto typed_mask(CompareOp op, decltype(cmp_load_vec<T>(nullptr)) a,
                                     decltype(cmp_load_vec<T>(nullptr)) b) noexcept {
   if constexpr (std::is_same_v<T, float>) {
-    return f32_mask(op, a, b);
+    return float_mask<float>(op, a, b);
   } else if constexpr (std::is_same_v<T, double>) {
-    return f64_mask(op, a, b);
+    return float_mask<double>(op, a, b);
   } else {
     return int_mask<T>(op, a, b);
   }

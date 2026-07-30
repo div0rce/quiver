@@ -4,26 +4,38 @@
 // Module: MOD-BENCH | REQs: REQ-BENCH-002/-004/-006 | ADR-008, ADR-011
 #pragma once
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
 
+#include <benchmark/benchmark.h>
+
+#include "bench/harness/pmu.h"
 #include "quiver/dispatch.h"
 
 namespace quiver::bench {
 
 // Benchmark names are the ledger's join key: BM_<family>/<api>/<variant>/<type>/<k>=<v>/...
 // (REQ-BENCH-002; renames are a ledger-schema event).
-inline std::string bench_name(const char* family, const char* api, const char* variant,
-                              const char* type, const std::string& axes) {
+// The fixed four-part path of a benchmark name. These are always supplied together and always
+// in this order; naming them stops a caller silently swapping api and variant.
+struct BenchKey {
+  const char* family;
+  const char* api;
+  const char* variant;
+  const char* type;
+};
+
+inline std::string bench_name(BenchKey key, const std::string& axes) {
   std::string s = "BM_";
-  s += family;
+  s += key.family;
   s += '/';
-  s += api;
+  s += key.api;
   s += '/';
-  s += variant;
+  s += key.variant;
   s += '/';
-  s += type;
+  s += key.type;
   if (!axes.empty()) {
     s += '/';
     s += axes;
@@ -66,6 +78,31 @@ inline void validate_or_abort(const char* bench, bool ok, const char* detail) {
                  bench, detail);
     std::abort();
   }
+}
+
+// REQ-BENCH-005: the three PMU-derived columns a ledger entry carries. Defined once — every
+// bench file previously hand-copied this block, and five of twelve had drifted to emitting only
+// cycles_per_value, so those families silently reached the ledger as `pmu: unavailable`.
+// `bytes` < 0 skips SetBytesProcessed (only the unpack family reports a byte rate).
+inline void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c,
+                       std::int64_t values, std::int64_t bytes = -1) {
+  state.SetItemsProcessed(state.iterations() * values);
+  if (bytes >= 0) {
+    state.SetBytesProcessed(state.iterations() * bytes);
+  }
+  if (!c.valid) {
+    return;  // no perf_event_open: the entry records `pmu: unavailable`, never a fabricated zero
+  }
+  const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
+  // Guard the denominator like the two below: a zero-length batch would otherwise publish
+  // inf/NaN into a ledger entry rather than an obviously-absent measurement.
+  state.counters["cycles_per_value"] = total > 0.0 ? static_cast<double>(c.cycles) / total : 0.0;
+  state.counters["ipc"] =
+      c.cycles > 0 ? static_cast<double>(c.instructions) / static_cast<double>(c.cycles) : 0.0;
+  state.counters["branch_miss_pct"] =
+      c.branches > 0
+          ? 100.0 * static_cast<double>(c.branch_misses) / static_cast<double>(c.branches)
+          : 0.0;
 }
 
 // Force a specific ISA variant for the process (REQ-BENCH-006): override + warmup + verify.

@@ -84,8 +84,10 @@ void unpack_bytes(const std::uint8_t* packed, std::int64_t n, Out base, Out* out
 }
 
 template <class Out>
-void unpack_impl(const std::uint8_t* packed, std::int64_t n, int bit_width, Out base,
-                 Out* out) noexcept {
+void unpack_impl(scalar_impl::PackedStream in, Out base, Out* out) noexcept {
+  const std::uint8_t* packed = in.packed;
+  const std::int64_t n = in.n;
+  const int bit_width = in.bit_width;
   switch (bit_width) {
   case 8:
     unpack_bytes<Out, 1>(packed, n, base, out);
@@ -111,7 +113,7 @@ void unpack_impl(const std::uint8_t* packed, std::int64_t n, int bit_width, Out 
   default:
     break;
   }
-  scalar_impl::unpack<Out>(packed, n, bit_width, base, out);  // generic gather path
+  scalar_impl::unpack<Out>({packed, n, bit_width}, base, out);  // generic gather path
 }
 
 }  // namespace
@@ -120,7 +122,7 @@ void unpack_impl(const std::uint8_t* packed, std::int64_t n, int bit_width, Out 
 #define QUIVER_K8_DEFINE(T)                                                                        \
   void k8_unpack(const std::uint8_t* packed, std::int64_t n, int bit_width, T base,                \
                  T* out) noexcept {                                                                \
-    unpack_impl<T>(packed, n, bit_width, base, out);                                               \
+    unpack_impl<T>({packed, n, bit_width}, base, out);                                             \
   }
 
 QUIVER_K8_DEFINE(std::uint8_t)

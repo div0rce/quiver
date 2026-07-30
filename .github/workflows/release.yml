@@ -25,6 +25,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   publish:
+    timeout-minutes: 30
     name: build artifacts + draft release
     needs: [gate, nightly]
     runs-on: ubuntu-24.04
@@ -35,6 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          persist-credentials: false
           fetch-depth: 0 # tags + history for the amalgamation version stamp and source archive
       - name: Build release artifacts (amalgamation pair + source archive)
         run: |

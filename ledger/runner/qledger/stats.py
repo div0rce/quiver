@@ -44,27 +44,29 @@ def percentile(sorted_values: list[float], pct: float) -> float:
     return sorted_values[lo] * (1.0 - frac) + sorted_values[hi] * frac
 
 
+_ESTIMATORS = {"median": statistics.median, "min": min}
+
+
 def bootstrap_ci(
     values: list[float],
     estimator: str,
     seed: int,
     b: int = BOOTSTRAP_B,
 ) -> tuple[float, float]:
-    """Seeded percentile bootstrap for 'median' or 'min' (ADR-020)."""
-    if estimator not in ("median", "min"):
+    """Seeded percentile bootstrap for 'median' or 'min' (ADR-020).
+
+    The estimator is resolved once through a table rather than branched per resample: the RNG
+    draw order is what makes the interval reproducible, and it is unchanged by the lookup.
+    """
+    stat = _ESTIMATORS.get(estimator)
+    if stat is None:
         raise ValueError(f"unknown estimator: {estimator}")
     if not values:
         raise ValueError("bootstrap of empty list")
     rng = random.Random(seed)
     n = len(values)
-    resample_stats: list[float] = []
-    for _ in range(b):
-        resample = [values[rng.randrange(n)] for _ in range(n)]
-        if estimator == "median":
-            resample_stats.append(statistics.median(resample))
-        else:
-            resample_stats.append(min(resample))
-    resample_stats.sort()
+    resample_stats = sorted(
+        stat([values[rng.randrange(n)] for _ in range(n)]) for _ in range(b))
     return (
         percentile(resample_stats, CI_LO_PCT),
         percentile(resample_stats, CI_HI_PCT),

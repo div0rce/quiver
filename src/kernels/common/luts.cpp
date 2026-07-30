@@ -10,20 +10,23 @@ namespace detail {
 
 namespace {
 
+// The compaction permutation for one selection mask: the selected lane indices in order,
+// followed by the unselected ones in order. Both compaction LUTs are built from it.
+consteval void compaction_order(std::uint32_t* out, int mask, int lanes) {
+  int cursor = 0;
+  for (int want = 1; want >= 0; --want) {
+    for (int lane = 0; lane < lanes; ++lane) {
+      if (((mask >> lane) & 1) == want) {
+        out[cursor++] = static_cast<std::uint32_t>(lane);
+      }
+    }
+  }
+}
+
 consteval CompactLut32 build_lut32() {
   CompactLut32 lut{};
   for (int b = 0; b < 256; ++b) {
-    int cursor = 0;
-    for (int lane = 0; lane < 8; ++lane) {
-      if ((b >> lane) & 1) {
-        lut.perm[b][cursor++] = static_cast<std::uint32_t>(lane);
-      }
-    }
-    for (int lane = 0; lane < 8; ++lane) {
-      if (((b >> lane) & 1) == 0) {
-        lut.perm[b][cursor++] = static_cast<std::uint32_t>(lane);
-      }
-    }
+    compaction_order(lut.perm[b], b, 8);
   }
   return lut;
 }
@@ -32,17 +35,7 @@ consteval CompactLut64 build_lut64() {
   CompactLut64 lut{};
   for (int b = 0; b < 16; ++b) {
     std::uint32_t lanes[4] = {};
-    std::size_t cursor = 0;
-    for (std::uint32_t lane = 0; lane < 4; ++lane) {
-      if ((static_cast<std::uint32_t>(b) >> lane) & 1u) {
-        lanes[cursor++] = lane;
-      }
-    }
-    for (std::uint32_t lane = 0; lane < 4; ++lane) {
-      if (((static_cast<std::uint32_t>(b) >> lane) & 1u) == 0u) {
-        lanes[cursor++] = lane;
-      }
-    }
+    compaction_order(lanes, b, 4);
     // Expand each 64-bit lane index p into the epi32 pair {2p, 2p+1} for vpermd.
     // k is std::size_t so the 2*k subscripts are computed in the index type directly —
     // an int multiply widened to ptrdiff_t at the subscript trips
@@ -67,23 +60,35 @@ consteval PopcountLut build_popcount() {
   return lut;
 }
 
-// Generic nibble/pair TBL-control builder: for each selection value, byte indices of the
-// selected lanes front-packed, 0xFF elsewhere (TBL zero-fill; REQ-MEM-008 scratch).
+// The byte indices of one selected lane, appended at `cursor`.
+consteval int append_lane_bytes(std::uint8_t* ctrl, int cursor, int lane, int lane_bytes) {
+  for (int byte = 0; byte < lane_bytes; ++byte) {
+    ctrl[cursor++] = static_cast<std::uint8_t>(lane * lane_bytes + byte);
+  }
+  return cursor;
+}
+
+// One selection value's control row: byte indices of the selected lanes front-packed, 0xFF
+// elsewhere (TBL zero-fill; REQ-MEM-008 scratch).
+template <int kSelBits, int kLaneBytes, int kCtrlBytes>
+consteval void fill_tbl_row(std::uint8_t* ctrl, int s) {
+  int cursor = 0;
+  for (int lane = 0; lane < kSelBits; ++lane) {
+    if ((s >> lane) & 1) {
+      cursor = append_lane_bytes(ctrl, cursor, lane, kLaneBytes);
+    }
+  }
+  for (; cursor < kCtrlBytes; ++cursor) {
+    ctrl[cursor] = 0xFF;
+  }
+}
+
+// Generic nibble/pair TBL-control builder.
 template <class Lut, int kSelBits, int kLaneBytes, int kCtrlBytes>
 consteval Lut build_tbl_ctrl() {
   Lut lut{};
   for (int s = 0; s < (1 << kSelBits); ++s) {
-    int cursor = 0;
-    for (int lane = 0; lane < kSelBits; ++lane) {
-      if ((s >> lane) & 1) {
-        for (int byte = 0; byte < kLaneBytes; ++byte) {
-          lut.ctrl[s][cursor++] = static_cast<std::uint8_t>(lane * kLaneBytes + byte);
-        }
-      }
-    }
-    for (; cursor < kCtrlBytes; ++cursor) {
-      lut.ctrl[s][cursor] = 0xFF;
-    }
+    fill_tbl_row<kSelBits, kLaneBytes, kCtrlBytes>(lut.ctrl[s], s);
   }
   return lut;
 }

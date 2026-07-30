@@ -21,20 +21,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB001ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
-  state.SetItemsProcessed(state.iterations() * values);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-    state.counters["ipc"] =
-        c.cycles > 0 ? static_cast<double>(c.instructions) / static_cast<double>(c.cycles) : 0.0;
-    state.counters["branch_miss_pct"] =
-        c.branches > 0
-            ? 100.0 * static_cast<double>(c.branch_misses) / static_cast<double>(c.branches)
-            : 0.0;
-  }
-}
-
 template <bool kAutovec>
 void bm_dict_decode(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
@@ -84,7 +70,7 @@ void register_benchmarks() {
   // Dict-size sweep across cache levels (QLM-1 dict_size axis; mandatory per PRD 08 §4).
   for (const std::int64_t dict_bytes : {4 << 10, 32 << 10, 256 << 10, 8 << 20, 64 << 20}) {
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("take", "dict_decode", variant, "i64_u32",
+        quiver::bench::bench_name({"take", "dict_decode", variant, "i64_u32"},
                                   "n=65536/dict=" + std::to_string(dict_bytes >> 10) + "KiB"),
         bm_dict_decode<false>)
         ->Args({65536, dict_bytes});
@@ -94,7 +80,7 @@ void register_benchmarks() {
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
     for (const std::int64_t dict_bytes : {4 << 10, 32 << 10, 256 << 10, 8 << 20, 64 << 20}) {
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("take", "dict_decode", "autovec-avx2", "i64_u32",
+          quiver::bench::bench_name({"take", "dict_decode", "autovec-avx2", "i64_u32"},
                                     "n=65536/dict=" + std::to_string(dict_bytes >> 10) + "KiB"),
           bm_dict_decode<true>)
           ->Args({65536, dict_bytes});

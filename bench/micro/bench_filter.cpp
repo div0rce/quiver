@@ -20,20 +20,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB001ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
-  state.SetItemsProcessed(state.iterations() * values);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-    state.counters["ipc"] =
-        c.cycles > 0 ? static_cast<double>(c.instructions) / static_cast<double>(c.cycles) : 0.0;
-    state.counters["branch_miss_pct"] =
-        c.branches > 0
-            ? 100.0 * static_cast<double>(c.branch_misses) / static_cast<double>(c.branches)
-            : 0.0;
-  }
-}
-
 template <bool kAutovec>
 void bm_filter_bitmap(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
@@ -82,35 +68,29 @@ void bm_filter_bitmap(benchmark::State& state) {
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
 
-void register_benchmarks() {
-  const char* variant = quiver::bench::variant_name(quiver::active_isa());
+// Register the full (n, selectivity, pattern) grid for one variant.
+template <bool Autovec>
+void register_grid(const char* variant) {
   for (const std::int64_t n : {4096, 65536}) {
     for (const int pct : {1, 10, 50, 90, 99}) {
       for (const int clustered : {0, 1}) {
         benchmark::RegisterBenchmark(
-            quiver::bench::bench_name("filter", "bitmap", variant, "i64",
+            quiver::bench::bench_name({"filter", "bitmap", variant, "i64"},
                                       "n=" + std::to_string(n) + "/sel=" + std::to_string(pct) +
                                           (clustered ? "/pat=clustered" : "/pat=uniform")),
-            bm_filter_bitmap<false>)
+            bm_filter_bitmap<Autovec>)
             ->Args({n, pct, clustered});
       }
     }
   }
+}
+
+void register_benchmarks() {
+  register_grid<false>(quiver::bench::variant_name(quiver::active_isa()));
 #if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
   // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
-    for (const std::int64_t n : {4096, 65536}) {
-      for (const int pct : {1, 10, 50, 90, 99}) {
-        for (const int clustered : {0, 1}) {
-          benchmark::RegisterBenchmark(
-              quiver::bench::bench_name("filter", "bitmap", "autovec-avx2", "i64",
-                                        "n=" + std::to_string(n) + "/sel=" + std::to_string(pct) +
-                                            (clustered ? "/pat=clustered" : "/pat=uniform")),
-              bm_filter_bitmap<true>)
-              ->Args({n, pct, clustered});
-        }
-      }
-    }
+    register_grid<true>("autovec-avx2");
   }
 #endif
 }

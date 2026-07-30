@@ -80,8 +80,9 @@ void run_filter_diff(std::uint64_t seed) {
                                                       quiver::BitmapView{sel.data()}, got.data());
         ASSERT_EQ(got_count, static_cast<std::int64_t>(want.size())) << "n=" << n;
         if (!want.empty()) {
-          ASSERT_TRUE(quiver_test::buffers_equal(
-              want.data(), got.data(), static_cast<std::int64_t>(want.size()), seed, "REQ-K2-001"));
+          ASSERT_TRUE(quiver_test::buffers_equal(want.data(), got.data(),
+                                                 static_cast<std::int64_t>(want.size()),
+                                                 {seed, "REQ-K2-001"}));
         }
       }
     }

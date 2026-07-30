@@ -13,20 +13,28 @@ namespace {
 
 using namespace quiver::detail;
 
+// Independent transcription of the compaction order. Derived from the DEFINITION by rank — a
+// selected lane lands after the selected lanes before it, an unselected one after all selected
+// lanes plus the unselected ones before it — deliberately NOT by replaying the production
+// builder's two passes, so this stays a real oracle for it (the dual-oracle discipline).
+void expected_compaction(std::uint32_t* out, int mask, int lanes) {
+  int selected = 0;
+  for (int lane = 0; lane < lanes; ++lane) {
+    selected += (mask >> lane) & 1;
+  }
+  int taken = 0;
+  int dropped = 0;
+  for (int lane = 0; lane < lanes; ++lane) {
+    const bool on = ((mask >> lane) & 1) != 0;
+    const int pos = on ? taken++ : selected + dropped++;
+    out[pos] = static_cast<std::uint32_t>(lane);
+  }
+}
+
 TEST(Luts, CompactLut32Rederives) {
   for (int b = 0; b < 256; ++b) {
     std::uint32_t expect[8];
-    int c = 0;
-    for (std::uint32_t lane = 0; lane < 8; ++lane) {
-      if ((b >> lane) & 1) {
-        expect[c++] = lane;
-      }
-    }
-    for (std::uint32_t lane = 0; lane < 8; ++lane) {
-      if (((b >> lane) & 1) == 0) {
-        expect[c++] = lane;
-      }
-    }
+    expected_compaction(expect, b, 8);
     for (int k = 0; k < 8; ++k) {
       ASSERT_EQ(kCompactLut32.perm[b][k], expect[k]) << "byte=" << b << " lane " << k;
     }
@@ -38,17 +46,7 @@ TEST(Luts, CompactLut64Rederives) {
   // 64-bit lane indices p — re-derive both steps independently (luts.h).
   for (int b = 0; b < 16; ++b) {
     std::uint32_t lanes[4];
-    int c = 0;
-    for (std::uint32_t lane = 0; lane < 4; ++lane) {
-      if ((b >> lane) & 1) {
-        lanes[c++] = lane;
-      }
-    }
-    for (std::uint32_t lane = 0; lane < 4; ++lane) {
-      if (((b >> lane) & 1) == 0) {
-        lanes[c++] = lane;
-      }
-    }
+    expected_compaction(lanes, b, 4);
     for (int k = 0; k < 4; ++k) {
       ASSERT_EQ(kCompactLut64.perm[b][2 * k], 2 * lanes[k]) << "nibble=" << b << " k=" << k;
       ASSERT_EQ(kCompactLut64.perm[b][2 * k + 1], 2 * lanes[k] + 1) << "nibble=" << b << " k=" << k;
@@ -78,21 +76,31 @@ TEST(Luts, PopcountLutRederives) {
 // 0xFF elsewhere. Bounds are template parameters so every subscript is provably in-range
 // (gcc -Warray-bounds cannot see through runtime bounds when the assert machinery keeps
 // this from inlining).
+template <int kLaneBytes, class Row>
+void check_lane_bytes(const Row& ctrl, int at, int lane, int s) {
+  for (int byte = 0; byte < kLaneBytes; ++byte) {
+    ASSERT_EQ(ctrl[at + byte], lane * kLaneBytes + byte) << "s=" << s << " pos=" << (at + byte);
+  }
+}
+
+template <int kSelBits, int kLaneBytes, int kCtrlBytes, class Row>
+void check_tbl_row(const Row& ctrl, int s) {
+  int c = 0;
+  for (int lane = 0; lane < kSelBits; ++lane) {
+    if ((s >> lane) & 1) {
+      check_lane_bytes<kLaneBytes>(ctrl, c, lane, s);
+      c += kLaneBytes;
+    }
+  }
+  for (; c < kCtrlBytes; ++c) {
+    ASSERT_EQ(ctrl[c], 0xFF) << "s=" << s << " fill pos=" << c;
+  }
+}
+
 template <int kSelBits, int kLaneBytes, int kCtrlBytes, class Lut>
 void check_tbl_ctrl(const Lut& lut) {
   for (int s = 0; s < (1 << kSelBits); ++s) {
-    int c = 0;
-    for (int lane = 0; lane < kSelBits; ++lane) {
-      if ((s >> lane) & 1) {
-        for (int byte = 0; byte < kLaneBytes; ++byte) {
-          ASSERT_EQ(lut.ctrl[s][c], lane * kLaneBytes + byte) << "s=" << s << " pos=" << c;
-          ++c;
-        }
-      }
-    }
-    for (; c < kCtrlBytes; ++c) {
-      ASSERT_EQ(lut.ctrl[s][c], 0xFF) << "s=" << s << " fill pos=" << c;
-    }
+    check_tbl_row<kSelBits, kLaneBytes, kCtrlBytes>(lut.ctrl[s], s);
   }
 }
 

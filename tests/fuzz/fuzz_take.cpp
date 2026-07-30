@@ -51,46 +51,65 @@ void run_decode(quiver_fuzz::Decoder& d, const std::vector<T>& dict) {
   }
 }
 
+// Gather indices drawn from the stream, all in range for the value source.
+inline std::vector<std::uint32_t> decode_indices(quiver_fuzz::Decoder& d, std::int64_t idx_len,
+                                                 std::int64_t values_len) {
+  std::vector<std::uint32_t> idx(static_cast<std::size_t>(idx_len) + 1);
+  for (std::int64_t j = 0; j < idx_len; ++j) {
+    idx[static_cast<std::size_t>(j)] = d.u32() % static_cast<std::uint32_t>(values_len);
+  }
+  return idx;
+}
+
+// Every backend must produce the identical gather.
+template <class T>
+void run_take(quiver_fuzz::Decoder& d, const std::vector<T>& values) {
+  const auto values_len = static_cast<std::int64_t>(values.size());
+  const std::int64_t idx_len = d.len(kMaxN);
+  const std::vector<std::uint32_t> idx = decode_indices(d, idx_len, values_len);
+  std::vector<T> out0(static_cast<std::size_t>(idx_len) + 1);
+  bool first = true;
+  for (const quiver::Isa isa : quiver_fuzz::host_backends()) {
+    quiver_fuzz::check(quiver::set_isa_override(isa), "override rejected");
+    std::vector<T> out(static_cast<std::size_t>(idx_len) + 1);
+    quiver::take(quiver::BatchView<T>{values.data(), values_len},
+                 quiver::SelVec{idx.data(), idx_len}, out.data());
+    if (first) {
+      out0 = out;
+      first = false;
+      continue;
+    }
+    quiver_fuzz::check(
+        std::memcmp(out.data(), out0.data(), static_cast<std::size_t>(idx_len) * sizeof(T)) == 0,
+        "K5 take mismatch");
+  }
+}
+
+// The dictionary code width comes from the stream too.
+template <class T>
+void run_decode_any_code(quiver_fuzz::Decoder& d, const std::vector<T>& values) {
+  switch (d.pick(3)) {
+  case 0:
+    run_decode<T, std::uint8_t>(d, values);
+    break;
+  case 1:
+    run_decode<T, std::uint16_t>(d, values);
+    break;
+  default:
+    run_decode<T, std::uint32_t>(d, values);
+    break;
+  }
+}
+
 template <class T>
 void run(quiver_fuzz::Decoder& d) {
   const std::int64_t values_len = d.len(kMaxDict - 1) + 1;  // >= 1 so indices can be valid
   std::vector<T> values(static_cast<std::size_t>(values_len));
   d.fill(values.data(), values_len);
-
-  if (d.boolean()) {  // --- take ---
-    const std::int64_t idx_len = d.len(kMaxN);
-    std::vector<std::uint32_t> idx(static_cast<std::size_t>(idx_len) + 1);
-    for (std::int64_t j = 0; j < idx_len; ++j) {
-      idx[static_cast<std::size_t>(j)] = d.u32() % static_cast<std::uint32_t>(values_len);
-    }
-    std::vector<T> out0(static_cast<std::size_t>(idx_len) + 1);
-    bool first = true;
-    for (const quiver::Isa isa : quiver_fuzz::host_backends()) {
-      quiver_fuzz::check(quiver::set_isa_override(isa), "override rejected");
-      std::vector<T> out(static_cast<std::size_t>(idx_len) + 1);
-      quiver::take(quiver::BatchView<T>{values.data(), values_len},
-                   quiver::SelVec{idx.data(), idx_len}, out.data());
-      if (first) {
-        out0 = out;
-        first = false;
-        continue;
-      }
-      quiver_fuzz::check(
-          std::memcmp(out.data(), out0.data(), static_cast<std::size_t>(idx_len) * sizeof(T)) == 0,
-          "K5 take mismatch");
-    }
-  } else {  // --- dict_decode, code type from the stream ---
-    switch (d.pick(3)) {
-    case 0:
-      run_decode<T, std::uint8_t>(d, values);
-      break;
-    case 1:
-      run_decode<T, std::uint16_t>(d, values);
-      break;
-    default:
-      run_decode<T, std::uint32_t>(d, values);
-      break;
-    }
+  if (d.boolean()) {
+    run_take<T>(d, values);
+  } else {
+    run_decode_any_code<T>(d, values);
   }
   quiver::clear_isa_override();
 }

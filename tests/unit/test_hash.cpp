@@ -59,38 +59,45 @@ std::uint64_t hash_from_bits(std::uint64_t key_bits, std::uint64_t seed) {
   return h;
 }
 
+// The golden file's type column names the hash instantiation that produced the row. A table
+// keeps the mapping in one place instead of an if/else ladder that has to stay in sync with it.
+using HashFromBits = std::uint64_t (*)(std::uint64_t, std::uint64_t);
+
+struct GoldenType {
+  const char* name;
+  HashFromBits fn;
+};
+
+constexpr GoldenType kGoldenTypes[] = {
+    {"i8", &hash_from_bits<std::int8_t>},    {"i16", &hash_from_bits<std::int16_t>},
+    {"i32", &hash_from_bits<std::int32_t>},  {"i64", &hash_from_bits<std::int64_t>},
+    {"u8", &hash_from_bits<std::uint8_t>},   {"u16", &hash_from_bits<std::uint16_t>},
+    {"u32", &hash_from_bits<std::uint32_t>}, {"u64", &hash_from_bits<std::uint64_t>},
+    {"f32", &hash_from_bits<float>},         {"f64", &hash_from_bits<double>},
+};
+
+// False when the golden file names a type this test does not know how to reproduce.
+bool golden_hash(const GoldenRow& r, std::uint64_t* out) {
+  if (r.type == "combine") {  // combine rows: key_bits = a, seed column = b
+    quiver::hash64_combine(&r.key_bits, &r.seed, 1, out);
+    return true;
+  }
+  for (const GoldenType& t : kGoldenTypes) {
+    if (r.type == t.name) {
+      *out = t.fn(r.key_bits, r.seed);
+      return true;
+    }
+  }
+  return false;
+}
+
 TEST(Hash, GoldenVectorsReproduce) {
   const auto rows = load_goldens();
   ASSERT_GT(rows.size(), 200u);
   std::int64_t checked = 0;
   for (const auto& r : rows) {
     std::uint64_t h = 0;
-    if (r.type == "i8") {
-      h = hash_from_bits<std::int8_t>(r.key_bits, r.seed);
-    } else if (r.type == "i16") {
-      h = hash_from_bits<std::int16_t>(r.key_bits, r.seed);
-    } else if (r.type == "i32") {
-      h = hash_from_bits<std::int32_t>(r.key_bits, r.seed);
-    } else if (r.type == "i64") {
-      h = hash_from_bits<std::int64_t>(r.key_bits, r.seed);
-    } else if (r.type == "u8") {
-      h = hash_from_bits<std::uint8_t>(r.key_bits, r.seed);
-    } else if (r.type == "u16") {
-      h = hash_from_bits<std::uint16_t>(r.key_bits, r.seed);
-    } else if (r.type == "u32") {
-      h = hash_from_bits<std::uint32_t>(r.key_bits, r.seed);
-    } else if (r.type == "u64") {
-      h = hash_from_bits<std::uint64_t>(r.key_bits, r.seed);
-    } else if (r.type == "f32") {
-      h = hash_from_bits<float>(r.key_bits, r.seed);
-    } else if (r.type == "f64") {
-      h = hash_from_bits<double>(r.key_bits, r.seed);
-    } else if (r.type == "combine") {
-      // combine rows: key_bits = a, seed column = b
-      quiver::hash64_combine(&r.key_bits, &r.seed, 1, &h);
-    } else {
-      FAIL() << "unknown golden type " << r.type;
-    }
+    ASSERT_TRUE(golden_hash(r, &h)) << "unknown golden type " << r.type;
     ASSERT_EQ(h, r.hash) << r.type << " key=" << std::hex << r.key_bits << " seed=" << r.seed;
     ++checked;
   }

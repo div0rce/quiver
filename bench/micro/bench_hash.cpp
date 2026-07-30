@@ -23,16 +23,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB007ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
-  state.SetItemsProcessed(state.iterations() * values);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-    state.counters["ipc"] =
-        c.cycles > 0 ? static_cast<double>(c.instructions) / static_cast<double>(c.cycles) : 0.0;
-  }
-}
-
 // Bench-local ADR-012 transcription for validation.
 std::uint64_t qhash64_local(std::uint64_t key, std::uint64_t seed) {
   std::uint64_t x = key ^ (seed + 0x9E3779B97F4A7C15ull);
@@ -114,11 +104,11 @@ void register_benchmarks() {
   const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536}) {
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("hash", "hash64", variant, "i64", "n=" + std::to_string(n)),
+        quiver::bench::bench_name({"hash", "hash64", variant, "i64"}, "n=" + std::to_string(n)),
         bm_hash_i64<false>)
         ->Args({n});
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("hash", "combine", variant, "u64", "n=" + std::to_string(n)),
+        quiver::bench::bench_name({"hash", "combine", variant, "u64"}, "n=" + std::to_string(n)),
         bm_hash_combine)
         ->Args({n});
   }
@@ -126,9 +116,10 @@ void register_benchmarks() {
   // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
     for (const std::int64_t n : {4096, 65536}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("hash", "hash64", "autovec-avx2",
-                                                             "i64", "n=" + std::to_string(n)),
-                                   bm_hash_i64<true>)
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name({"hash", "hash64", "autovec-avx2", "i64"},
+                                    "n=" + std::to_string(n)),
+          bm_hash_i64<true>)
           ->Args({n});
     }
   }

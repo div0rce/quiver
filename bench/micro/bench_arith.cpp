@@ -20,14 +20,6 @@ namespace {
 quiver::bench::PmuGroup g_pmu;
 constexpr std::uint64_t kSeed = 0xBE5CB009ull;
 
-void attach_pmu(benchmark::State& state, const quiver::bench::PmuCounters& c, std::int64_t values) {
-  state.SetItemsProcessed(state.iterations() * values);
-  if (c.valid) {
-    const double total = static_cast<double>(state.iterations()) * static_cast<double>(values);
-    state.counters["cycles_per_value"] = static_cast<double>(c.cycles) / total;
-  }
-}
-
 template <bool kAutovec>
 void bm_add_i64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
@@ -96,11 +88,11 @@ void register_benchmarks() {
   const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536}) {
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("arith", "add", variant, "i64", "n=" + std::to_string(n)),
+        quiver::bench::bench_name({"arith", "add", variant, "i64"}, "n=" + std::to_string(n)),
         bm_add_i64<false>)
         ->Args({n});
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("arith", "mul", variant, "f64", "n=" + std::to_string(n)),
+        quiver::bench::bench_name({"arith", "mul", variant, "f64"}, "n=" + std::to_string(n)),
         bm_mul_f64)
         ->Args({n});
   }
@@ -108,9 +100,10 @@ void register_benchmarks() {
   // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
     for (const std::int64_t n : {4096, 65536}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("arith", "add", "autovec-avx2", "i64",
-                                                             "n=" + std::to_string(n)),
-                                   bm_add_i64<true>)
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name({"arith", "add", "autovec-avx2", "i64"},
+                                    "n=" + std::to_string(n)),
+          bm_add_i64<true>)
           ->Args({n});
     }
   }
