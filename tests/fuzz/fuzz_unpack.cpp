@@ -27,9 +27,17 @@ inline std::int64_t values_in_budget(std::size_t avail, int w) {
   return n > 2048 ? 2048 : n;
 }
 
+// The packed stream one case describes. Declared locally: a fuzz target links against the
+// public API only, so it must not reach into the kernels' internal headers.
+struct PackedCase {
+  const std::uint8_t* packed;
+  std::int64_t n;
+  int bit_width;
+};
+
 // The scalar tier is checked against the independent oracle, not just against its peers.
 template <class Out>
-void check_against_oracle(quiver::detail::scalar_impl::PackedStream in, Out base, const Out* got) {
+void check_against_oracle(PackedCase in, Out base, const Out* got) {
   for (std::int64_t i = 0; i < in.n; ++i) {
     const Out want = static_cast<Out>(
         base +
