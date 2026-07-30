@@ -21,6 +21,95 @@ namespace ref = quiver_test::ref;
 
 constexpr std::int64_t kMaxN = 512;
 
+// The shape one fuzz input describes: the batch, its validity, and the selection when used.
+template <class T>
+struct ReduceShape {
+  quiver::BatchView<T> in;
+  quiver::BitmapView val;
+  quiver::SelVec sel;
+  bool with_sel;
+};
+
+// Every K6 result one backend produced for that shape.
+template <class T>
+struct ReduceResults {
+  T min;
+  T max;
+  quiver::SumType<T> sum;
+  quiver::MinMaxSummary<T> sma;
+  bool overflow;
+};
+
+template <class T>
+ReduceResults<T> reduce_all(const ReduceShape<T>& s) {
+  return {s.with_sel ? quiver::reduce_min(s.in, s.val, s.sel) : quiver::reduce_min(s.in, s.val),
+          s.with_sel ? quiver::reduce_max(s.in, s.val, s.sel) : quiver::reduce_max(s.in, s.val),
+          s.with_sel ? quiver::reduce_sum_wrap(s.in, s.val, s.sel)
+                     : quiver::reduce_sum_wrap(s.in, s.val),
+          s.with_sel ? quiver::compute_min_max(s.in, s.val, s.sel)
+                     : quiver::compute_min_max(s.in, s.val),
+          false};
+}
+
+// The blocked float-sum shape this backend uses, or w == 0 meaning the strict fold. The
+// EFFECTIVE backend can sit below the ISA cap (empty rows fall through): a kAvx512 cap resolves
+// to the AVX2 backend until M7.
+inline ref::BlockShape blocked_shape_for(quiver::Isa isa, bool with_sel, std::size_t elem_size) {
+  if (with_sel) {
+    return {0, 0};  // selected shapes use the strict fold on every backend
+  }
+  if (isa >= quiver::Isa::kAvx2 && quiver::cpu_supports(quiver::Isa::kAvx2)) {
+    return {elem_size == 4 ? 8 : 4, 4};
+  }
+  if (isa >= quiver::Isa::kNeon && quiver::cpu_supports(quiver::Isa::kNeon)) {
+    return {elem_size == 4 ? 4 : 2, 4};
+  }
+  return {0, 0};
+}
+
+// Per-backend policy oracle for float sums. NaN results compare as a CLASS — payloads follow
+// hardware operand order, which C++ does not pin (gate M4).
+template <class T>
+void check_float_sum(const ReduceShape<T>& s, const ref::Participation& p, quiver::SumType<T> sum,
+                     quiver::Isa isa) {
+  const ref::BlockShape shape = blocked_shape_for(isa, s.with_sel, sizeof(T));
+  const auto want = shape.w == 0
+                        ? ref::sum_expected(s.in.data, s.in.len, p)
+                        : ref::sum_blocked_expected<T>(s.in.data, s.in.len, s.val.bits, shape);
+  const bool nan_class = (sum != sum) && (want != want);
+  quiver_fuzz::check(nan_class || std::memcmp(&sum, &want, sizeof(sum)) == 0,
+                     "K6 float sum vs policy");
+}
+
+// The checked form always reports the wrapped value (API-K6-003), so it must equal the wrap
+// kernel's result; narrow types provably cannot overflow at n <= 512.
+template <class T>
+bool check_integer_sum(const ReduceShape<T>& s, quiver::SumType<T> sum) {
+  quiver::SumType<T> checked_sum{};
+  const bool overflow = s.with_sel ? quiver::reduce_sum_checked(s.in, s.val, s.sel, &checked_sum)
+                                   : quiver::reduce_sum_checked(s.in, s.val, &checked_sum);
+  quiver_fuzz::check(std::memcmp(&checked_sum, &sum, sizeof(sum)) == 0,
+                     "K6 checked sum != wrapped sum");
+  quiver_fuzz::check(!overflow || sizeof(T) == 8, "K6 narrow checked sum overflowed");
+  return overflow;
+}
+
+// Later backends must reproduce the first backend's results exactly.
+template <class T>
+void expect_same(const ReduceResults<T>& got, const ReduceResults<T>& want) {
+  quiver_fuzz::check(got.overflow == want.overflow, "K6 overflow flag mismatch");
+  quiver_fuzz::check(std::memcmp(&got.min, &want.min, sizeof(T)) == 0, "K6 min mismatch");
+  quiver_fuzz::check(std::memcmp(&got.max, &want.max, sizeof(T)) == 0, "K6 max mismatch");
+  if constexpr (std::is_integral_v<T>) {
+    quiver_fuzz::check(std::memcmp(&got.sum, &want.sum, sizeof(got.sum)) == 0,
+                       "K6 int sum mismatch");
+  }
+  quiver_fuzz::check(std::memcmp(&got.sma.min, &want.sma.min, sizeof(T)) == 0 &&
+                         std::memcmp(&got.sma.max, &want.sma.max, sizeof(T)) == 0 &&
+                         got.sma.null_count == want.sma.null_count,
+                     "K6 sma mismatch");
+}
+
 template <class T>
 void run(quiver_fuzz::Decoder& d) {
   const std::int64_t n = d.len(kMaxN);
@@ -30,78 +119,31 @@ void run(quiver_fuzz::Decoder& d) {
   const std::uint8_t* vd = d.boolean() ? validity.data() : nullptr;
   const std::vector<std::uint32_t> selv = quiver_fuzz::selvec(d, n);
   const bool with_sel = d.boolean();
-  const quiver::BatchView<T> in{v.data(), n};
-  const quiver::BitmapView val{vd};
-  const quiver::SelVec sel{selv.data(), static_cast<std::int64_t>(selv.size())};
+  const ReduceShape<T> s{quiver::BatchView<T>{v.data(), n}, quiver::BitmapView{vd},
+                         quiver::SelVec{selv.data(), static_cast<std::int64_t>(selv.size())},
+                         with_sel};
   // Oracle-side empty-selection disambiguation (see reg_empty_selvec.cpp).
   static constexpr std::uint32_t kNoIdx = 0;
   const ref::Participation p{vd, with_sel ? (selv.empty() ? &kNoIdx : selv.data()) : nullptr,
                              static_cast<std::int64_t>(selv.size())};
 
-  T min0{};
-  T max0{};
-  quiver::SumType<T> sum0{};
-  quiver::MinMaxSummary<T> sma0{};
-  bool overflow0 = false;
+  ReduceResults<T> ref_results{};
   bool first = true;
   for (const quiver::Isa isa : quiver_fuzz::host_backends()) {
     quiver_fuzz::check(quiver::set_isa_override(isa), "override rejected");
-    const T mn = with_sel ? quiver::reduce_min(in, val, sel) : quiver::reduce_min(in, val);
-    const T mx = with_sel ? quiver::reduce_max(in, val, sel) : quiver::reduce_max(in, val);
-    const auto sm =
-        with_sel ? quiver::reduce_sum_wrap(in, val, sel) : quiver::reduce_sum_wrap(in, val);
-    const quiver::MinMaxSummary<T> sma =
-        with_sel ? quiver::compute_min_max(in, val, sel) : quiver::compute_min_max(in, val);
-
+    ReduceResults<T> got = reduce_all(s);
     if constexpr (std::is_floating_point_v<T>) {
-      // Per-backend policy oracle for sums (dense AVX2/NEON = blocked {w,a}; else strict
-      // fold). The EFFECTIVE backend can sit below the ISA cap (empty rows fall through):
-      // a kAvx512 cap resolves to the AVX2 backend until M7. NaN results compare as a
-      // class — payloads follow hardware operand order, which C++ does not pin (gate M4).
-      const bool avx2_backend =
-          isa >= quiver::Isa::kAvx2 && quiver::cpu_supports(quiver::Isa::kAvx2);
-      const bool neon_backend =
-          isa >= quiver::Isa::kNeon && quiver::cpu_supports(quiver::Isa::kNeon);
-      auto want = ref::sum_expected(v.data(), n, p);
-      if (!with_sel && avx2_backend) {
-        want = ref::sum_blocked_expected<T>(v.data(), n, vd, {sizeof(T) == 4 ? 8 : 4, 4});
-      } else if (!with_sel && neon_backend) {
-        want = ref::sum_blocked_expected<T>(v.data(), n, vd, {sizeof(T) == 4 ? 4 : 2, 4});
-      }
-      const bool nan_class = (sm != sm) && (want != want);
-      quiver_fuzz::check(nan_class || std::memcmp(&sm, &want, sizeof(sm)) == 0,
-                         "K6 float sum vs policy");
+      check_float_sum(s, p, got.sum, isa);
     }
-    bool overflow = false;
     if constexpr (std::is_integral_v<T>) {
-      quiver::SumType<T> checked_sum{};
-      overflow = with_sel ? quiver::reduce_sum_checked(in, val, sel, &checked_sum)
-                          : quiver::reduce_sum_checked(in, val, &checked_sum);
-      // The checked form always reports the wrapped value (API-K6-003), so it must equal
-      // the wrap kernel's result; narrow types provably cannot overflow at n <= 512.
-      quiver_fuzz::check(std::memcmp(&checked_sum, &sm, sizeof(sm)) == 0,
-                         "K6 checked sum != wrapped sum");
-      quiver_fuzz::check(!overflow || sizeof(T) == 8, "K6 narrow checked sum overflowed");
+      got.overflow = check_integer_sum(s, got.sum);
     }
     if (first) {
-      min0 = mn;
-      max0 = mx;
-      sum0 = sm;
-      sma0 = sma;
-      overflow0 = overflow;
+      ref_results = got;
       first = false;
       continue;
     }
-    quiver_fuzz::check(overflow == overflow0, "K6 overflow flag mismatch");
-    quiver_fuzz::check(std::memcmp(&mn, &min0, sizeof(T)) == 0, "K6 min mismatch");
-    quiver_fuzz::check(std::memcmp(&mx, &max0, sizeof(T)) == 0, "K6 max mismatch");
-    if constexpr (std::is_integral_v<T>) {
-      quiver_fuzz::check(std::memcmp(&sm, &sum0, sizeof(sm)) == 0, "K6 int sum mismatch");
-    }
-    quiver_fuzz::check(std::memcmp(&sma.min, &sma0.min, sizeof(T)) == 0 &&
-                           std::memcmp(&sma.max, &sma0.max, sizeof(T)) == 0 &&
-                           sma.null_count == sma0.null_count,
-                       "K6 sma mismatch");
+    expect_same(got, ref_results);
   }
   quiver::clear_isa_override();
 }
