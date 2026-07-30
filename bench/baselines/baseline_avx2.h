@@ -35,6 +35,13 @@ void unpack_for_u32(const std::uint8_t* packed, std::int64_t n, int bit_width, s
                     std::uint32_t* out) noexcept;
 void arith_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n,
                std::int64_t* out) noexcept;
+// K10. Both guarded forms the family benchmarks measure: the checked op returns the overflow
+// count and fills the overflow bitmap, the saturating op clamps (REQ-K10-002/-003).
+std::int64_t arith_checked_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b,
+                               std::int64_t n, std::int64_t* out,
+                               std::uint8_t* overflow_bits) noexcept;
+void arith_saturating_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b,
+                          std::int64_t n, std::int64_t* out) noexcept;
 
 }  // namespace quiver::bench::autovec_avx2
 

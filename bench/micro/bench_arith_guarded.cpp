@@ -90,6 +90,7 @@ bool saturating_outputs_match(OperandPair ops, const std::vector<std::int64_t>& 
   return true;
 }
 
+template <bool kAutovec>
 void bm_checked_add_i64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const int ovf_permille = static_cast<int>(state.range(1));
@@ -100,9 +101,18 @@ void bm_checked_add_i64(benchmark::State& state) {
   std::vector<std::int64_t> out(static_cast<std::size_t>(n));
   std::vector<std::uint8_t> bits((static_cast<std::size_t>(n) + 7) / 8);
 
-  const std::int64_t got =
-      quiver::arith_checked(quiver::ArithOp::kAdd, quiver::BatchView<std::int64_t>{a.data(), n},
-                            quiver::BatchView<std::int64_t>{b.data(), n}, out.data(), bits.data());
+  const auto run_checked = [&]() -> std::int64_t {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      return quiver::bench::autovec_avx2::arith_checked_i64(quiver::ArithOp::kAdd, a.data(),
+                                                            b.data(), n, out.data(), bits.data());
+    }
+#endif
+    return quiver::arith_checked(
+        quiver::ArithOp::kAdd, quiver::BatchView<std::int64_t>{a.data(), n},
+        quiver::BatchView<std::int64_t>{b.data(), n}, out.data(), bits.data());
+  };
+  const std::int64_t got = run_checked();
   const CheckedExpectation want = recompute_checked({a, b}, out, bits);
   quiver::bench::validate_or_abort(
       "BM_arith_guarded", got == want.overflow_count && want.outputs_match,
@@ -110,13 +120,12 @@ void bm_checked_add_i64(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(quiver::arith_checked(
-        quiver::ArithOp::kAdd, quiver::BatchView<std::int64_t>{a.data(), n},
-        quiver::BatchView<std::int64_t>{b.data(), n}, out.data(), bits.data()));
+    benchmark::DoNotOptimize(run_checked());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
 
+template <bool kAutovec>
 void bm_saturating_add_i64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   quiver::bench::Rng rng(kSeed);
@@ -124,14 +133,23 @@ void bm_saturating_add_i64(benchmark::State& state) {
   std::vector<std::int64_t> b;
   make_inputs(rng, n, 100, {a, b});
   std::vector<std::int64_t> out(static_cast<std::size_t>(n));
-  quiver::arith_saturating(quiver::ArithOp::kAdd, quiver::BatchView<std::int64_t>{a.data(), n},
-                           quiver::BatchView<std::int64_t>{b.data(), n}, out.data());
+  const auto run_saturating = [&]() {
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+    if constexpr (kAutovec) {
+      quiver::bench::autovec_avx2::arith_saturating_i64(quiver::ArithOp::kAdd, a.data(), b.data(),
+                                                        n, out.data());
+      return;
+    }
+#endif
+    quiver::arith_saturating(quiver::ArithOp::kAdd, quiver::BatchView<std::int64_t>{a.data(), n},
+                             quiver::BatchView<std::int64_t>{b.data(), n}, out.data());
+  };
+  run_saturating();
   quiver::bench::validate_or_abort("BM_arith_saturating", saturating_outputs_match({a, b}, out),
                                    "saturation vs independent recompute");
   g_pmu.start();
   for (auto _ : state) {
-    quiver::arith_saturating(quiver::ArithOp::kAdd, quiver::BatchView<std::int64_t>{a.data(), n},
-                             quiver::BatchView<std::int64_t>{b.data(), n}, out.data());
+    run_saturating();
     benchmark::DoNotOptimize(out.data());
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
@@ -144,15 +162,32 @@ void register_benchmarks() {
       benchmark::RegisterBenchmark(
           quiver::bench::bench_name({"arith_guarded", "checked_add", variant, "i64"},
                                     "n=" + std::to_string(n) + "/ovf=" + std::to_string(permille)),
-          bm_checked_add_i64)
+          bm_checked_add_i64<false>)
           ->Args({n, permille});
     }
     benchmark::RegisterBenchmark(
         quiver::bench::bench_name({"arith_guarded", "saturating_add", variant, "i64"},
                                   "n=" + std::to_string(n)),
-        bm_saturating_add_i64)
+        bm_saturating_add_i64<false>)
         ->Args({n});
   }
+#if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
+  // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
+  for (const std::int64_t n : {4096, 65536}) {
+    for (const int permille : {0, 1, 500}) {
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name({"arith_guarded", "checked_add", "autovec-avx2", "i64"},
+                                    "n=" + std::to_string(n) + "/ovf=" + std::to_string(permille)),
+          bm_checked_add_i64<true>)
+          ->Args({n, permille});
+    }
+    benchmark::RegisterBenchmark(
+        quiver::bench::bench_name({"arith_guarded", "saturating_add", "autovec-avx2", "i64"},
+                                  "n=" + std::to_string(n)),
+        bm_saturating_add_i64<true>)
+        ->Args({n});
+  }
+#endif
 }
 
 }  // namespace

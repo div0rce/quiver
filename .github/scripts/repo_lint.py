@@ -222,6 +222,35 @@ def check_include_graph(manifest: dict) -> None:
         check_family_isolation(rel, text)
 
 
+def check_autovec_baseline_coverage() -> None:
+    """REQ-BENCH-010 / ADR-011: the equal-ISA autovec baseline recompiles EVERY family's
+    `_scalar_impl.h`, so every family with an explicit AVX2 backend has a verdict pair
+    (REQ-LEDGER-011). arith_guarded was omitted, and the gap was invisible until an x86 machine
+    was registered: on ARM the portable scalar build IS the autovec baseline (REQ-BENCH-010), so
+    the NEON verdict existed while the AVX2 one could never be produced.
+
+    Structural, not behavioural: a family is covered iff the baseline TU re-includes its
+    reference header and its microbenchmark registers the `autovec-avx2` variant name.
+    """
+    baseline = ROOT / "bench" / "baselines" / "baseline_avx2.cpp"
+    if not baseline.exists():
+        return  # baselines land at their owning milestone
+    recompiled = baseline.read_text(errors="replace")
+    for impl in sorted(ROOT.glob("src/kernels/*/*_scalar_impl.h")):
+        family = impl.parent.name
+        # Only families that actually ship an explicit AVX2 backend owe a verdict pair.
+        if not (impl.parent / f"{family}_avx2.cpp").exists():
+            continue
+        if f"src/kernels/{family}/{impl.name}" not in recompiled:
+            err(f"REQ-BENCH-010: {family} has an explicit AVX2 backend but "
+                f"bench/baselines/baseline_avx2.cpp does not recompile {impl.name} — "
+                f"no autovec-avx2 baseline, so REQ-LEDGER-011 can derive no verdict")
+        bench = ROOT / "bench" / "micro" / f"bench_{family}.cpp"
+        if bench.exists() and '"autovec-avx2"' not in bench.read_text(errors="replace"):
+            err(f"REQ-BENCH-010: bench/micro/bench_{family}.cpp registers no `autovec-avx2` "
+                f"variant, so its AVX2 entries have no equal-ISA pair (ADR-011)")
+
+
 def check_source_scans(manifest: dict) -> None:
     # --- Source scans (vacuous while no production code exists) ------------------------------
     src_globs = ["include/**/*.h", "src/**/*.h", "src/**/*.cpp"]
@@ -333,6 +362,7 @@ def main() -> int:
     want = check_adrs(manifest)
     check_include_graph(manifest)
     check_source_scans(manifest)
+    check_autovec_baseline_coverage()
     check_ledger_refs(manifest)
     check_release_status(manifest)
 

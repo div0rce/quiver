@@ -39,6 +39,7 @@ using namespace ::quiver::detail;  // NOLINT(google-build-using-namespace): see 
 QUIVER_TARGET_AVX2_BEGIN
 
 #include "src/kernels/arith/arith_scalar_impl.h"
+#include "src/kernels/arith_guarded/arith_guarded_scalar_impl.h"
 #include "src/kernels/compare/compare_scalar_impl.h"
 #include "src/kernels/filter/filter_scalar_impl.h"
 #include "src/kernels/hash/hash_scalar_impl.h"
@@ -103,6 +104,17 @@ void unpack_for_u32(const std::uint8_t* packed, std::int64_t n, int bit_width, s
 void arith_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n,
                std::int64_t* out) noexcept {
   impl::arith<std::int64_t>(op, {a, n}, b, out);
+}
+
+std::int64_t arith_checked_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b,
+                               std::int64_t n, std::int64_t* out,
+                               std::uint8_t* overflow_bits) noexcept {
+  return impl::arith_checked<std::int64_t>(op, {a, n}, b, {out, overflow_bits});
+}
+
+void arith_saturating_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b,
+                          std::int64_t n, std::int64_t* out) noexcept {
+  impl::arith_saturating<std::int64_t>(op, {a, n}, b, out);
 }
 
 }  // namespace quiver::bench::autovec_avx2
