@@ -116,11 +116,11 @@ inline double expected_dense_sum_f64(const double* v, std::int64_t n, int w) {
   double acc[8 * kA] = {};
   const std::int64_t block = static_cast<std::int64_t>(w) * kA;
   std::int64_t i = 0;
+  // acc index k*w+lane and source index i+k*w+lane both run contiguously over [0, block), so
+  // the accumulator-major/lane-minor nest is one flat pass — same additions, same order.
   for (; i + block <= n; i += block) {
-    for (int k = 0; k < kA; ++k) {
-      for (int lane = 0; lane < w; ++lane) {
-        acc[k * w + lane] += v[i + k * w + lane];
-      }
+    for (std::int64_t m = 0; m < block; ++m) {
+      acc[m] += v[i + m];
     }
   }
   double s = 0.0;
