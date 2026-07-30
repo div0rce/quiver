@@ -84,27 +84,32 @@ def check_toplevel(manifest: dict) -> None:
             f"(not in .github/repo-manifest.json; new directories need a PRD amendment)")
 
 
-def main() -> int:
-    manifest = json.loads(MANIFEST.read_text())
-
-    check_toplevel(manifest)
-
+def check_required_paths(manifest: dict) -> None:
     # --- REQ-REPO-001: required paths exist --------------------------------------------------
     for rel in manifest["required"]:
         if not (ROOT / rel).exists():
             err(f"REQ-REPO-001: required path missing: {rel}")
 
+
+
+def check_forbidden_dirs(manifest: dict) -> None:
     # --- Milestone scope: forbidden directories ----------------------------------------------
     for rel in manifest["forbidden_at_milestone"]:
         if (ROOT / rel).exists():
             err(f"REQ-MS-001: '{rel}/' must not exist at milestone {manifest['milestone']} "
                 f"(introduced by a later milestone per docs/prd/18-milestones.md)")
 
+
+
+def check_docs_readmes(manifest: dict) -> None:
     # --- REQ-REPO-012: docs READMEs ----------------------------------------------------------
     for rel in manifest["docs_dirs_requiring_readme"]:
         if not (ROOT / rel / "README.md").exists():
             err(f"REQ-REPO-012: {rel}/README.md missing")
 
+
+
+def check_adrs(manifest: dict) -> int:
     # --- REQ-DOC-004: ADR completeness -------------------------------------------------------
     adr_dir = ROOT / "docs" / "adr"
     want = manifest["adr_count"]
@@ -123,69 +128,98 @@ def main() -> int:
         if indexed != set(range(1, want + 1)):
             err(f"REQ-DOC-004: docs/adr/README.md index does not list exactly ADR-001..{want:03d}")
 
+    return want
+
+
+# Shipped code may include these and nothing else (REQ-REPO-006).
+STD_HEADERS = {
+    "algorithm", "array", "atomic", "bit", "cassert", "concepts", "cstddef", "cstdint",
+    "cstdio", "cstdlib", "cstring", "limits", "memory", "new", "numeric", "ranges", "span",
+    "string", "string_view", "thread", "type_traits", "utility", "vector",
+}
+OS_HEADERS_BY_FILE = {
+    "src/cpu/cpu_features.cpp": {"cpuid.h", "intrin.h", "immintrin.h",
+                                 "sys/auxv.h", "sys/sysctl.h"},
+}
+# Per-ISA kernel TUs use the compiler-provided intrinsic headers — toolchain surface,
+# not a third-party dependency; same class as <cpuid.h> (PRD 09, ADR-003).
+ISA_HEADERS_BY_SUFFIX = {
+    "_avx2.cpp": {"immintrin.h"},
+    "_avx512.cpp": {"immintrin.h"},
+    "_neon.cpp": {"arm_neon.h"},
+}
+# module -> allowed quoted-include prefixes (dependency direction, PRD 02 §6)
+QUOTED_RULES = [
+    ("include/quiver/", ("quiver/",)),
+    ("src/cpu/", ("quiver/detail/", "src/cpu/")),
+    ("src/dispatch/", ("quiver/", "src/cpu/", "src/dispatch/")),
+    ("src/kernels/common/", ("quiver/", "src/kernels/common/")),
+    # kernel families: own dir + common only (REQ-REPO-009); family dirs checked generically
+    ("src/kernels/", ("quiver/", "src/kernels/common/", "src/dispatch/")),
+]
+INC_RE = re.compile(r'^\s*#\s*include\s+([<"])([^">]+)[">]', re.M)
+FAMILY_RE = re.compile(r"src/kernels/(?!common)([a-z0-9_]+)/")
+
+
+def angle_allowed_for(rel: str) -> set[str]:
+    isa = {h for suffix, hdrs in ISA_HEADERS_BY_SUFFIX.items() if rel.endswith(suffix)
+           for h in hdrs}
+    return STD_HEADERS | OS_HEADERS_BY_FILE.get(rel, set()) | isa
+
+
+def quoted_prefixes_for(rel: str) -> tuple[str, ...]:
+    rules = [pfx for base, pfx in QUOTED_RULES if rel.startswith(base)]
+    prefixes = tuple(rules[0]) if rules else ()
+    fam_dir = re.match(r"(src/kernels/[a-z0-9_]+/)", rel)
+    if fam_dir:  # a family may include its own directory (the 5-file pattern)
+        prefixes = prefixes + (fam_dir.group(1),)
+    return prefixes
+
+
+def check_angle_include(rel: str, target: str) -> None:
+    if target not in angle_allowed_for(rel):
+        err(f"REQ-REPO-006: {rel} includes <{target}> — not in the std/OS "
+            f"allow-list (shipped code: std + documented OS headers only)")
+
+
+def check_quoted_include(rel: str, target: str) -> None:
+    prefixes = quoted_prefixes_for(rel)
+    if not any(target.startswith(p) for p in prefixes):
+        err(f"REQ-REPO-005/-009: {rel} includes \"{target}\" — violates the "
+            f"module dependency rules of PRD 02 §6")
+    if not (ROOT / "include" / target).exists() and not (ROOT / target).exists():
+        err(f"REQ-REPO-006: {rel} includes \"{target}\" which does not resolve "
+            f"within include/ or the repo root")
+
+
+# A family may not include another family's internals (REQ-REPO-009): vacuous until M3, but the
+# generic rule keeps it enforced forever.
+def check_family_isolation(rel: str, text: str) -> None:
+    fam = FAMILY_RE.match(rel)
+    if not fam:
+        return
+    for m in INC_RE.finditer(text):
+        other = FAMILY_RE.match(m.group(2))
+        if other and other.group(1) != fam.group(1):
+            err(f"REQ-REPO-009: {rel} includes another family's internals: {m.group(2)}")
+
+
+def check_include_graph(manifest: dict) -> None:
     # --- Include-graph lint (REQ-REPO-005/-006/-009; layering per PRD 02 §6) -----------------
-    std_headers = {
-        "algorithm", "array", "atomic", "bit", "cassert", "concepts", "cstddef", "cstdint",
-        "cstdio", "cstdlib", "cstring", "limits", "memory", "new", "numeric", "ranges", "span",
-        "string", "string_view", "thread", "type_traits", "utility", "vector",
-    }
-    os_headers_by_file = {
-        "src/cpu/cpu_features.cpp": {"cpuid.h", "intrin.h", "immintrin.h",
-                                     "sys/auxv.h", "sys/sysctl.h"},
-    }
-    # Per-ISA kernel TUs use the compiler-provided intrinsic headers — toolchain surface,
-    # not a third-party dependency; same class as <cpuid.h> (PRD 09, ADR-003).
-    isa_headers_by_suffix = {
-        "_avx2.cpp": {"immintrin.h"},
-        "_avx512.cpp": {"immintrin.h"},
-        "_neon.cpp": {"arm_neon.h"},
-    }
-    # module -> allowed quoted-include prefixes (dependency direction, PRD 02 §6)
-    quoted_rules = [
-        ("include/quiver/", ("quiver/",)),
-        ("src/cpu/", ("quiver/detail/", "src/cpu/")),
-        ("src/dispatch/", ("quiver/", "src/cpu/", "src/dispatch/")),
-        ("src/kernels/common/", ("quiver/", "src/kernels/common/")),
-        # kernel families: own dir + common only (REQ-REPO-009); family dirs checked generically
-        ("src/kernels/", ("quiver/", "src/kernels/common/", "src/dispatch/")),
-    ]
-    inc_re = re.compile(r'^\s*#\s*include\s+([<"])([^">]+)[">]', re.M)
+    del manifest  # graph rules are structural, not manifest-driven
     for f in sorted(list(ROOT.glob("include/**/*.h")) + list(ROOT.glob("src/**/*.h"))
                     + list(ROOT.glob("src/**/*.cpp"))):
         rel = f.relative_to(ROOT).as_posix()
         text = f.read_text(errors="replace")
-        for m2 in inc_re.finditer(text):
-            style, target = m2.group(1), m2.group(2)
-            if style == "<":
-                allowed = std_headers | os_headers_by_file.get(rel, set())
-                for suffix, hdrs in isa_headers_by_suffix.items():
-                    if rel.endswith(suffix):
-                        allowed = allowed | hdrs
-                if target not in allowed:
-                    err(f"REQ-REPO-006: {rel} includes <{target}> — not in the std/OS "
-                        f"allow-list (shipped code: std + documented OS headers only)")
+        for m2 in INC_RE.finditer(text):
+            if m2.group(1) == "<":
+                check_angle_include(rel, m2.group(2))
             else:
-                rules = [pfx for base, pfx in quoted_rules if rel.startswith(base)]
-                prefixes = tuple(rules[0]) if rules else ()
-                fam_dir = re.match(r"(src/kernels/[a-z0-9_]+/)", rel)
-                if fam_dir:  # a family may include its own directory (the 5-file pattern)
-                    prefixes = prefixes + (fam_dir.group(1),)
-                if not any(target.startswith(p) for p in prefixes):
-                    err(f"REQ-REPO-005/-009: {rel} includes \"{target}\" — violates the "
-                        f"module dependency rules of PRD 02 §6")
-                if not (ROOT / "include" / target).exists() and not (ROOT / target).exists():
-                    err(f"REQ-REPO-006: {rel} includes \"{target}\" which does not resolve "
-                        f"within include/ or the repo root")
-        # kernel-family cross-include check (REQ-REPO-009): a family may not include another
-        # family's directory (vacuous until M3; generic rule keeps it enforced forever).
-        fam = re.match(r"src/kernels/(?!common)([a-z0-9_]+)/", rel)
-        if fam:
-            for m3 in inc_re.finditer(text):
-                tgt = m3.group(2)
-                other = re.match(r"src/kernels/(?!common)([a-z0-9_]+)/", tgt)
-                if other and other.group(1) != fam.group(1):
-                    err(f"REQ-REPO-009: {rel} includes another family's internals: {tgt}")
+                check_quoted_include(rel, m2.group(2))
+        check_family_isolation(rel, text)
 
+
+def check_source_scans(manifest: dict) -> None:
     # --- Source scans (vacuous while no production code exists) ------------------------------
     src_globs = ["include/**/*.h", "src/**/*.h", "src/**/*.cpp"]
     for pattern in src_globs:
@@ -198,16 +232,24 @@ def main() -> int:
                 err(f"REQ-MEM-002: '_padded' variant in {f.relative_to(ROOT)} "
                     f"(reserved naming; requires ledger evidence + PRD amendment)")
 
-    # --- Ledger entry_id references in docs (REQ-LEDGER-015): every `qle:<entry_id>` inline
-    # --- reference must exist in a committed entries.json — no hand-copied numbers without
-    # --- provenance (Charter T2).
-    committed_ids: set[str] = set()
+
+
+def committed_entry_ids() -> set[str]:
+    ids: set[str] = set()
     for entries_file in ROOT.glob("ledger/results/*/*/entries.json"):
         try:
             for entry in json.loads(entries_file.read_text()):
-                committed_ids.add(entry.get("entry_id", ""))
+                ids.add(entry.get("entry_id", ""))
         except (json.JSONDecodeError, TypeError):
             err(f"REQ-LEDGER-001: {entries_file.relative_to(ROOT)} is not a valid entry array")
+    return ids
+
+
+def check_ledger_refs(manifest: dict) -> None:
+    # --- Ledger entry_id references in docs (REQ-LEDGER-015): every `qle:<entry_id>` inline
+    # --- reference must exist in a committed entries.json — no hand-copied numbers without
+    # --- provenance (Charter T2).
+    committed_ids = committed_entry_ids()
     qle_re = re.compile(r"`qle:([A-Za-z0-9._-]+)`")
     for doc in ROOT.glob("docs/**/*.md"):
         for m in qle_re.finditer(doc.read_text(errors="replace")):
@@ -215,47 +257,79 @@ def main() -> int:
                 err(f"REQ-LEDGER-015: {doc.relative_to(ROOT)} references entry_id "
                     f"'{m.group(1)}' which exists in no committed entries.json")
 
+
+
+def config_version() -> str | None:
+    cfg = (ROOT / "include/quiver/detail/config.h").read_text(errors="replace")
+    parts = {k: m.group(1) for k in ("MAJOR", "MINOR", "PATCH")
+             if (m := re.search(rf"#define QUIVER_VERSION_{k} (\d+)", cfg))}
+    if len(parts) != 3:
+        err("REQ-REL-001: cannot parse QUIVER_VERSION_* from config.h")
+        return None
+    return f"{parts['MAJOR']}.{parts['MINOR']}.{parts['PATCH']}"
+
+
+# Each place a release version is written down, and how to read it back out.
+VERSION_SOURCES = [
+    ("CHANGELOG latest release", "CHANGELOG.md", r"^## \[(\d+\.\d+\.\d+)\]"),
+    ("README 'Current release'", "README.md", r"Current release: \[v(\d+\.\d+\.\d+)\]"),
+    ("conanfile.py version", "cmake/packaging/conan/conanfile.py",
+     r'version = "(\d+\.\d+\.\d+)"'),
+]
+
+
+def check_declared_versions(ver: str) -> None:
+    for label, rel, pattern in VERSION_SOURCES:
+        text = (ROOT / rel).read_text(errors="replace")
+        m = re.search(pattern, text, re.MULTILINE)
+        if not m or m.group(1) != ver:
+            err(f"REQ-REL-001: {label} is '{m.group(1) if m else '?'}' but config.h says {ver}")
+    vcpkg = json.loads((ROOT / "cmake/packaging/vcpkg/vcpkg.json").read_text())
+    if vcpkg.get("version") != ver:
+        err(f"REQ-REL-001: vcpkg.json version '{vcpkg.get('version')}' != config.h {ver}")
+
+
+# config.h AHEAD of the tag is the legal release-prep state (the tag lands after the release PR
+# merges); the tag being AHEAD of config.h means the post-release bump was forgotten — the drift
+# this check exists to catch. Tags may be absent entirely in CI shallow checkouts.
+def check_tag_not_ahead(ver: str) -> None:
+    try:
+        tag = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--abbrev=0"],
+                             capture_output=True, text=True, timeout=10)
+        if tag.returncode != 0:
+            return
+        latest = tag.stdout.strip().lstrip("v")
+        if tuple(map(int, latest.split("."))) > tuple(map(int, ver.split("."))):
+            err(f"REQ-REL-001: latest git tag v{latest} is ahead of config.h {ver} "
+                f"(run the post-release bump)")
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        pass  # no git, no tags, or unparseable: the file-level checks above still hold
+
+
+def check_release_status(manifest: dict) -> None:
     # --- Release-status coherence (REQ-REL-001): the version strings humans keep forgetting to
     # --- synchronize must agree. Single source of truth: include/quiver/detail/config.h.
-    cfg = (ROOT / "include/quiver/detail/config.h").read_text(errors="replace")
-    ver_parts = {k: m.group(1) for k in ("MAJOR", "MINOR", "PATCH")
-                 if (m := re.search(rf"#define QUIVER_VERSION_{k} (\d+)", cfg))}
-    if len(ver_parts) != 3:
-        err("REQ-REL-001: cannot parse QUIVER_VERSION_* from config.h")
-    else:
-        ver = f"{ver_parts['MAJOR']}.{ver_parts['MINOR']}.{ver_parts['PATCH']}"
-        changelog = (ROOT / "CHANGELOG.md").read_text(errors="replace")
-        m = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
-        if not m or m.group(1) != ver:
-            err(f"REQ-REL-001: CHANGELOG latest release is "
-                f"'{m.group(1) if m else '?'}' but config.h says {ver}")
-        readme = (ROOT / "README.md").read_text(errors="replace")
-        m = re.search(r"Current release: \[v(\d+\.\d+\.\d+)\]", readme)
-        if not m or m.group(1) != ver:
-            err(f"REQ-REL-001: README 'Current release' is "
-                f"'v{m.group(1) if m else '?'}' but config.h says {ver}")
-        vcpkg = json.loads((ROOT / "cmake/packaging/vcpkg/vcpkg.json").read_text())
-        if vcpkg.get("version") != ver:
-            err(f"REQ-REL-001: vcpkg.json version '{vcpkg.get('version')}' != config.h {ver}")
-        conan = (ROOT / "cmake/packaging/conan/conanfile.py").read_text(errors="replace")
-        m = re.search(r'version = "(\d+\.\d+\.\d+)"', conan)
-        if not m or m.group(1) != ver:
-            err(f"REQ-REL-001: conanfile.py version "
-                f"'{m.group(1) if m else '?'}' != config.h {ver}")
-        # Latest reachable tag, when tags are available (CI shallow checkouts may lack them).
-        # config.h AHEAD of the tag is the legal release-prep state (the tag lands after the
-        # release PR merges); the tag being AHEAD of config.h means the post-release bump was
-        # forgotten — the drift this check exists to catch.
-        try:
-            tag = subprocess.run(["git", "-C", str(ROOT), "describe", "--tags", "--abbrev=0"],
-                                 capture_output=True, text=True, timeout=10)
-            if tag.returncode == 0:
-                latest = tag.stdout.strip().lstrip("v")
-                if tuple(map(int, latest.split("."))) > tuple(map(int, ver.split("."))):
-                    err(f"REQ-REL-001: latest git tag v{latest} is ahead of config.h {ver} "
-                        f"(run the post-release bump)")
-        except (OSError, subprocess.TimeoutExpired, ValueError):
-            pass  # no git, no tags, or unparseable: the file-level checks above still hold
+    del manifest  # versions come from the tree, not the manifest
+    ver = config_version()
+    if ver is None:
+        return
+    check_declared_versions(ver)
+    check_tag_not_ahead(ver)
+
+
+def main() -> int:
+    manifest = json.loads(MANIFEST.read_text())
+
+    check_toplevel(manifest)
+
+    check_required_paths(manifest)
+    check_forbidden_dirs(manifest)
+    check_docs_readmes(manifest)
+    want = check_adrs(manifest)
+    check_include_graph(manifest)
+    check_source_scans(manifest)
+    check_ledger_refs(manifest)
+    check_release_status(manifest)
 
     if errors:
         print("repo-lint: FAIL", file=sys.stderr)
