@@ -55,6 +55,42 @@ void for_each_backend(Body body) {
   quiver::clear_isa_override();
 }
 
+// The two operand bitmaps a combine reads.
+struct BitmapPair {
+  const std::uint8_t* a;
+  const std::uint8_t* b;
+};
+
+// The K4 truth table, transcribed from the contract rather than from the kernel.
+bool mask_op_expected(int opi, bool av, bool bv) {
+  switch (opi) {
+  case 0:
+    return av && bv;
+  case 1:
+    return av || bv;
+  case 2:
+    return av && !bv;
+  default:
+    return av != bv;
+  }
+}
+
+void expect_combine_matches(BitmapPair in, const std::uint8_t* out, std::int64_t n, int opi) {
+  for (std::int64_t i = 0; i < n; ++i) {
+    const bool want = mask_op_expected(opi, ref::bit_get(in.a, i), ref::bit_get(in.b, i));
+    ASSERT_EQ(ref::bit_get(out, i), want) << "op=" << opi << " n=" << n;
+  }
+}
+
+void check_all_ops(BitmapPair in, std::uint8_t* out, std::int64_t n) {
+  for (int opi = 0; opi < 4; ++opi) {
+    quiver::mask_combine(static_cast<quiver::MaskOp>(opi), quiver::BitmapView{in.a},
+                         quiver::BitmapView{in.b}, n, out);
+    expect_combine_matches(in, out, n, opi);
+    ASSERT_TRUE(ref::tail_bits_zero(out, n));
+  }
+}
+
 TEST(DiffMask, AllOpsMatchOracle) {
   for_each_backend([&](quiver::Isa isa) {
     Rng rng(0xD1FF0004ull + static_cast<std::uint64_t>(isa));
@@ -65,21 +101,7 @@ TEST(DiffMask, AllOpsMatchOracle) {
       quiver_test::fill_bitmap_uniform(rng, a.data(), n, 37);
       quiver_test::fill_bitmap_uniform(rng, b.data(), n, 73);
       std::vector<std::uint8_t> out(static_cast<std::size_t>(bytes) + 1);
-      for (int opi = 0; opi < 4; ++opi) {
-        const auto op = static_cast<quiver::MaskOp>(opi);
-        quiver::mask_combine(op, quiver::BitmapView{a.data()}, quiver::BitmapView{b.data()}, n,
-                             out.data());
-        for (std::int64_t i = 0; i < n; ++i) {
-          const bool av = ref::bit_get(a.data(), i);
-          const bool bv = ref::bit_get(b.data(), i);
-          const bool want = opi == 0   ? (av && bv)
-                            : opi == 1 ? (av || bv)
-                            : opi == 2 ? (av && !bv)
-                                       : (av != bv);
-          ASSERT_EQ(ref::bit_get(out.data(), i), want) << "op=" << opi << " n=" << n;
-        }
-        ASSERT_TRUE(ref::tail_bits_zero(out.data(), n));
-      }
+      check_all_ops({a.data(), b.data()}, out.data(), n);
       ASSERT_EQ(quiver::mask_popcount(quiver::BitmapView{a.data()}, n),
                 ref::popcount_bits(a.data(), n));
     }
