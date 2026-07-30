@@ -42,29 +42,30 @@ QUIVER_FORCE_INLINE bool compare_one(CompareOp op, T a, T b) noexcept {
 
 // Shared bitmap-assembly core: build each output byte from up to 8 predicate lanes, count as
 // we go, zero tails by construction. `pred(i)` must be branch-free in the data.
+// `bits` predicate results from `base`, LSB-first.
+template <class Pred>
+QUIVER_FORCE_INLINE std::uint8_t pack_byte(Pred pred, std::int64_t base, int bits) noexcept {
+  std::uint8_t byte = 0;
+  for (int k = 0; k < bits; ++k) {
+    byte = static_cast<std::uint8_t>(byte | (static_cast<std::uint8_t>(pred(base + k)) << k));
+  }
+  return byte;
+}
+
 template <class Pred>
 QUIVER_FORCE_INLINE std::int64_t emit_bitmap(std::int64_t n, std::uint8_t* out,
                                              Pred pred) noexcept {
   std::int64_t count = 0;
   const std::int64_t full_bytes = n >> 3;
   for (std::int64_t b = 0; b < full_bytes; ++b) {
-    const std::int64_t base = b << 3;
-    std::uint8_t byte = 0;
-    for (int k = 0; k < 8; ++k) {
-      byte = static_cast<std::uint8_t>(byte | (static_cast<std::uint8_t>(pred(base + k)) << k));
-    }
-    out[b] = byte;
-    count += std::popcount(byte);
+    out[b] = pack_byte(pred, b << 3, 8);
+    count += std::popcount(out[b]);
   }
   const int tail = static_cast<int>(n & 7);
   if (tail != 0) {
-    std::uint8_t byte = 0;
-    for (int k = 0; k < tail; ++k) {
-      byte = static_cast<std::uint8_t>(
-          byte | (static_cast<std::uint8_t>(pred((full_bytes << 3) + k)) << k));
-    }
-    out[full_bytes] = byte;  // bits >= tail are zero by construction (ADR-016)
-    count += std::popcount(byte);
+    // bits >= tail are zero by construction (ADR-016)
+    out[full_bytes] = pack_byte(pred, full_bytes << 3, tail);
+    count += std::popcount(out[full_bytes]);
   }
   return count;
 }
@@ -82,58 +83,64 @@ QUIVER_FORCE_INLINE std::int64_t emit_selvec(std::int64_t n, std::uint32_t* out,
   return count;
 }
 
+// A batch under comparison together with the validity that gates it. These three always
+// travel as a unit, and the six entry points below each took them as loose parameters.
+template <class T>
+struct CompareBatch {
+  const T* in;
+  std::int64_t n;
+  const std::uint8_t* validity;
+};
+
 // --- The six K1 entry points (validity == nullptr means all-valid, REQ-API-008) --------------
 
 template <class T>
-std::int64_t compare_bitmap(CompareOp op, const T* in, std::int64_t n, T comparand,
-                            const std::uint8_t* validity, std::uint8_t* out) noexcept {
-  if (validity == nullptr) {  // distinct mask-free path (PRD 08 K1)
-    return emit_bitmap(n, out, [&](std::int64_t i) { return compare_one(op, in[i], comparand); });
+std::int64_t compare_bitmap(CompareOp op, CompareBatch<T> x, T comparand,
+                            std::uint8_t* out) noexcept {
+  if (x.validity == nullptr) {  // distinct mask-free path (PRD 08 K1)
+    return emit_bitmap(x.n, out,
+                       [&](std::int64_t i) { return compare_one(op, x.in[i], comparand); });
   }
-  return emit_bitmap(n, out, [&](std::int64_t i) {
-    return bitmap_get(validity, i) && compare_one(op, in[i], comparand);
+  return emit_bitmap(x.n, out, [&](std::int64_t i) {
+    return bitmap_get(x.validity, i) && compare_one(op, x.in[i], comparand);
   });
 }
 
 template <class T>
-std::int64_t compare_bitmap2(CompareOp op, const T* a, const T* b, std::int64_t n,
-                             const std::uint8_t* a_validity, const std::uint8_t* b_validity,
+std::int64_t compare_bitmap2(CompareOp op, CompareBatch<T> x, CompareBatch<T> y,
                              std::uint8_t* out) noexcept {
-  return emit_bitmap(n, out, [&](std::int64_t i) {
-    return is_valid(a_validity, i) && is_valid(b_validity, i) && compare_one(op, a[i], b[i]);
+  return emit_bitmap(x.n, out, [&](std::int64_t i) {
+    return is_valid(x.validity, i) && is_valid(y.validity, i) && compare_one(op, x.in[i], y.in[i]);
   });
 }
 
 template <class T>
-std::int64_t compare_between_bitmap(const T* in, std::int64_t n, T lo, T hi,
-                                    const std::uint8_t* validity, std::uint8_t* out) noexcept {
-  return emit_bitmap(n, out, [&](std::int64_t i) {
-    return is_valid(validity, i) && (lo <= in[i]) && (in[i] <= hi);
+std::int64_t compare_between_bitmap(CompareBatch<T> x, T lo, T hi, std::uint8_t* out) noexcept {
+  return emit_bitmap(x.n, out, [&](std::int64_t i) {
+    return is_valid(x.validity, i) && (lo <= x.in[i]) && (x.in[i] <= hi);
   });
 }
 
 template <class T>
-std::int64_t compare_selvec(CompareOp op, const T* in, std::int64_t n, T comparand,
-                            const std::uint8_t* validity, std::uint32_t* out) noexcept {
-  return emit_selvec(n, out, [&](std::int64_t i) {
-    return is_valid(validity, i) && compare_one(op, in[i], comparand);
+std::int64_t compare_selvec(CompareOp op, CompareBatch<T> x, T comparand,
+                            std::uint32_t* out) noexcept {
+  return emit_selvec(x.n, out, [&](std::int64_t i) {
+    return is_valid(x.validity, i) && compare_one(op, x.in[i], comparand);
   });
 }
 
 template <class T>
-std::int64_t compare_selvec2(CompareOp op, const T* a, const T* b, std::int64_t n,
-                             const std::uint8_t* a_validity, const std::uint8_t* b_validity,
+std::int64_t compare_selvec2(CompareOp op, CompareBatch<T> x, CompareBatch<T> y,
                              std::uint32_t* out) noexcept {
-  return emit_selvec(n, out, [&](std::int64_t i) {
-    return is_valid(a_validity, i) && is_valid(b_validity, i) && compare_one(op, a[i], b[i]);
+  return emit_selvec(x.n, out, [&](std::int64_t i) {
+    return is_valid(x.validity, i) && is_valid(y.validity, i) && compare_one(op, x.in[i], y.in[i]);
   });
 }
 
 template <class T>
-std::int64_t compare_between_selvec(const T* in, std::int64_t n, T lo, T hi,
-                                    const std::uint8_t* validity, std::uint32_t* out) noexcept {
-  return emit_selvec(n, out, [&](std::int64_t i) {
-    return is_valid(validity, i) && (lo <= in[i]) && (in[i] <= hi);
+std::int64_t compare_between_selvec(CompareBatch<T> x, T lo, T hi, std::uint32_t* out) noexcept {
+  return emit_selvec(x.n, out, [&](std::int64_t i) {
+    return is_valid(x.validity, i) && (lo <= x.in[i]) && (x.in[i] <= hi);
   });
 }
 

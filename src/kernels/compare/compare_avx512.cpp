@@ -229,17 +229,17 @@ QUIVER_FORCE_INLINE std::int64_t emit_bm(std::int64_t n, std::uint8_t* out, Grou
   }                                                                                                \
   std::int64_t k1_compare_selvec(CompareOp op, const T* in, std::int64_t n, T comparand,           \
                                  const std::uint8_t* validity, std::uint32_t* out) noexcept {      \
-    return scalar_impl::compare_selvec<T>(op, in, n, comparand, validity, out);                    \
+    return scalar_impl::compare_selvec<T>(op, {in, n, validity}, comparand, out);                  \
   }                                                                                                \
   std::int64_t k1_compare_selvec2(CompareOp op, const T* a, const T* b, std::int64_t n,            \
                                   const std::uint8_t* a_validity, const std::uint8_t* b_validity,  \
                                   std::uint32_t* out) noexcept {                                   \
-    return scalar_impl::compare_selvec2<T>(op, a, b, n, a_validity, b_validity, out);              \
+    return scalar_impl::compare_selvec2<T>(op, {a, n, a_validity}, {b, n, b_validity}, out);       \
   }                                                                                                \
   std::int64_t k1_compare_between_selvec(const T* in, std::int64_t n, T lo, T hi,                  \
                                          const std::uint8_t* validity,                             \
                                          std::uint32_t* out) noexcept {                            \
-    return scalar_impl::compare_between_selvec<T>(in, n, lo, hi, validity, out);                   \
+    return scalar_impl::compare_between_selvec<T>({in, n, validity}, lo, hi, out);                 \
   }
 
 QUIVER_K1_DEFINE(std::int8_t)

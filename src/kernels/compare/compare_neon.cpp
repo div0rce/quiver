@@ -445,7 +445,7 @@ std::int64_t emit_selvec_neon(std::int64_t n, const Pred& pred, const Validity& 
   std::int64_t k1_compare_bitmap(CompareOp op, const T* in, std::int64_t n, T comparand,           \
                                  const std::uint8_t* validity, std::uint8_t* out) noexcept {       \
     if constexpr (sizeof(T) == 8) /* 64-bit bitmap: autovec scalar wins (see header) */            \
-      return scalar_impl::compare_bitmap(op, in, n, comparand, validity, out);                     \
+      return scalar_impl::compare_bitmap<T>(op, {in, n, validity}, comparand, out);                \
     else                                                                                           \
       return emit_bitmap_neon<T>(n, CmpRhs<T>{op, in, comparand, cmp_broadcast(comparand)},        \
                                  OneValidity{validity}, out);                                      \
@@ -454,7 +454,7 @@ std::int64_t emit_selvec_neon(std::int64_t n, const Pred& pred, const Validity& 
                                   const std::uint8_t* a_validity, const std::uint8_t* b_validity,  \
                                   std::uint8_t* out) noexcept {                                    \
     if constexpr (sizeof(T) == 8)                                                                  \
-      return scalar_impl::compare_bitmap2(op, a, b, n, a_validity, b_validity, out);               \
+      return scalar_impl::compare_bitmap2<T>(op, {a, n, a_validity}, {b, n, b_validity}, out);     \
     else                                                                                           \
       return emit_bitmap_neon<T>(n, CmpBatch<T>{op, a, b}, TwoValidity{a_validity, b_validity},    \
                                  out);                                                             \
@@ -463,7 +463,7 @@ std::int64_t emit_selvec_neon(std::int64_t n, const Pred& pred, const Validity& 
                                          const std::uint8_t* validity,                             \
                                          std::uint8_t* out) noexcept {                             \
     if constexpr (sizeof(T) == 8)                                                                  \
-      return scalar_impl::compare_between_bitmap(in, n, lo, hi, validity, out);                    \
+      return scalar_impl::compare_between_bitmap<T>({in, n, validity}, lo, hi, out);               \
     else                                                                                           \
       return emit_bitmap_neon<T>(n,                                                                \
                                  CmpBetween<T>{in, lo, hi, cmp_broadcast(lo), cmp_broadcast(hi)},  \

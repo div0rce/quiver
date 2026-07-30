@@ -55,7 +55,7 @@ namespace impl = ::quiver_autovec_avx2_impl::detail::scalar_impl;
 std::int64_t compare_bitmap_i64(quiver::CompareOp op, const std::int64_t* in, std::int64_t n,
                                 std::int64_t comparand, const std::uint8_t* validity,
                                 std::uint8_t* out) noexcept {
-  return impl::compare_bitmap<std::int64_t>(op, in, n, comparand, validity, out);
+  return impl::compare_bitmap<std::int64_t>(op, {in, n, validity}, comparand, out);
 }
 
 std::int64_t filter_bitmap_i64(const std::int64_t* in, std::int64_t n,
