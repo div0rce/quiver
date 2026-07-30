@@ -167,13 +167,13 @@ struct ar_ScalarRhs {
 #define QUIVER_K9_DEFINE(T)                                                                        \
   void k9_arith(ArithOp op, const T* a, const T* b, std::int64_t n, T* out) noexcept {             \
     if constexpr (sizeof(T) == 8) /* 8-byte elementwise is bandwidth-bound; autovec scalar wins */ \
-      scalar_impl::arith(op, a, b, n, out);                                                        \
+      scalar_impl::arith(op, {a, n}, b, out);                                                      \
     else                                                                                           \
       arith_impl<T>(op, {a, n}, ar_BatchRhs<T>{b}, out);                                           \
   }                                                                                                \
   void k9_arith_scalar_rhs(ArithOp op, const T* a, T b, std::int64_t n, T* out) noexcept {         \
     if constexpr (sizeof(T) == 8)                                                                  \
-      scalar_impl::arith_scalar_rhs(op, a, b, n, out);                                             \
+      scalar_impl::arith_scalar_rhs(op, {a, n}, b, out);                                           \
     else                                                                                           \
       arith_impl<T>(op, {a, n}, ar_ScalarRhs<T>{b}, out);                                          \
   }

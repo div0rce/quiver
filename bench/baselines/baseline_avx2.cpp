@@ -102,7 +102,7 @@ void unpack_for_u32(const std::uint8_t* packed, std::int64_t n, int bit_width, s
 
 void arith_i64(quiver::ArithOp op, const std::int64_t* a, const std::int64_t* b, std::int64_t n,
                std::int64_t* out) noexcept {
-  impl::arith<std::int64_t>(op, a, b, n, out);
+  impl::arith<std::int64_t>(op, {a, n}, b, out);
 }
 
 }  // namespace quiver::bench::autovec_avx2
