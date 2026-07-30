@@ -80,6 +80,56 @@ quiver::SumType<T> expected_sum(quiver::Isa isa, const T* data, std::int64_t n,
 }
 
 template <class T>
+struct ReduceTriple {
+  T min;
+  T max;
+  quiver::SumType<T> sum;
+};
+
+// One shape under test: the batch, its validity, and the selection (when this case uses one).
+template <class T>
+struct ReduceShape {
+  quiver::BatchView<T> in;
+  quiver::BitmapView val;
+  quiver::SelVec sel;
+  bool with_sel;
+};
+
+// Bit-exact comparison (floats: the per-backend policy oracle, REQ-TEST-004). NaN float sums
+// compare as a CLASS: IEEE add propagates whichever operand's payload the hardware sees first,
+// and C++ does not pin FP operand order (gate M4 amendment).
+template <class T>
+void expect_reduce_matches(const ReduceTriple<T>& got, const ReduceTriple<T>& want,
+                           std::int64_t n) {
+  bool sum_nan_class = false;
+  if constexpr (std::is_floating_point_v<T>) {
+    sum_nan_class = (got.sum != got.sum) && (want.sum != want.sum);
+  }
+  ASSERT_EQ(std::memcmp(&got.min, &want.min, sizeof(T)), 0) << "min n=" << n;
+  ASSERT_EQ(std::memcmp(&got.max, &want.max, sizeof(T)), 0) << "max n=" << n;
+  ASSERT_TRUE(sum_nan_class || std::memcmp(&got.sum, &want.sum, sizeof(want.sum)) == 0)
+      << "sum n=" << n;
+}
+
+template <class T>
+void check_reduce_shape(quiver::Isa isa, ReduceShape<T> s, const ref::Participation& p) {
+  const std::int64_t n = s.in.len;
+  const ReduceTriple<T> want{ref::min_expected(s.in.data, n, p), ref::max_expected(s.in.data, n, p),
+                             expected_sum(isa, s.in.data, n, p)};
+  const ReduceTriple<T> got{
+      s.with_sel ? quiver::reduce_min(s.in, s.val, s.sel) : quiver::reduce_min(s.in, s.val),
+      s.with_sel ? quiver::reduce_max(s.in, s.val, s.sel) : quiver::reduce_max(s.in, s.val),
+      s.with_sel ? quiver::reduce_sum_wrap(s.in, s.val, s.sel)
+                 : quiver::reduce_sum_wrap(s.in, s.val)};
+  expect_reduce_matches(got, want, n);
+
+  const quiver::MinMaxSummary<T> sma = s.with_sel ? quiver::compute_min_max(s.in, s.val, s.sel)
+                                                  : quiver::compute_min_max(s.in, s.val);
+  ASSERT_EQ(std::memcmp(&sma.min, &want.min, sizeof(T)), 0);
+  ASSERT_EQ(std::memcmp(&sma.max, &want.max, sizeof(T)), 0);
+}
+
+template <class T>
 void run_reduce_diff(quiver::Isa isa, std::uint64_t seed) {
   Rng rng(seed);
   for (const std::int64_t n : kLengths) {
@@ -94,39 +144,17 @@ void run_reduce_diff(quiver::Isa isa, std::uint64_t seed) {
         quiver_test::fill_bitmap_uniform(rng, selbits.data(), n, 60);
         const auto selv = ref::selvec_expected(selbits.data(), n);
         // The oracle encodes "no selection" as sel == nullptr, so an EMPTY selection (whose
-        // vector data() is null) needs a non-null stand-in — same disambiguation the façade
+        // vector data() is null) needs a non-null stand-in — same disambiguation the facade
         // performs (reg_empty_selvec.cpp).
         static constexpr std::uint32_t kNoIdx = 0;
         const std::uint32_t* selp = selv.empty() ? &kNoIdx : selv.data();
         const ref::Participation p{vd, with_sel ? selp : nullptr,
                                    static_cast<std::int64_t>(selv.size())};
-        const quiver::SelVec sel{selv.data(), static_cast<std::int64_t>(selv.size())};
-        const quiver::BatchView<T> in{v.data(), n};
-        const quiver::BitmapView val{vd};
-
-        const T want_min = ref::min_expected(v.data(), n, p);
-        const T want_max = ref::max_expected(v.data(), n, p);
-        const auto want_sum = expected_sum(isa, v.data(), n, p);
-        const T got_min = with_sel ? quiver::reduce_min(in, val, sel) : quiver::reduce_min(in, val);
-        const T got_max = with_sel ? quiver::reduce_max(in, val, sel) : quiver::reduce_max(in, val);
-        const auto got_sum =
-            with_sel ? quiver::reduce_sum_wrap(in, val, sel) : quiver::reduce_sum_wrap(in, val);
-        // NaN float sums compare as a class: IEEE add propagates whichever operand's payload
-        // the hardware sees first, and C++ does not pin FP operand order (gate M4 amendment).
-        bool sum_nan_class = false;
-        if constexpr (std::is_floating_point_v<T>) {
-          sum_nan_class = (got_sum != got_sum) && (want_sum != want_sum);
-        }
-        // Bit-exact comparison (floats: the per-backend policy oracle, REQ-TEST-004).
-        ASSERT_EQ(std::memcmp(&got_min, &want_min, sizeof(T)), 0) << "min n=" << n;
-        ASSERT_EQ(std::memcmp(&got_max, &want_max, sizeof(T)), 0) << "max n=" << n;
-        ASSERT_TRUE(sum_nan_class || std::memcmp(&got_sum, &want_sum, sizeof(want_sum)) == 0)
-            << "sum n=" << n;
-
-        const quiver::MinMaxSummary<T> sma =
-            with_sel ? quiver::compute_min_max(in, val, sel) : quiver::compute_min_max(in, val);
-        ASSERT_EQ(std::memcmp(&sma.min, &want_min, sizeof(T)), 0);
-        ASSERT_EQ(std::memcmp(&sma.max, &want_max, sizeof(T)), 0);
+        check_reduce_shape<T>(isa,
+                              {quiver::BatchView<T>{v.data(), n}, quiver::BitmapView{vd},
+                               quiver::SelVec{selv.data(), static_cast<std::int64_t>(selv.size())},
+                               with_sel},
+                              p);
       }
     }
   }
