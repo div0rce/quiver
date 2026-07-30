@@ -27,9 +27,19 @@ constexpr std::uint64_t kSeed = 0x91DE501C0DE5ull;  // distinct stream from the 
 using Sum = quiver::SumType<std::int32_t>;
 
 // Run the full chain over `v`, returning the reduced sum of the elements that pass `> comparand`.
+// The intermediate buffers the chain writes through. They are hoisted out of the timing loop
+// and reused, so the benchmark measures the kernels rather than allocation.
+struct PipelineScratch {
+  std::vector<std::uint8_t>& bits;
+  std::vector<std::uint32_t>& sel;
+  std::vector<std::int32_t>& gathered;
+};
+
 Sum run_pipeline(const std::vector<std::int32_t>& v, std::int32_t comparand,
-                 std::vector<std::uint8_t>& bits, std::vector<std::uint32_t>& sel,
-                 std::vector<std::int32_t>& gathered) {
+                 PipelineScratch scratch) {
+  std::vector<std::uint8_t>& bits = scratch.bits;
+  std::vector<std::uint32_t>& sel = scratch.sel;
+  std::vector<std::int32_t>& gathered = scratch.gathered;
   const auto n = static_cast<std::int64_t>(v.size());
   quiver::compare_bitmap(quiver::CompareOp::kGt, quiver::BatchView<std::int32_t>{v.data(), n},
                          comparand, quiver::BitmapView{nullptr}, bits.data());  // K1
@@ -55,7 +65,7 @@ void bm_pipeline_sum_gt(benchmark::State& state) {
   std::vector<std::uint32_t> sel(static_cast<std::size_t>(n));
   std::vector<std::int32_t> gathered(static_cast<std::size_t>(n));
 
-  const Sum got = run_pipeline(v, comparand, bits, sel, gathered);
+  const Sum got = run_pipeline(v, comparand, {bits, sel, gathered});
   Sum want = 0;  // independent single-pass recompute (REQ-BENCH-004)
   for (std::int64_t i = 0; i < n; ++i) {
     if (v[static_cast<std::size_t>(i)] > comparand) {
@@ -67,7 +77,7 @@ void bm_pipeline_sum_gt(benchmark::State& state) {
 
   g_pmu.start();
   for (auto _ : state) {
-    benchmark::DoNotOptimize(run_pipeline(v, comparand, bits, sel, gathered));
+    benchmark::DoNotOptimize(run_pipeline(v, comparand, {bits, sel, gathered}));
   }
   attach_pmu(state, g_pmu.stop_and_read(), n);
 }
