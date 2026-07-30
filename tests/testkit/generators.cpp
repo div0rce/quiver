@@ -70,22 +70,37 @@ void fill_bitmap_uniform(Rng& rng, std::uint8_t* bits, std::int64_t n, int selec
   }
 }
 
+namespace {
+// Geometric(mean 64) run length via Bernoulli trials: continue the run while next()%64 != 0.
+std::int64_t clustered_run_length(Rng& rng) {
+  std::int64_t len = 1;
+  while (rng.next_below(64) != 0) {
+    ++len;
+  }
+  return len;
+}
+
+// Set every bit in [from, to).
+void set_bit_range(std::uint8_t* bits, std::int64_t from, std::int64_t to) {
+  for (std::int64_t i = from; i < to; ++i) {
+    bits[i >> 3] = static_cast<std::uint8_t>(bits[i >> 3] | (1u << (i & 7)));
+  }
+}
+
+}  // namespace
+
 void fill_bitmap_clustered(Rng& rng, std::uint8_t* bits, std::int64_t n, int selectivity_pct) {
   const std::int64_t bytes = (n + 7) / 8;
   std::memset(bits, 0, static_cast<std::size_t>(bytes));
   std::int64_t i = 0;
   while (i < n) {
     const bool selected = rng.next_below(100) < static_cast<std::uint64_t>(selectivity_pct);
-    // Geometric(mean 64) via Bernoulli trials: continue the run while next()%64 != 0.
-    std::int64_t len = 1;
-    while (rng.next_below(64) != 0) {
-      ++len;
+    const std::int64_t len = clustered_run_length(rng);
+    const std::int64_t end = (i + len < n) ? i + len : n;
+    if (selected) {
+      set_bit_range(bits, i, end);
     }
-    for (std::int64_t j = 0; j < len && i < n; ++j, ++i) {
-      if (selected) {
-        bits[i >> 3] = static_cast<std::uint8_t>(bits[i >> 3] | (1u << (i & 7)));
-      }
-    }
+    i = end;
   }
 }
 
@@ -108,79 +123,75 @@ std::int64_t selvec_from_bitmap(const std::uint8_t* bits, std::int64_t n, std::u
   return count;
 }
 
-GuardedAlloc::GuardedAlloc(std::size_t bytes, Guard placement) {
+namespace {
+
+// Platform primitives, one job each, so the guard-placement policy below is written once
+// instead of once per platform.
+
+std::size_t guard_page_size() {
 #if !defined(_WIN32)
-  const std::size_t page = static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
-  const std::size_t payload_pages = (bytes + page - 1) / page;
-  map_len_ = (payload_pages + 1) * page;
-  base_ = mmap(nullptr, map_len_, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (base_ == MAP_FAILED) {
-    base_ = nullptr;
-    payload_ = nullptr;
-    return;
-  }
-  auto* b = static_cast<unsigned char*>(base_);
-  // If the guard page cannot be protected the allocation is USELESS but not obviously
-  // broken: an over-read would land on ordinary readable memory and the test would pass
-  // while proving nothing. Fail loudly instead — callers assert data() != nullptr.
-  if (placement == Guard::kEnd) {
-    // Payload ends flush against the protected trailing page.
-    if (mprotect(b + payload_pages * page, page, PROT_NONE) != 0) {
-      munmap(base_, map_len_);
-      base_ = nullptr;
-      payload_ = nullptr;
-      return;
-    }
-    payload_ = b + payload_pages * page - bytes;
-  } else {
-    // Payload starts flush after the protected leading page.
-    if (mprotect(b, page, PROT_NONE) != 0) {
-      munmap(base_, map_len_);
-      base_ = nullptr;
-      payload_ = nullptr;
-      return;
-    }
-    payload_ = b + page;
-  }
+  return static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
 #else
-  // Windows: VirtualAlloc the payload + one extra page, then flip the guard page to
-  // PAGE_NOACCESS. Mirrors the POSIX mmap/mprotect leg exactly, so the same over-read /
-  // over-write bound is enforced on both platforms (REQ-TEST-006, REQ-MEM-008).
   SYSTEM_INFO si;
   GetSystemInfo(&si);
-  const std::size_t page = static_cast<std::size_t>(si.dwPageSize);
+  return static_cast<std::size_t>(si.dwPageSize);
+#endif
+}
+
+void* reserve_readwrite(std::size_t len) {
+#if !defined(_WIN32)
+  void* p = mmap(nullptr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  return p == MAP_FAILED ? nullptr : p;
+#else
+  return VirtualAlloc(nullptr, len, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+#endif
+}
+
+void release_mapping(void* base, std::size_t len) {
+#if !defined(_WIN32)
+  munmap(base, len);
+#else
+  (void)len;
+  VirtualFree(base, 0, MEM_RELEASE);
+#endif
+}
+
+// True on success. If protection fails the allocation is USELESS but not obviously broken: an
+// over-read would land on ordinary readable memory and the test would pass while proving
+// nothing. The caller fails loudly instead — callers assert data() != nullptr.
+bool protect_no_access(void* at, std::size_t len) {
+#if !defined(_WIN32)
+  return mprotect(at, len, PROT_NONE) == 0;
+#else
+  DWORD prev = 0;
+  return VirtualProtect(at, len, PAGE_NOACCESS, &prev) != 0;
+#endif
+}
+
+}  // namespace
+
+// One page is reserved beyond the payload and protected; the payload then sits flush against
+// it, so any over-read or over-write past the requested bytes faults (REQ-TEST-006,
+// REQ-MEM-008). The POSIX and Windows legs enforce the identical bound.
+GuardedAlloc::GuardedAlloc(std::size_t bytes, Guard placement) {
+  const std::size_t page = guard_page_size();
   const std::size_t payload_pages = (bytes + page - 1) / page;
   map_len_ = (payload_pages + 1) * page;
-  base_ = VirtualAlloc(nullptr, map_len_, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  base_ = reserve_readwrite(map_len_);
   if (base_ == nullptr) {
     payload_ = nullptr;
     return;
   }
   auto* b = static_cast<unsigned char*>(base_);
-  DWORD prev = 0;
-  // VirtualProtect returns BOOL. On failure the guard page stays readable, so an over-read
-  // would hit ordinary memory and the test would pass without proving anything — exactly the
-  // silent-no-op this branch used to be. Fail loudly; callers assert data() != nullptr.
-  if (placement == Guard::kEnd) {
-    // Payload ends flush against the protected trailing page.
-    if (VirtualProtect(b + payload_pages * page, page, PAGE_NOACCESS, &prev) == 0) {
-      VirtualFree(base_, 0, MEM_RELEASE);
-      base_ = nullptr;
-      payload_ = nullptr;
-      return;
-    }
-    payload_ = b + payload_pages * page - bytes;
-  } else {
-    // Payload starts flush after the protected leading page.
-    if (VirtualProtect(b, page, PAGE_NOACCESS, &prev) == 0) {
-      VirtualFree(base_, 0, MEM_RELEASE);
-      base_ = nullptr;
-      payload_ = nullptr;
-      return;
-    }
-    payload_ = b + page;
+  const bool at_end = placement == Guard::kEnd;
+  unsigned char* const guard = at_end ? b + payload_pages * page : b;
+  if (!protect_no_access(guard, page)) {
+    release_mapping(base_, map_len_);
+    base_ = nullptr;
+    payload_ = nullptr;
+    return;
   }
-#endif
+  payload_ = at_end ? b + payload_pages * page - bytes : b + page;
 }
 
 GuardedAlloc::~GuardedAlloc() {
