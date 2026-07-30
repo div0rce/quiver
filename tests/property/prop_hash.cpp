@@ -60,64 +60,91 @@ TEST(PropHash, BatchEqualsElementwise) {
 
 // REQ-TEST-016 avalanche: for input bit j, P(output bit k flips) within 0.5 +- 0.02.
 // Aggregated per (input-bit, output-bit) pair over the sample count.
+// Same-size unsigned carrier (make_unsigned rejects floats).
 template <class T>
-void avalanche_gate(std::uint64_t seed_base, std::int64_t samples) {
+using Carrier = std::conditional_t<
+    sizeof(T) == 1, std::uint8_t,
+    std::conditional_t<sizeof(T) == 2, std::uint16_t,
+                       std::conditional_t<sizeof(T) == 4, std::uint32_t, std::uint64_t>>>;
+
+// How often each input bit flipped each output bit, and how often each output bit was set.
+struct AvalancheCounts {
+  std::vector<std::int64_t> flips;
+  std::vector<std::int64_t> bits_set;
+};
+
+// One sample: hash a random value, then hash every single-bit flip of it.
+template <class T>
+void tally_sample(AvalancheCounts& c, Rng& rng) {
   constexpr int kInBits = 8 * static_cast<int>(sizeof(T));
-  Rng rng(seed_base);
-  std::vector<std::int64_t> flip_count(static_cast<std::size_t>(kInBits) * 64, 0);
-  std::vector<std::int64_t> bit_set_count(64, 0);
-  // Same-size unsigned carrier (make_unsigned rejects floats).
-  using U = std::conditional_t<
-      sizeof(T) == 1, std::uint8_t,
-      std::conditional_t<sizeof(T) == 2, std::uint16_t,
-                         std::conditional_t<sizeof(T) == 4, std::uint32_t, std::uint64_t>>>;
-  for (std::int64_t s = 0; s < samples; ++s) {
-    const U raw = static_cast<U>(rng.next());
-    T v;
-    std::memcpy(&v, &raw, sizeof(T));
-    std::uint64_t h0 = 0;
-    quiver::hash64(quiver::BatchView<T>{&v, 1}, 0x1234, &h0);
+  using U = Carrier<T>;
+  const U raw = static_cast<U>(rng.next());
+  T v;
+  std::memcpy(&v, &raw, sizeof(T));
+  std::uint64_t h0 = 0;
+  quiver::hash64(quiver::BatchView<T>{&v, 1}, 0x1234, &h0);
+  for (int out = 0; out < 64; ++out) {
+    c.bits_set[static_cast<std::size_t>(out)] += (h0 >> out) & 1u;
+  }
+  for (int in = 0; in < kInBits; ++in) {
+    const U flipped_raw = static_cast<U>(raw ^ (U{1} << in));
+    T fv;
+    std::memcpy(&fv, &flipped_raw, sizeof(T));
+    std::uint64_t h1 = 0;
+    quiver::hash64(quiver::BatchView<T>{&fv, 1}, 0x1234, &h1);
+    const std::uint64_t diff = h0 ^ h1;
     for (int out = 0; out < 64; ++out) {
-      bit_set_count[static_cast<std::size_t>(out)] += (h0 >> out) & 1u;
-    }
-    for (int in = 0; in < kInBits; ++in) {
-      const U flipped_raw = static_cast<U>(raw ^ (U{1} << in));
-      T fv;
-      std::memcpy(&fv, &flipped_raw, sizeof(T));
-      std::uint64_t h1 = 0;
-      quiver::hash64(quiver::BatchView<T>{&fv, 1}, 0x1234, &h1);
-      const std::uint64_t diff = h0 ^ h1;
-      for (int out = 0; out < 64; ++out) {
-        flip_count[static_cast<std::size_t>(in) * 64 + out] += (diff >> out) & 1u;
-      }
+      c.flips[static_cast<std::size_t>(in) * 64 + out] += (diff >> out) & 1u;
     }
   }
-  // Statistical resolution is bounded by DISTINCT flip pairs, not raw samples: a T-bit
-  // domain has at most 2^(T-1) distinct (x, x^bit) pairs, so for 8-bit keys the flip
-  // probability is a fixed rational with ~1/128 granularity and the literal 0.5 +- 0.02
-  // criterion is unsatisfiable for ANY function (gate M6 records the REQ-TEST-016
-  // amendment). Band = max(0.02, 6 sigma of the distinct-pair binomial SE); nightly at
-  // >= 100k samples enforces exactly the normative 0.02 for every type of 16+ bits.
+}
+
+// Statistical resolution is bounded by DISTINCT flip pairs, not raw samples: a T-bit domain has
+// at most 2^(T-1) distinct (x, x^bit) pairs, so for 8-bit keys the flip probability is a fixed
+// rational with ~1/128 granularity and the literal 0.5 +- 0.02 criterion is unsatisfiable for ANY
+// function (gate M6 records the REQ-TEST-016 amendment). Band = max(0.02, 6 sigma of the
+// distinct-pair binomial SE); nightly at >= 100k samples enforces exactly the normative 0.02 for
+// every type of 16+ bits.
+template <class T>
+double avalanche_band(std::int64_t samples) {
+  constexpr int kInBits = 8 * static_cast<int>(sizeof(T));
   const double distinct_pairs = std::min(static_cast<double>(samples),
                                          (kInBits >= 63) ? 9.22e18 : std::ldexp(1.0, kInBits - 1));
-  const double band = std::max(0.02, 6.0 * std::sqrt(0.25 / distinct_pairs));
+  return std::max(0.02, 6.0 * std::sqrt(0.25 / distinct_pairs));
+}
+
+template <class T>
+void expect_within_band(const AvalancheCounts& c, std::int64_t samples, double band) {
+  constexpr int kInBits = 8 * static_cast<int>(sizeof(T));
   const double lo = 0.5 - band;
   const double hi = 0.5 + band;
   for (int in = 0; in < kInBits; ++in) {
     for (int out = 0; out < 64; ++out) {
-      const double p = static_cast<double>(flip_count[static_cast<std::size_t>(in) * 64 + out]) /
+      const double p = static_cast<double>(c.flips[static_cast<std::size_t>(in) * 64 + out]) /
                        static_cast<double>(samples);
       ASSERT_GE(p, lo) << "avalanche: in-bit " << in << " -> out-bit " << out;
       ASSERT_LE(p, hi) << "avalanche: in-bit " << in << " -> out-bit " << out;
     }
   }
   for (int out = 0; out < 64; ++out) {
-    const double bias = static_cast<double>(bit_set_count[static_cast<std::size_t>(out)]) /
+    const double bias = static_cast<double>(c.bits_set[static_cast<std::size_t>(out)]) /
                             static_cast<double>(samples) -
                         0.5;
     ASSERT_LE(bias, band) << "bias: out-bit " << out;
     ASSERT_GE(bias, -band) << "bias: out-bit " << out;
   }
+}
+
+template <class T>
+void avalanche_gate(std::uint64_t seed_base, std::int64_t samples) {
+  constexpr int kInBits = 8 * static_cast<int>(sizeof(T));
+  Rng rng(seed_base);
+  AvalancheCounts counts{std::vector<std::int64_t>(static_cast<std::size_t>(kInBits) * 64, 0),
+                         std::vector<std::int64_t>(64, 0)};
+  for (std::int64_t s = 0; s < samples; ++s) {
+    tally_sample<T>(counts, rng);
+  }
+  expect_within_band<T>(counts, samples, avalanche_band<T>(samples));
 }
 
 // Integer-key avalanche across representative widths; the full >= 100k/type sweep is
