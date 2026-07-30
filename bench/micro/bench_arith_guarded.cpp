@@ -173,19 +173,25 @@ void register_benchmarks() {
   }
 #if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
   // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
-  for (const std::int64_t n : {4096, 65536}) {
-    for (const int permille : {0, 1, 500}) {
+  // The #if is architecture-only: these functions are compiled inside the AVX2+BMI2 target
+  // region, so registering them on an x86-64 host WITHOUT AVX2 would execute unsupported
+  // instructions (SIGILL). Guard at run time exactly as every sibling bench file does.
+  if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
+    for (const std::int64_t n : {4096, 65536}) {
+      for (const int permille : {0, 1, 500}) {
+        benchmark::RegisterBenchmark(
+            quiver::bench::bench_name({"arith_guarded", "checked_add", "autovec-avx2", "i64"},
+                                      "n=" + std::to_string(n) +
+                                          "/ovf=" + std::to_string(permille)),
+            bm_checked_add_i64<true>)
+            ->Args({n, permille});
+      }
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name({"arith_guarded", "checked_add", "autovec-avx2", "i64"},
-                                    "n=" + std::to_string(n) + "/ovf=" + std::to_string(permille)),
-          bm_checked_add_i64<true>)
-          ->Args({n, permille});
+          quiver::bench::bench_name({"arith_guarded", "saturating_add", "autovec-avx2", "i64"},
+                                    "n=" + std::to_string(n)),
+          bm_saturating_add_i64<true>)
+          ->Args({n});
     }
-    benchmark::RegisterBenchmark(
-        quiver::bench::bench_name({"arith_guarded", "saturating_add", "autovec-avx2", "i64"},
-                                  "n=" + std::to_string(n)),
-        bm_saturating_add_i64<true>)
-        ->Args({n});
   }
 #endif
 }

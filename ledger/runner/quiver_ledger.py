@@ -262,8 +262,11 @@ def resolve_out_dir(args: argparse.Namespace, machine: dict, sha: str) -> pathli
 def write_results(out_dir: pathlib.Path, entries: list, rejected: list,
                   deviations: list[str]) -> None:
     (out_dir / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")
+    # Always emit the rejected-noisy record, empty when nothing was excluded. CONTRIBUTING.md
+    # lists it as part of a Lane A bundle, and an explicit [] states "nothing was rejected"
+    # where a missing file cannot be told apart from a lost artifact.
+    (out_dir / "rejected_noisy.json").write_text(json.dumps(rejected, indent=2) + "\n")
     if rejected:
-        (out_dir / "rejected_noisy.json").write_text(json.dumps(rejected, indent=2) + "\n")
         print(f"{len(rejected)} entries EXCLUDED (cv > 5%, REQ-LEDGER-005) — rerun advised; "
               f"see rejected_noisy.json")
     print(f"{len(entries)} entries -> {out_dir}")
@@ -350,6 +353,30 @@ def validate_run_dir(run_dir: pathlib.Path) -> list[str]:
     return problems
 
 
+def cross_run_id_collisions(run_dirs: list[pathlib.Path]) -> list[str]:
+    """entry_id must be unique across the whole ledger, not just within one run.
+
+    build_entry derives it from the OUTPUT DIRECTORY NAME, which is unique for a default run
+    (`<date>-<sha>`) but is the literal `submission` for every community-run bundle. Two
+    submissions from the same machine therefore mint identical ids; appending the second makes
+    every `qle:<entry_id>` doc reference ambiguous (REQ-LEDGER-015). validate_run_dir only sees
+    one directory, so the collision is invisible to it.
+    """
+    owner: dict[str, pathlib.Path] = {}
+    problems: list[str] = []
+    for run_dir in run_dirs:
+        entries = json.loads((run_dir / "entries.json").read_text())
+        for entry in entries:
+            entry_id = entry.get("entry_id", "?")
+            if entry_id in owner:
+                problems.append(f"{run_dir}: entry_id {entry_id} already published by "
+                                f"{owner[entry_id]} — ids must be unique across the ledger "
+                                f"(REQ-LEDGER-015); rename the run directory before appending")
+            else:
+                owner[entry_id] = run_dir
+    return problems
+
+
 def cmd_validate(args: argparse.Namespace) -> int:
     run_dirs = sorted(p.parent for p in (REPO / "ledger" / "results").glob("*/*/entries.json"))
     # A Lane A bundle in flight lives at the repo root (CONTRIBUTING.md) and is reviewed before
@@ -360,6 +387,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
         print("no committed results found", file=sys.stderr)
         return 1
     problems = [p for run_dir in run_dirs for p in validate_run_dir(run_dir)]
+    problems += cross_run_id_collisions(run_dirs)
     for problem in problems:
         print(problem, file=sys.stderr)
     print(f"validate: {len(run_dirs)} run dir(s), {len(problems)} problem(s)")
