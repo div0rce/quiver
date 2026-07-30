@@ -17,6 +17,27 @@ namespace {
 
 namespace ref = quiver_test::ref;
 
+// How many values the remaining fuzz budget can describe at this width, capped so a single
+// input cannot ask for an unbounded batch.
+inline std::int64_t values_in_budget(std::size_t avail, int w) {
+  if (w == 0) {
+    return static_cast<std::int64_t>(avail % 300);
+  }
+  const auto n = static_cast<std::int64_t>((avail * 8) / static_cast<std::size_t>(w));
+  return n > 2048 ? 2048 : n;
+}
+
+// The scalar tier is checked against the independent oracle, not just against its peers.
+template <class Out>
+void check_against_oracle(quiver::detail::scalar_impl::PackedStream in, Out base, const Out* got) {
+  for (std::int64_t i = 0; i < in.n; ++i) {
+    const Out want = static_cast<Out>(
+        base +
+        (in.bit_width == 0 ? Out{0} : ref::unpack_value_expected<Out>(in.packed, i, in.bit_width)));
+    quiver_fuzz::check(got[static_cast<std::size_t>(i)] == want, "K8 scalar vs oracle");
+  }
+}
+
 template <class Out>
 void run(quiver_fuzz::Decoder& d, const std::uint8_t* raw, std::size_t raw_size) {
   const int max_w = 8 * static_cast<int>(sizeof(Out));
@@ -26,15 +47,9 @@ void run(quiver_fuzz::Decoder& d, const std::uint8_t* raw, std::size_t raw_size)
   const std::size_t consumed = raw_size - d.remaining();
   const std::uint8_t* packed = raw + consumed;
   const std::size_t avail = d.remaining();
-  std::int64_t n;
+  const std::int64_t n = values_in_budget(avail, w);
   if (w == 0) {
-    n = static_cast<std::int64_t>(avail % 300);  // packed unused (may be null by contract)
-    packed = nullptr;
-  } else {
-    n = static_cast<std::int64_t>((avail * 8) / static_cast<std::size_t>(w));
-    if (n > 2048) {
-      n = 2048;
-    }
+    packed = nullptr;  // packed is unused at w == 0 and may be null by contract
   }
   std::vector<Out> first(static_cast<std::size_t>(n) + 1);
   bool have_first = false;
@@ -45,11 +60,7 @@ void run(quiver_fuzz::Decoder& d, const std::uint8_t* raw, std::size_t raw_size)
     if (!have_first) {
       first = got;
       have_first = true;
-      for (std::int64_t i = 0; i < n; ++i) {  // scalar tier vs the independent oracle
-        const Out want = static_cast<Out>(
-            base + (w == 0 ? Out{0} : ref::unpack_value_expected<Out>(packed, i, w)));
-        quiver_fuzz::check(got[static_cast<std::size_t>(i)] == want, "K8 scalar vs oracle");
-      }
+      check_against_oracle<Out>({packed, n, w}, base, got.data());
       continue;
     }
     quiver_fuzz::check(
