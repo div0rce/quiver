@@ -16,15 +16,15 @@ namespace detail::neon {
 #define QUIVER_K5_TAKE_DEFINE(T)                                                                   \
   void k5_take(const T* values, std::int64_t values_len, const std::uint32_t* idx,                 \
                std::int64_t idx_len, T* out) noexcept {                                            \
-    scalar_impl::take<T>(values, values_len, idx, idx_len, out);                                   \
+    scalar_impl::take<T>({values, values_len}, {idx, idx_len}, out);                               \
   }
 
 #define QUIVER_K5_DECODE_DEFINE(T, C)                                                              \
   void k5_dict_decode(const T* dict, std::int64_t dict_len, const C* codes, std::int64_t n,        \
                       const std::uint32_t* sel, std::int64_t sel_len, T* out) noexcept {           \
     return sel == nullptr                                                                          \
-               ? scalar_impl::dict_decode<T, C>(dict, dict_len, codes, n, out)                     \
-               : scalar_impl::dict_decode_sel<T, C>(dict, dict_len, codes, sel, sel_len, out);     \
+               ? scalar_impl::dict_decode<T, C>({dict, dict_len}, codes, n, out)                   \
+               : scalar_impl::dict_decode_sel<T, C>({dict, dict_len}, codes, {sel, sel_len}, out); \
   }
 
 #define QUIVER_K5_DEFINE(T)                                                                        \

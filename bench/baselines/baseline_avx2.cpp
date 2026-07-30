@@ -75,7 +75,7 @@ void mask_combine(quiver::MaskOp op, const std::uint8_t* a, const std::uint8_t* 
 
 void dict_decode_i64_u32(const std::int64_t* dict, std::int64_t dict_len,
                          const std::uint32_t* codes, std::int64_t n, std::int64_t* out) noexcept {
-  impl::dict_decode<std::int64_t, std::uint32_t>(dict, dict_len, codes, n, out);
+  impl::dict_decode<std::int64_t, std::uint32_t>({dict, dict_len}, codes, n, out);
 }
 
 std::int64_t sum_wrap_i64(const std::int64_t* in, std::int64_t n,

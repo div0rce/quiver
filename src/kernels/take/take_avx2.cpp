@@ -28,8 +28,11 @@ namespace {
 constexpr bool kUseGatherTake = false;
 
 template <class T>
-void take_gather(const T* values, std::int64_t values_len, const std::uint32_t* idx,
-                 std::int64_t idx_len, T* out) noexcept {
+void take_gather(scalar_impl::Source<T> src, scalar_impl::IndexRun indices, T* out) noexcept {
+  const T* values = src.values;
+  const std::int64_t values_len = src.len;
+  const std::uint32_t* idx = indices.idx;
+  const std::int64_t idx_len = indices.len;
   static_assert(sizeof(T) == 4 || sizeof(T) == 8, "gather path is 32/64-bit lanes only");
 #if defined(QUIVER_ENABLE_ASSERTS)
   for (std::int64_t j = 0; j < idx_len; ++j) {
@@ -69,16 +72,19 @@ void take_gather(const T* values, std::int64_t values_len, const std::uint32_t* 
 }
 
 template <class T>
-QUIVER_FORCE_INLINE void take_dispatch(const T* values, std::int64_t values_len,
-                                       const std::uint32_t* idx, std::int64_t idx_len,
+QUIVER_FORCE_INLINE void take_dispatch(scalar_impl::Source<T> src, scalar_impl::IndexRun indices,
                                        T* out) noexcept {
+  const T* values = src.values;
+  const std::int64_t values_len = src.len;
+  const std::uint32_t* idx = indices.idx;
+  const std::int64_t idx_len = indices.len;
   if constexpr (sizeof(T) >= 4) {
     if (kUseGatherTake) {
-      take_gather<T>(values, values_len, idx, idx_len, out);
+      take_gather<T>({values, values_len}, {idx, idx_len}, out);
       return;
     }
   }
-  scalar_impl::take<T>(values, values_len, idx, idx_len, out);
+  scalar_impl::take<T>({values, values_len}, {idx, idx_len}, out);
 }
 
 }  // namespace
@@ -87,15 +93,15 @@ QUIVER_FORCE_INLINE void take_dispatch(const T* values, std::int64_t values_len,
 #define QUIVER_K5_TAKE_DEFINE(T)                                                                   \
   void k5_take(const T* values, std::int64_t values_len, const std::uint32_t* idx,                 \
                std::int64_t idx_len, T* out) noexcept {                                            \
-    take_dispatch<T>(values, values_len, idx, idx_len, out);                                       \
+    take_dispatch<T>({values, values_len}, {idx, idx_len}, out);                                   \
   }
 
 #define QUIVER_K5_DECODE_DEFINE(T, C)                                                              \
   void k5_dict_decode(const T* dict, std::int64_t dict_len, const C* codes, std::int64_t n,        \
                       const std::uint32_t* sel, std::int64_t sel_len, T* out) noexcept {           \
     return sel == nullptr                                                                          \
-               ? scalar_impl::dict_decode<T, C>(dict, dict_len, codes, n, out)                     \
-               : scalar_impl::dict_decode_sel<T, C>(dict, dict_len, codes, sel, sel_len, out);     \
+               ? scalar_impl::dict_decode<T, C>({dict, dict_len}, codes, n, out)                   \
+               : scalar_impl::dict_decode_sel<T, C>({dict, dict_len}, codes, {sel, sel_len}, out); \
   }
 
 #define QUIVER_K5_DEFINE(T)                                                                        \
