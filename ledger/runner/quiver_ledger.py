@@ -252,15 +252,28 @@ def write_results(out_dir: pathlib.Path, entries: list, rejected: list,
         print("NON-PUBLISHABLE (deviations recorded in manifest) — investigation only")
 
 
+def report_deviations(deviations: list[str]) -> None:
+    print("environment checklist FAILED (REQ-LEDGER-013); run is non-publishable:",
+          file=sys.stderr)
+    for d in deviations:
+        print(f"  - {d}", file=sys.stderr)
+    print("re-run with --allow-deviations for local investigation only", file=sys.stderr)
+
+
+def partition_entries(samples: dict, ctx: dict) -> tuple[list, list]:
+    """Split measured samples into publishable entries and CV-rejected ones."""
+    entries, rejected = [], []
+    for (_, name), reps in samples.items():
+        entry, publishable = build_entry(name, reps, ctx)
+        (entries if publishable else rejected).append(entry)
+    return entries, rejected
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     machine = environment.load_machine(REPO, args.machine)
     deviations = environment.environment_checklist(REPO, machine)
     if deviations and not args.allow_deviations:
-        print("environment checklist FAILED (REQ-LEDGER-013); run is non-publishable:",
-              file=sys.stderr)
-        for d in deviations:
-            print(f"  - {d}", file=sys.stderr)
-        print("re-run with --allow-deviations for local investigation only", file=sys.stderr)
+        report_deviations(deviations)
         return 2
 
     build_dir = pathlib.Path(args.build_dir)
@@ -284,10 +297,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                "lib_version": library_version(),
                "git_dirty": "dirty" if "git tree dirty" in manifest["deviations"] else "clean",
                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")}
-        entries, rejected = [], []
-        for (_, name), reps in samples.items():
-            entry, publishable = build_entry(name, reps, ctx)
-            (entries if publishable else rejected).append(entry)
+        entries, rejected = partition_entries(samples, ctx)
     except RunAborted as exc:
         print(str(exc), file=sys.stderr)
         return 2
