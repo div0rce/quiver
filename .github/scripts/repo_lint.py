@@ -246,7 +246,10 @@ def check_autovec_baseline_coverage() -> None:
                 f"bench/baselines/baseline_avx2.cpp does not recompile {impl.name} — "
                 f"no autovec-avx2 baseline, so REQ-LEDGER-011 can derive no verdict")
         bench = ROOT / "bench" / "micro" / f"bench_{family}.cpp"
-        if bench.exists() and '"autovec-avx2"' not in bench.read_text(errors="replace"):
+        if not bench.exists():
+            err(f"REQ-BENCH-010: {family} ships an explicit AVX2 backend but has no "
+                f"bench/micro/bench_{family}.cpp, so it can produce no ledger entries at all")
+        elif '"autovec-avx2"' not in bench.read_text(errors="replace"):
             err(f"REQ-BENCH-010: bench/micro/bench_{family}.cpp registers no `autovec-avx2` "
                 f"variant, so its AVX2 entries have no equal-ISA pair (ADR-011)")
 
@@ -266,16 +269,29 @@ def check_lane_a_submission() -> None:
     if not sub.is_dir():
         err("REQ-REPO-001: 'submission' must be the Lane A bundle directory, not a file")
         return
-    required = {"manifest.json", "entries.json", "rejected_noisy.json", "raw",
-                "commands.txt", "git-status.txt", "checksums.txt"}
+    # Types matter, not just names: a plain file called `raw` would satisfy a name-only check
+    # while carrying no evidence, and a directory called `manifest.json` would pass here and then
+    # crash the ledger validator's read_text().
+    files = {"manifest.json", "entries.json", "rejected_noisy.json",
+             "commands.txt", "git-status.txt", "checksums.txt"}
     present = {p.name for p in sub.iterdir()}
-    for missing in sorted(required - present):
-        err(f"REQ-LEDGER-013: submission/ is missing '{missing}' — a Lane A bundle is the "
-            f"complete community-run output (CONTRIBUTING.md)")
-    for extra in sorted(present - required):
+    for extra in sorted(present - files - {"raw"}):
         err(f"REQ-REPO-001: submission/{extra} is not part of a community-run bundle "
             f"(open a PR containing only the generated directory, CONTRIBUTING.md)")
-    if (sub / "raw").is_dir() and not any((sub / "raw").iterdir()):
+    for name in sorted(files):
+        path = sub / name
+        if not path.exists():
+            err(f"REQ-LEDGER-013: submission/ is missing '{name}' — a Lane A bundle is the "
+                f"complete community-run output (CONTRIBUTING.md)")
+        elif not path.is_file():
+            err(f"REQ-LEDGER-013: submission/{name} must be a regular file")
+    raw = sub / "raw"
+    if not raw.exists():
+        err("REQ-LEDGER-013: submission/ is missing 'raw' — a Lane A bundle is the complete "
+            "community-run output (CONTRIBUTING.md)")
+    elif not raw.is_dir():
+        err("REQ-LEDGER-013: submission/raw must be a directory of per-repetition measurements")
+    elif not any(raw.iterdir()):
         err("REQ-LEDGER-013: submission/raw/ is empty — raw per-repetition measurements are "
             "the evidence a published entry rests on")
 

@@ -146,7 +146,8 @@ def main() -> int:
 
     def missing_raw(sub):
         _complete(sub)
-        (sub / "raw" / "rep0.json").unlink(); (sub / "raw").rmdir()
+        (sub / "raw" / "rep0.json").unlink()
+        (sub / "raw").rmdir()
     check_submission("missing raw/ rejected", missing_raw, expect="missing 'raw'")
 
     def empty_raw(sub):
@@ -155,12 +156,37 @@ def main() -> int:
     check_submission("empty raw/ rejected", empty_raw, expect="raw/ is empty")
 
     def no_manifest(sub):
-        _complete(sub); (sub / "manifest.json").unlink()
+        _complete(sub)
+        (sub / "manifest.json").unlink()
     check_submission("missing manifest rejected", no_manifest, expect="missing 'manifest.json'")
 
+    def raw_is_file(sub):
+        _complete(sub)
+        (sub / "raw" / "rep0.json").unlink()
+        (sub / "raw").rmdir()
+        (sub / "raw").write_text("not a directory")
+    check_submission("raw as a file rejected", raw_is_file, expect="raw must be a directory")
+
+    def manifest_is_dir(sub):
+        _complete(sub)
+        (sub / "manifest.json").unlink()
+        (sub / "manifest.json").mkdir()
+    check_submission("artifact as a directory rejected", manifest_is_dir,
+                     expect="manifest.json must be a regular file")
+
     def stray(sub):
-        _complete(sub); (sub / "notes.txt").write_text("hi")
+        _complete(sub)
+        (sub / "notes.txt").write_text("hi")
     check_submission("stray file rejected", stray, expect="not part of a community-run bundle")
+
+    root = new_repo()
+    (root / "submission").write_text("not a bundle")
+    mod = load_repo_lint()
+    mod.ROOT = root
+    mod.errors.clear()
+    mod.check_lane_a_submission()
+    check("submission as a file rejected", list(mod.errors),
+          expect="must be the Lane A bundle directory, not a file")
 
     if failures:
         print("\nrepo_lint allow-list self-tests: FAIL", file=sys.stderr)
