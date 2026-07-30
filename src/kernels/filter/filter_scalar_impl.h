@@ -14,6 +14,15 @@
 QUIVER_BEGIN_NAMESPACE
 namespace detail::scalar_impl {
 
+// The batch a filter reads: the values, how many there are, and the selection bitmap over them.
+// The three are meaningless apart, so they travel as one.
+template <class T>
+struct FilterInput {
+  const T* in;
+  std::int64_t n;
+  const std::uint8_t* selection;
+};
+
 template <class T>
 std::int64_t filter_bitmap(const T* in, std::int64_t n, const std::uint8_t* selection,
                            T* out) noexcept {

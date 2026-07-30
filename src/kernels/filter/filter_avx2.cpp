@@ -28,9 +28,11 @@ namespace {
 // Scalar remainder shared by every lane width (ADR-015 tails; also used for in-place safety
 // on the trailing partial byte). Identical to the reference core.
 template <class T>
-QUIVER_FORCE_INLINE std::int64_t filter_tail(const T* in, std::int64_t start, std::int64_t n,
-                                             const std::uint8_t* selection, T* out,
-                                             std::int64_t count) noexcept {
+QUIVER_FORCE_INLINE std::int64_t filter_tail(scalar_impl::FilterInput<T> batch, std::int64_t start,
+                                             T* out, std::int64_t count) noexcept {
+  const T* in = batch.in;
+  const std::int64_t n = batch.n;
+  const std::uint8_t* selection = batch.selection;
   for (std::int64_t i = start; i < n; ++i) {
     out[count] = in[i];
     count += ((selection[i >> 3] >> (i & 7)) & 1u) != 0 ? 1 : 0;
@@ -118,7 +120,7 @@ std::int64_t filter_bitmap_impl(const T* in, std::int64_t n, const std::uint8_t*
       count = compact4_16bit(hi, (byte >> 4) & 0xFu, reinterpret_cast<std::uint16_t*>(out), count);
     }
   }
-  return filter_tail(in, full_bytes << 3, n, selection, out, count);
+  return filter_tail({in, n, selection}, full_bytes << 3, out, count);
 }
 
 }  // namespace
