@@ -168,8 +168,11 @@ def angle_allowed_for(rel: str) -> set[str]:
 
 
 def quoted_prefixes_for(rel: str) -> tuple[str, ...]:
-    rules = [pfx for base, pfx in QUOTED_RULES if rel.startswith(base)]
-    prefixes = tuple(rules[0]) if rules else ()
+    # Longest matching base wins. Several bases overlap (src/kernels/common/ is inside
+    # src/kernels/), and resolving by declaration order would let a future reordering silently
+    # apply the broader rule with no test to catch it.
+    matches = [(base, pfx) for base, pfx in QUOTED_RULES if rel.startswith(base)]
+    prefixes = tuple(max(matches, key=lambda bp: len(bp[0]))[1]) if matches else ()
     fam_dir = re.match(r"(src/kernels/[a-z0-9_]+/)", rel)
     if fam_dir:  # a family may include its own directory (the 5-file pattern)
         prefixes = prefixes + (fam_dir.group(1),)
@@ -240,7 +243,9 @@ def committed_entry_ids() -> set[str]:
         try:
             for entry in json.loads(entries_file.read_text()):
                 ids.add(entry.get("entry_id", ""))
-        except (json.JSONDecodeError, TypeError):
+        # AttributeError covers a top-level object or non-object elements: entry.get would
+        # raise, and this lint must report a clean violation rather than crash mid-scan.
+        except (json.JSONDecodeError, TypeError, AttributeError):
             err(f"REQ-LEDGER-001: {entries_file.relative_to(ROOT)} is not a valid entry array")
     return ids
 
