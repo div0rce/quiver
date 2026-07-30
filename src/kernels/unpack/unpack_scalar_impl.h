@@ -43,9 +43,19 @@ QUIVER_FORCE_INLINE std::uint64_t gather_bits(const std::uint8_t* packed, std::i
   return v;
 }
 
+// A bit-packed stream: the bytes, how many values they hold, and at what width. These three
+// always travel together — an unpack is meaningless with any one of them missing.
+struct PackedStream {
+  const std::uint8_t* packed;
+  std::int64_t n;
+  int bit_width;
+};
+
 template <class Out>
-void unpack(const std::uint8_t* packed, std::int64_t n, int bit_width, Out base,
-            Out* out) noexcept {
+void unpack(PackedStream in, Out base, Out* out) noexcept {
+  const std::uint8_t* packed = in.packed;
+  const std::int64_t n = in.n;
+  const int bit_width = in.bit_width;
   static_assert(std::is_unsigned_v<Out>, "unpack outputs are unsigned (PRD 04 K8)");
   if (bit_width == 0) {  // REQ-K8-003: all values are base; packed may be null
     for (std::int64_t i = 0; i < n; ++i) {

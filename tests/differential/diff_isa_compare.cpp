@@ -84,8 +84,8 @@ void run_compare_diff(std::uint64_t seed) {
                                    quiver::BitmapView{vd}, got_bits.data());
         ASSERT_EQ(got_count, want_count) << "n=" << n << " op=" << opi;
         if (bytes > 0) {
-          ASSERT_TRUE(quiver_test::buffers_equal(want_bits.data(), got_bits.data(), bytes, seed,
-                                                 "REQ-K1-001"));
+          ASSERT_TRUE(quiver_test::buffers_equal(want_bits.data(), got_bits.data(), bytes,
+                                                 {seed, "REQ-K1-001"}));
         }
         // Selvec form agrees positionally.
         std::vector<std::uint32_t> got_idx(static_cast<std::size_t>(n) + 1);

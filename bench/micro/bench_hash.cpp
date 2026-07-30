@@ -104,11 +104,11 @@ void register_benchmarks() {
   const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536}) {
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("hash", "hash64", variant, "i64", "n=" + std::to_string(n)),
+        quiver::bench::bench_name({"hash", "hash64", variant, "i64"}, "n=" + std::to_string(n)),
         bm_hash_i64<false>)
         ->Args({n});
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("hash", "combine", variant, "u64", "n=" + std::to_string(n)),
+        quiver::bench::bench_name({"hash", "combine", variant, "u64"}, "n=" + std::to_string(n)),
         bm_hash_combine)
         ->Args({n});
   }
@@ -116,9 +116,10 @@ void register_benchmarks() {
   // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
     for (const std::int64_t n : {4096, 65536}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("hash", "hash64", "autovec-avx2",
-                                                             "i64", "n=" + std::to_string(n)),
-                                   bm_hash_i64<true>)
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name({"hash", "hash64", "autovec-avx2", "i64"},
+                                    "n=" + std::to_string(n)),
+          bm_hash_i64<true>)
           ->Args({n});
     }
   }

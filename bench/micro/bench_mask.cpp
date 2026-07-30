@@ -100,13 +100,13 @@ void register_benchmarks() {
   const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536, 1 << 20}) {
     benchmark::RegisterBenchmark(
-        quiver::bench::bench_name("mask", "and", variant, "bitmap", "n=" + std::to_string(n)),
+        quiver::bench::bench_name({"mask", "and", variant, "bitmap"}, "n=" + std::to_string(n)),
         bm_mask_and<false>)
         ->Args({n});
   }
   for (const std::int64_t n : {65536, 1 << 20}) {
     for (const int exit_first : {0, 1}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("mask", "all", variant, "bitmap",
+      benchmark::RegisterBenchmark(quiver::bench::bench_name({"mask", "all", variant, "bitmap"},
                                                              "n=" + std::to_string(n) + "/exit=" +
                                                                  (exit_first ? "first" : "none")),
                                    bm_mask_all)
@@ -117,9 +117,10 @@ void register_benchmarks() {
   // Equal-ISA autovec baseline variants (ADR-011; verdict pair for `avx2`, REQ-BENCH-002).
   if (quiver::cpu_supports(quiver::Isa::kAvx2)) {
     for (const std::int64_t n : {4096, 65536, 1 << 20}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("mask", "and", "autovec-avx2",
-                                                             "bitmap", "n=" + std::to_string(n)),
-                                   bm_mask_and<true>)
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name({"mask", "and", "autovec-avx2", "bitmap"},
+                                    "n=" + std::to_string(n)),
+          bm_mask_and<true>)
           ->Args({n});
     }
   }

@@ -31,15 +31,20 @@ QUIVER_FORCE_INLINE std::uint64_t apply_mask_op(MaskOp op, std::uint64_t a,
   return 0;  // unreachable for in-contract op values
 }
 
-inline void mask_combine(MaskOp op, const std::uint8_t* a, const std::uint8_t* b, std::int64_t n,
-                         std::uint8_t* out) noexcept {
+// The two operand bitmaps a combine reads.
+struct MaskPair {
+  const std::uint8_t* a;
+  const std::uint8_t* b;
+};
+
+inline void mask_combine(MaskOp op, MaskPair in, std::int64_t n, std::uint8_t* out) noexcept {
   const std::int64_t bytes = bitmap_byte_count(n);
   const std::int64_t words = bytes >> 3;
   for (std::int64_t w = 0; w < words; ++w) {
-    store_word(out + w * 8, apply_mask_op(op, load_word(a + w * 8), load_word(b + w * 8)));
+    store_word(out + w * 8, apply_mask_op(op, load_word(in.a + w * 8), load_word(in.b + w * 8)));
   }
   for (std::int64_t i = words * 8; i < bytes; ++i) {
-    out[i] = static_cast<std::uint8_t>(apply_mask_op(op, a[i], b[i]));
+    out[i] = static_cast<std::uint8_t>(apply_mask_op(op, in.a[i], in.b[i]));
   }
   zero_tail_bits(out, n);  // kAndNot/kXor can set tail bits; producers zero them (ADR-016)
 }
@@ -73,26 +78,30 @@ inline std::int64_t mask_popcount(const std::uint8_t* a, std::int64_t n) noexcep
   return count;
 }
 
-inline bool mask_all(const std::uint8_t* a, std::int64_t n) noexcept {
+// all() and any() are one scan with an inverted sense: all() stops at the first byte that is
+// not full, any() at the first that is not empty. Early exit is permitted — these are queries,
+// not transforms (PRD 08 Sec 5 K4).
+template <bool All>
+inline bool mask_query(const std::uint8_t* a, std::int64_t n) noexcept {
   const std::int64_t full_bytes = n >> 3;
   for (std::int64_t i = 0; i < full_bytes; ++i) {
-    if (a[i] != 0xFF) {
-      return false;  // early exit permitted: query, not a transform (PRD 08 §5 K4)
+    if (a[i] != (All ? 0xFF : 0)) {
+      return !All;
     }
   }
-  const int tail = static_cast<int>(n & 7);
-  return tail == 0 || (a[full_bytes] & tail_mask(n)) == tail_mask(n);
+  if ((n & 7) == 0) {
+    return All;  // no tail: the full-byte scan decided it
+  }
+  const std::uint8_t masked = static_cast<std::uint8_t>(a[full_bytes] & tail_mask(n));
+  return All ? masked == tail_mask(n) : masked != 0;
+}
+
+inline bool mask_all(const std::uint8_t* a, std::int64_t n) noexcept {
+  return mask_query<true>(a, n);
 }
 
 inline bool mask_any(const std::uint8_t* a, std::int64_t n) noexcept {
-  const std::int64_t full_bytes = n >> 3;
-  for (std::int64_t i = 0; i < full_bytes; ++i) {
-    if (a[i] != 0) {
-      return true;
-    }
-  }
-  const int tail = static_cast<int>(n & 7);
-  return tail != 0 && (a[full_bytes] & tail_mask(n)) != 0;
+  return mask_query<false>(a, n);
 }
 
 inline bool mask_none(const std::uint8_t* a, std::int64_t n) noexcept {

@@ -142,7 +142,7 @@ void register_narrow(const char* variant, const char* type_name) {
   for (const std::int64_t n : {4096, 65536}) {
     for (const int pct : {10, 90}) {
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("compare", "bitmap_gt", variant, type_name,
+          quiver::bench::bench_name({"compare", "bitmap_gt", variant, type_name},
                                     "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),
           bm_compare_bitmap_t<T>)
           ->Args({n, pct});
@@ -158,12 +158,12 @@ void register_benchmarks() {
   for (const std::int64_t n : {1024, 4096, 65536}) {
     for (const int pct : {1, 10, 50, 90, 99}) {
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("compare", "selvec_gt", variant, "i64",
+          quiver::bench::bench_name({"compare", "selvec_gt", variant, "i64"},
                                     "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),
           bm_compare_selvec)
           ->Args({n, pct});
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("compare", "bitmap_gt", variant, "i64",
+          quiver::bench::bench_name({"compare", "bitmap_gt", variant, "i64"},
                                     "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),
           bm_compare_bitmap<false>)
           ->Args({n, pct});
@@ -175,7 +175,7 @@ void register_benchmarks() {
     for (const std::int64_t n : {1024, 4096, 65536}) {
       for (const int pct : {1, 10, 50, 90, 99}) {
         benchmark::RegisterBenchmark(
-            quiver::bench::bench_name("compare", "bitmap_gt", "autovec-avx2", "i64",
+            quiver::bench::bench_name({"compare", "bitmap_gt", "autovec-avx2", "i64"},
                                       "n=" + std::to_string(n) + "/sel=" + std::to_string(pct)),
             bm_compare_bitmap<true>)
             ->Args({n, pct});

@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include "quiver/core.h"
+#include "src/kernels/unpack/unpack_scalar_impl.h"
 
 #if defined(__aarch64__) || defined(_M_ARM64)
 
@@ -28,8 +29,7 @@ namespace detail::neon {
 // scalar_impl::unpack for those widths; bounded to ceil(n*bit_width/8) input bytes. Caller must
 // pass bit_width in [1,7]; other widths are out of scope for this candidate.
 template <class Out>
-void unpack_subbyte_candidate(const std::uint8_t* packed, std::int64_t n, int bit_width, Out base,
-                              Out* out) noexcept;
+void unpack_subbyte_candidate(scalar_impl::PackedStream in, Out base, Out* out) noexcept;
 
 }  // namespace detail::neon
 QUIVER_END_NAMESPACE

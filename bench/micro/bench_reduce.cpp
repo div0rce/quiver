@@ -116,11 +116,11 @@ inline double expected_dense_sum_f64(const double* v, std::int64_t n, int w) {
   double acc[8 * kA] = {};
   const std::int64_t block = static_cast<std::int64_t>(w) * kA;
   std::int64_t i = 0;
+  // acc index k*w+lane and source index i+k*w+lane both run contiguously over [0, block), so
+  // the accumulator-major/lane-minor nest is one flat pass — same additions, same order.
   for (; i + block <= n; i += block) {
-    for (int k = 0; k < kA; ++k) {
-      for (int lane = 0; lane < w; ++lane) {
-        acc[k * w + lane] += v[i + k * w + lane];
-      }
+    for (std::int64_t m = 0; m < block; ++m) {
+      acc[m] += v[i + m];
     }
   }
   double s = 0.0;
@@ -174,18 +174,18 @@ void register_benchmarks() {
   const char* variant = quiver::bench::variant_name(quiver::active_isa());
   for (const std::int64_t n : {4096, 65536}) {
     for (const int null_pct : {0, 10, 50}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", variant, "i64",
+      benchmark::RegisterBenchmark(quiver::bench::bench_name({"reduce", "sum_wrap", variant, "i64"},
                                                              "n=" + std::to_string(n) + "/nulls=" +
                                                                  std::to_string(null_pct)),
                                    bm_sum_i64<false>)
           ->Args({n, null_pct});
     }
-    benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", variant, "f64",
+    benchmark::RegisterBenchmark(quiver::bench::bench_name({"reduce", "sum_wrap", variant, "f64"},
                                                            "n=" + std::to_string(n) + "/nulls=0"),
                                  bm_sum_f64<false>)
         ->Args({n});
     for (const int null_pct : {0, 50}) {
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "min", variant, "i64",
+      benchmark::RegisterBenchmark(quiver::bench::bench_name({"reduce", "min", variant, "i64"},
                                                              "n=" + std::to_string(n) + "/nulls=" +
                                                                  std::to_string(null_pct)),
                                    bm_min_t<std::int64_t>)
@@ -193,11 +193,11 @@ void register_benchmarks() {
     }
     // i32 probes whether the single-accumulator latency chain loses at narrow widths too (the
     // chain is 1 native vmin per vector there vs 2 ops for 64-bit lanes, but still A=1 serial).
-    benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "min", variant, "i32",
+    benchmark::RegisterBenchmark(quiver::bench::bench_name({"reduce", "min", variant, "i32"},
                                                            "n=" + std::to_string(n) + "/nulls=0"),
                                  bm_min_t<std::int32_t>)
         ->Args({n, 0});
-    benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "min", variant, "f64",
+    benchmark::RegisterBenchmark(quiver::bench::bench_name({"reduce", "min", variant, "f64"},
                                                            "n=" + std::to_string(n) + "/nulls=0"),
                                  bm_min_t<double>)
         ->Args({n, 0});
@@ -209,16 +209,16 @@ void register_benchmarks() {
     for (const std::int64_t n : {4096, 65536}) {
       for (const int null_pct : {0, 10, 50}) {
         benchmark::RegisterBenchmark(
-            quiver::bench::bench_name("reduce", "sum_wrap", "autovec-avx2", "i64",
+            quiver::bench::bench_name({"reduce", "sum_wrap", "autovec-avx2", "i64"},
                                       "n=" + std::to_string(n) +
                                           "/nulls=" + std::to_string(null_pct)),
             bm_sum_i64<true>)
             ->Args({n, null_pct});
       }
-      benchmark::RegisterBenchmark(quiver::bench::bench_name("reduce", "sum_wrap", "autovec-avx2",
-                                                             "f64",
-                                                             "n=" + std::to_string(n) + "/nulls=0"),
-                                   bm_sum_f64<true>)
+      benchmark::RegisterBenchmark(
+          quiver::bench::bench_name({"reduce", "sum_wrap", "autovec-avx2", "f64"},
+                                    "n=" + std::to_string(n) + "/nulls=0"),
+          bm_sum_f64<true>)
           ->Args({n});
     }
   }

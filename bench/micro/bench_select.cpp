@@ -55,7 +55,7 @@ void register_benchmarks() {
   for (const std::int64_t n : {4096, 65536}) {
     for (const int pct : {1, 10, 50, 90, 99}) {
       benchmark::RegisterBenchmark(
-          quiver::bench::bench_name("select", "bitmap_to_selvec", variant, "u32",
+          quiver::bench::bench_name({"select", "bitmap_to_selvec", variant, "u32"},
                                     "n=" + std::to_string(n) + "/density=" + std::to_string(pct)),
           bm_bitmap_to_selvec<false>)
           ->Args({n, pct});
@@ -67,7 +67,7 @@ void register_benchmarks() {
     for (const std::int64_t n : {4096, 65536}) {
       for (const int pct : {1, 10, 50, 90, 99}) {
         benchmark::RegisterBenchmark(
-            quiver::bench::bench_name("select", "bitmap_to_selvec", "autovec-avx2", "u32",
+            quiver::bench::bench_name({"select", "bitmap_to_selvec", "autovec-avx2", "u32"},
                                       "n=" + std::to_string(n) + "/density=" + std::to_string(pct)),
             bm_bitmap_to_selvec<true>)
             ->Args({n, pct});

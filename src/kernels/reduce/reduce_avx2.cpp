@@ -175,60 +175,92 @@ struct MinMax {
   T max;
 };
 
+// The identity pair every fold starts from, and the value masked-off lanes contribute.
+template <class T>
+QUIVER_FORCE_INLINE MinMax<T> red_identity() noexcept {
+  return {std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest()};
+}
+
+// One participating element folded in. The Want* selection lives here, at depth 1, so the
+// driving loops below stay flat.
+template <class T, bool WantMin, bool WantMax>
+QUIVER_FORCE_INLINE void red_fold_one(MinMax<T>& mm, T v) noexcept {
+  if constexpr (WantMin) {
+    mm.min = (v < mm.min) ? v : mm.min;
+  }
+  if constexpr (WantMax) {
+    mm.max = (v > mm.max) ? v : mm.max;
+  }
+}
+
+// The elements past the last full vector block, folded by the reference rule.
+template <class T, std::int64_t kW, bool WantMin, bool WantMax>
+QUIVER_FORCE_INLINE void red_scalar_tail(MinMax<T>& mm, const T* in, std::int64_t n,
+                                         const std::uint8_t* validity) noexcept {
+  for (std::int64_t i = n / kW * kW; i < n; ++i) {
+    if (is_valid(validity, i)) {
+      red_fold_one<T, WantMin, WantMax>(mm, in[i]);
+    }
+  }
+}
+
+// Live min/max accumulators plus the identities masked-off lanes are blended with.
+struct RedIntAcc {
+  __m256i min;
+  __m256i max;
+  __m256i idmin;
+  __m256i idmax;
+};
+
+// Invalid lanes replaced by `ident`. `lm` is the block's expanded lane mask, computed once by
+// the caller (so the min and max blends share it) and unused when there is no validity bitmap.
+QUIVER_FORCE_INLINE __m256i red_int_masked(__m256i v, __m256i ident, __m256i lm,
+                                           const std::uint8_t* validity) noexcept {
+  return validity != nullptr ? _mm256_blendv_epi8(ident, v, lm) : v;
+}
+
+template <class T, bool WantMin, bool WantMax>
+QUIVER_FORCE_INLINE void red_int_step(RedIntAcc& acc, const T* in, std::int64_t i,
+                                      const std::uint8_t* validity) noexcept {
+  constexpr int kW = static_cast<int>(32 / sizeof(T));
+  const __m256i v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(in + i));
+  const __m256i lm = validity != nullptr ? lane_mask_for<T>(validity_bits<kW>(validity, i))
+                                         : _mm256_setzero_si256();
+  if constexpr (WantMin) {
+    acc.min = int_minmax_step<T, true>(acc.min, red_int_masked(v, acc.idmin, lm, validity));
+  }
+  if constexpr (WantMax) {
+    acc.max = int_minmax_step<T, false>(acc.max, red_int_masked(v, acc.idmax, lm, validity));
+  }
+}
+
+// Horizontal fold of one accumulator. Masked-off and never-written lanes hold the identity, so
+// they cannot win; folding an untouched accumulator therefore yields the identity itself.
+template <class T, bool IsMin>
+QUIVER_FORCE_INLINE T red_int_fold_lanes(__m256i acc) noexcept {
+  constexpr std::int64_t kW = static_cast<std::int64_t>(32 / sizeof(T));
+  alignas(32) T lanes[static_cast<std::size_t>(kW)];
+  _mm256_storeu_si256(reinterpret_cast<__m256i*>(lanes), acc);
+  T r = IsMin ? std::numeric_limits<T>::max() : std::numeric_limits<T>::lowest();
+  for (std::int64_t k = 0; k < kW; ++k) {
+    r = (IsMin ? (lanes[k] < r) : (lanes[k] > r)) ? lanes[k] : r;
+  }
+  return r;
+}
+
 template <class T, bool WantMin, bool WantMax>
 MinMax<T> dense_minmax_int(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
   constexpr std::int64_t kW = static_cast<std::int64_t>(32 / sizeof(T));
-  constexpr T kIdMin = std::numeric_limits<T>::max();
-  constexpr T kIdMax = std::numeric_limits<T>::lowest();
-  T bmin = kIdMin;
-  T bmax = kIdMax;
-  std::int64_t i = 0;
-  if (n >= kW) {
-    const __m256i idmin = broadcast_int(kIdMin);
-    const __m256i idmax = broadcast_int(kIdMax);
-    __m256i accmin = idmin;
-    __m256i accmax = idmax;
-    for (; i + kW <= n; i += kW) {
-      const __m256i v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(in + i));
-      __m256i lm{};
-      if (validity != nullptr) {
-        lm = lane_mask_for<T>(validity_bits<static_cast<int>(kW)>(validity, i));
-      }
-      if constexpr (WantMin) {
-        const __m256i vm = validity != nullptr ? _mm256_blendv_epi8(idmin, v, lm) : v;
-        accmin = int_minmax_step<T, true>(accmin, vm);
-      }
-      if constexpr (WantMax) {
-        const __m256i vm = validity != nullptr ? _mm256_blendv_epi8(idmax, v, lm) : v;
-        accmax = int_minmax_step<T, false>(accmax, vm);
-      }
-    }
-    alignas(32) T lanes[static_cast<std::size_t>(kW)];
-    if constexpr (WantMin) {
-      _mm256_storeu_si256(reinterpret_cast<__m256i*>(lanes), accmin);
-      for (std::int64_t k = 0; k < kW; ++k) {
-        bmin = (lanes[k] < bmin) ? lanes[k] : bmin;
-      }
-    }
-    if constexpr (WantMax) {
-      _mm256_storeu_si256(reinterpret_cast<__m256i*>(lanes), accmax);
-      for (std::int64_t k = 0; k < kW; ++k) {
-        bmax = (lanes[k] > bmax) ? lanes[k] : bmax;
-      }
-    }
+  const MinMax<T> id = red_identity<T>();
+  const __m256i idmin = broadcast_int(id.min);
+  const __m256i idmax = broadcast_int(id.max);
+  RedIntAcc acc{idmin, idmax, idmin, idmax};
+  for (std::int64_t i = 0; i + kW <= n; i += kW) {
+    red_int_step<T, WantMin, WantMax>(acc, in, i, validity);
   }
-  for (; i < n; ++i) {  // scalar tail, same fold rule as the reference
-    if (is_valid(validity, i)) {
-      const T v = in[i];
-      if constexpr (WantMin) {
-        bmin = (v < bmin) ? v : bmin;
-      }
-      if constexpr (WantMax) {
-        bmax = (v > bmax) ? v : bmax;
-      }
-    }
-  }
-  return {bmin, bmax};
+  MinMax<T> mm{red_int_fold_lanes<T, true>(acc.min), red_int_fold_lanes<T, false>(acc.max)};
+  red_scalar_tail<T, kW, WantMin, WantMax>(mm, in, n, validity);
+  return mm;
 }
 
 // --- Float dense min/max ------------------------------------------------------------------------
@@ -245,119 +277,153 @@ T first_participating_zero(const T* in, std::int64_t n, const std::uint8_t* vali
   return T{0};  // unreachable when the caller's folded result equals 0.0
 }
 
+// Thin shim over the two AVX2 float widths so the folds below are written once. Every member is
+// exactly the intrinsic the width-specific code used: no float operation is added, removed, or
+// reordered by this indirection (reassociation is frozen — ADR-013, PRD 08 §3.3).
+template <class T>
+struct RedFloatVec;
+
+template <>
+struct RedFloatVec<float> {
+  using V = __m256;
+  static constexpr std::int64_t kW = 8;
+  static QUIVER_FORCE_INLINE V set1(float x) noexcept { return _mm256_set1_ps(x); }
+  static QUIVER_FORCE_INLINE V zero() noexcept { return _mm256_setzero_ps(); }
+  static QUIVER_FORCE_INLINE V load(const float* p) noexcept { return _mm256_loadu_ps(p); }
+  static QUIVER_FORCE_INLINE void store(float* p, V v) noexcept { _mm256_storeu_ps(p, v); }
+  static QUIVER_FORCE_INLINE V mask_of(const std::uint8_t* b, std::int64_t i) noexcept {
+    return _mm256_castsi256_ps(lane_mask32(validity_bits<8>(b, i)));
+  }
+  static QUIVER_FORCE_INLINE V blend(V a, V b, V m) noexcept { return _mm256_blendv_ps(a, b, m); }
+  static QUIVER_FORCE_INLINE V add(V a, V b) noexcept { return _mm256_add_ps(a, b); }
+  static QUIVER_FORCE_INLINE V min(V a, V b) noexcept { return _mm256_min_ps(a, b); }
+  static QUIVER_FORCE_INLINE V max(V a, V b) noexcept { return _mm256_max_ps(a, b); }
+  static QUIVER_FORCE_INLINE V unord(V a) noexcept { return _mm256_cmp_ps(a, a, _CMP_UNORD_Q); }
+  static QUIVER_FORCE_INLINE V or_bits(V a, V b) noexcept { return _mm256_or_ps(a, b); }
+  static QUIVER_FORCE_INLINE bool any(V a) noexcept { return _mm256_movemask_ps(a) != 0; }
+};
+
+template <>
+struct RedFloatVec<double> {
+  using V = __m256d;
+  static constexpr std::int64_t kW = 4;
+  static QUIVER_FORCE_INLINE V set1(double x) noexcept { return _mm256_set1_pd(x); }
+  static QUIVER_FORCE_INLINE V zero() noexcept { return _mm256_setzero_pd(); }
+  static QUIVER_FORCE_INLINE V load(const double* p) noexcept { return _mm256_loadu_pd(p); }
+  static QUIVER_FORCE_INLINE void store(double* p, V v) noexcept { _mm256_storeu_pd(p, v); }
+  static QUIVER_FORCE_INLINE V mask_of(const std::uint8_t* b, std::int64_t i) noexcept {
+    return _mm256_castsi256_pd(lane_mask64(validity_bits<4>(b, i)));
+  }
+  static QUIVER_FORCE_INLINE V blend(V a, V b, V m) noexcept { return _mm256_blendv_pd(a, b, m); }
+  static QUIVER_FORCE_INLINE V add(V a, V b) noexcept { return _mm256_add_pd(a, b); }
+  static QUIVER_FORCE_INLINE V min(V a, V b) noexcept { return _mm256_min_pd(a, b); }
+  static QUIVER_FORCE_INLINE V max(V a, V b) noexcept { return _mm256_max_pd(a, b); }
+  static QUIVER_FORCE_INLINE V unord(V a) noexcept { return _mm256_cmp_pd(a, a, _CMP_UNORD_Q); }
+  static QUIVER_FORCE_INLINE V or_bits(V a, V b) noexcept { return _mm256_or_pd(a, b); }
+  static QUIVER_FORCE_INLINE bool any(V a) noexcept { return _mm256_movemask_pd(a) != 0; }
+};
+
+// Live min/max accumulators, the running NaN disjunction, and the blend identities.
+template <class T>
+struct RedFloatAcc {
+  using V = typename RedFloatVec<T>::V;
+  V min;
+  V max;
+  V nans;
+  V idmin;
+  V idmax;
+};
+
+// Invalid lanes replaced by `ident`; `lm` is the block's lane mask, shared by both blends.
+template <class T>
+QUIVER_FORCE_INLINE typename RedFloatVec<T>::V
+red_float_masked(typename RedFloatVec<T>::V v, typename RedFloatVec<T>::V ident,
+                 typename RedFloatVec<T>::V lm, const std::uint8_t* validity) noexcept {
+  return validity != nullptr ? RedFloatVec<T>::blend(ident, v, lm) : v;
+}
+
 template <class T, bool WantMin, bool WantMax>
-MinMax<T> dense_minmax_float(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
-  constexpr bool kF32 = std::is_same_v<T, float>;
-  constexpr std::int64_t kW = kF32 ? 8 : 4;
-  constexpr T kIdMin = std::numeric_limits<T>::max();
-  constexpr T kIdMax = std::numeric_limits<T>::lowest();
-  T bmin = kIdMin;
-  T bmax = kIdMax;
-  bool saw_nan = false;
-  std::int64_t i = 0;
-  if (n >= kW) {
-    if constexpr (kF32) {
-      const __m256 idmin = _mm256_set1_ps(kIdMin);
-      const __m256 idmax = _mm256_set1_ps(kIdMax);
-      __m256 accmin = idmin;
-      __m256 accmax = idmax;
-      __m256 nans = _mm256_setzero_ps();
-      for (; i + kW <= n; i += kW) {
-        const __m256 v = _mm256_loadu_ps(in + i);
-        __m256 lm{};
-        if (validity != nullptr) {
-          lm = _mm256_castsi256_ps(lane_mask32(validity_bits<8>(validity, i)));
-        }
-        // NaN detection must see only VALID lanes; masked lanes hold finite identities.
-        const __m256 vn = validity != nullptr ? _mm256_blendv_ps(idmin, v, lm) : v;
-        nans = _mm256_or_ps(nans, _mm256_cmp_ps(vn, vn, _CMP_UNORD_Q));
-        if constexpr (WantMin) {
-          accmin = _mm256_min_ps(accmin, vn);
-        }
-        if constexpr (WantMax) {
-          const __m256 vx = validity != nullptr ? _mm256_blendv_ps(idmax, v, lm) : v;
-          accmax = _mm256_max_ps(accmax, vx);
-        }
-      }
-      saw_nan = _mm256_movemask_ps(nans) != 0;
-      alignas(32) T lanes[static_cast<std::size_t>(kW)];
-      if constexpr (WantMin) {
-        _mm256_storeu_ps(lanes, accmin);
-        for (std::int64_t k = 0; k < kW; ++k) {
-          bmin = (lanes[k] < bmin) ? lanes[k] : bmin;
-        }
-      }
-      if constexpr (WantMax) {
-        _mm256_storeu_ps(lanes, accmax);
-        for (std::int64_t k = 0; k < kW; ++k) {
-          bmax = (lanes[k] > bmax) ? lanes[k] : bmax;
-        }
-      }
-    } else {
-      const __m256d idmin = _mm256_set1_pd(kIdMin);
-      const __m256d idmax = _mm256_set1_pd(kIdMax);
-      __m256d accmin = idmin;
-      __m256d accmax = idmax;
-      __m256d nans = _mm256_setzero_pd();
-      for (; i + kW <= n; i += kW) {
-        const __m256d v = _mm256_loadu_pd(in + i);
-        __m256d lm{};
-        if (validity != nullptr) {
-          lm = _mm256_castsi256_pd(lane_mask64(validity_bits<4>(validity, i)));
-        }
-        const __m256d vn = validity != nullptr ? _mm256_blendv_pd(idmin, v, lm) : v;
-        nans = _mm256_or_pd(nans, _mm256_cmp_pd(vn, vn, _CMP_UNORD_Q));
-        if constexpr (WantMin) {
-          accmin = _mm256_min_pd(accmin, vn);
-        }
-        if constexpr (WantMax) {
-          const __m256d vx = validity != nullptr ? _mm256_blendv_pd(idmax, v, lm) : v;
-          accmax = _mm256_max_pd(accmax, vx);
-        }
-      }
-      saw_nan = _mm256_movemask_pd(nans) != 0;
-      alignas(32) T lanes[static_cast<std::size_t>(kW)];
-      if constexpr (WantMin) {
-        _mm256_storeu_pd(lanes, accmin);
-        for (std::int64_t k = 0; k < kW; ++k) {
-          bmin = (lanes[k] < bmin) ? lanes[k] : bmin;
-        }
-      }
-      if constexpr (WantMax) {
-        _mm256_storeu_pd(lanes, accmax);
-        for (std::int64_t k = 0; k < kW; ++k) {
-          bmax = (lanes[k] > bmax) ? lanes[k] : bmax;
-        }
-      }
-    }
-  }
-  for (; i < n; ++i) {
-    if (is_valid(validity, i)) {
-      const T v = in[i];
-      saw_nan = saw_nan || (v != v);
-      if constexpr (WantMin) {
-        bmin = (v < bmin) ? v : bmin;
-      }
-      if constexpr (WantMax) {
-        bmax = (v > bmax) ? v : bmax;
-      }
-    }
-  }
-  if (saw_nan) {  // NaN propagation, payload-normalized (PRD 08 §3.3)
-    return {scalar_impl::canonical_qnan<T>(), scalar_impl::canonical_qnan<T>()};
-  }
-  // ±0.0 is the only bit-visible tie; recover the reference's first-encountered zero.
+QUIVER_FORCE_INLINE void red_float_step(RedFloatAcc<T>& acc, const T* in, std::int64_t i,
+                                        const std::uint8_t* validity) noexcept {
+  using F = RedFloatVec<T>;
+  using V = typename F::V;
+  const V v = F::load(in + i);
+  const V lm = validity != nullptr ? F::mask_of(validity, i) : F::zero();
+  // NaN detection must see only VALID lanes; masked lanes hold finite identities.
+  const V vn = red_float_masked<T>(v, acc.idmin, lm, validity);
+  acc.nans = F::or_bits(acc.nans, F::unord(vn));
   if constexpr (WantMin) {
-    if (bmin == T{0}) {
-      bmin = first_participating_zero(in, n, validity);
-    }
+    acc.min = F::min(acc.min, vn);
   }
   if constexpr (WantMax) {
-    if (bmax == T{0}) {
-      bmax = first_participating_zero(in, n, validity);
+    acc.max = F::max(acc.max, red_float_masked<T>(v, acc.idmax, lm, validity));
+  }
+}
+
+template <class T, bool IsMin>
+QUIVER_FORCE_INLINE T red_float_fold_lanes(typename RedFloatVec<T>::V acc) noexcept {
+  using F = RedFloatVec<T>;
+  alignas(32) T lanes[static_cast<std::size_t>(F::kW)];
+  F::store(lanes, acc);
+  T r = IsMin ? std::numeric_limits<T>::max() : std::numeric_limits<T>::lowest();
+  for (std::int64_t k = 0; k < F::kW; ++k) {
+    r = (IsMin ? (lanes[k] < r) : (lanes[k] > r)) ? lanes[k] : r;
+  }
+  return r;
+}
+
+template <class T>
+struct RedFloatFold {
+  MinMax<T> mm;
+  bool saw_nan;
+};
+
+// Scalar tail: the reference fold rule plus the valid-only NaN watch.
+template <class T, bool WantMin, bool WantMax>
+QUIVER_FORCE_INLINE void red_float_tail(RedFloatFold<T>& f, const T* in, std::int64_t n,
+                                        const std::uint8_t* validity) noexcept {
+  constexpr std::int64_t kW = RedFloatVec<T>::kW;
+  for (std::int64_t i = n / kW * kW; i < n; ++i) {
+    if (is_valid(validity, i)) {
+      const T v = in[i];
+      f.saw_nan = f.saw_nan || (v != v);
+      red_fold_one<T, WantMin, WantMax>(f.mm, v);
     }
   }
-  return {bmin, bmax};
+}
+
+// ±0.0 is the only bit-visible tie left; recover the reference's first-encountered zero. An
+// unwanted bound still holds its identity here, which is never 0.0, so it is left alone.
+template <class T>
+QUIVER_FORCE_INLINE void red_rescue_zero(MinMax<T>& mm, const T* in, std::int64_t n,
+                                         const std::uint8_t* validity) noexcept {
+  if (mm.min != T{0} && mm.max != T{0}) {
+    return;
+  }
+  const T z = first_participating_zero(in, n, validity);
+  mm.min = (mm.min == T{0}) ? z : mm.min;
+  mm.max = (mm.max == T{0}) ? z : mm.max;
+}
+
+template <class T, bool WantMin, bool WantMax>
+MinMax<T> dense_minmax_float(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
+  using F = RedFloatVec<T>;
+  const MinMax<T> id = red_identity<T>();
+  const typename F::V idmin = F::set1(id.min);
+  const typename F::V idmax = F::set1(id.max);
+  RedFloatAcc<T> acc{idmin, idmax, F::zero(), idmin, idmax};
+  for (std::int64_t i = 0; i + F::kW <= n; i += F::kW) {
+    red_float_step<T, WantMin, WantMax>(acc, in, i, validity);
+  }
+  RedFloatFold<T> f{
+      {red_float_fold_lanes<T, true>(acc.min), red_float_fold_lanes<T, false>(acc.max)},
+      F::any(acc.nans)};
+  red_float_tail<T, WantMin, WantMax>(f, in, n, validity);
+  if (f.saw_nan) {  // NaN propagation, payload-normalized (PRD 08 §3.3)
+    return {scalar_impl::canonical_qnan<T>(), scalar_impl::canonical_qnan<T>()};
+  }
+  red_rescue_zero(f.mm, in, n, validity);
+  return f.mm;
 }
 
 template <class T, bool WantMin, bool WantMax>
@@ -392,6 +458,17 @@ QUIVER_FORCE_INLINE __m256i widen4(const T* p) noexcept {
   }
 }
 
+// Four widened elements with invalid lanes cleared to 0, the wrap-neutral.
+template <class T>
+QUIVER_FORCE_INLINE __m256i red_widen_masked(const T* p, const std::uint8_t* validity,
+                                             std::int64_t i) noexcept {
+  const __m256i w = widen4(p);
+  if (validity == nullptr) {
+    return w;
+  }
+  return _mm256_and_si256(w, lane_mask64(validity_bits<4>(validity, i)));
+}
+
 template <class T>
 SumType<T> dense_sum_wrap_int(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
   using S = SumType<T>;
@@ -399,11 +476,8 @@ SumType<T> dense_sum_wrap_int(const T* in, std::int64_t n, const std::uint8_t* v
   __m256i acc = _mm256_setzero_si256();
   std::int64_t i = 0;
   for (; i + 4 <= n; i += 4) {
-    __m256i w = widen4(in + i);
-    if (validity != nullptr) {
-      w = _mm256_and_si256(w, lane_mask64(validity_bits<4>(validity, i)));
-    }
-    acc = _mm256_add_epi64(acc, w);  // wrapping lanewise; commutative, so blocking is exact
+    // wrapping lanewise; commutative, so lane blocking is exact
+    acc = _mm256_add_epi64(acc, red_widen_masked(in + i, validity, i));
   }
   alignas(32) U lanes[4];
   _mm256_storeu_si256(reinterpret_cast<__m256i*>(lanes), acc);
@@ -418,57 +492,38 @@ SumType<T> dense_sum_wrap_int(const T* in, std::int64_t n, const std::uint8_t* v
 
 // --- Float dense sum: the ADR-013 AVX2 policy (see file comment) --------------------------------
 
+// A = 4 independent vector accumulators (ADR-013). Masked lanes add -0.0, the exact neutral.
+constexpr int kRedSumAccs = 4;
+
+// One A-way block: each accumulator takes its own vector, valid lanes only.
+template <class T>
+QUIVER_FORCE_INLINE void red_sum_step(typename RedFloatVec<T>::V* acc, const T* in, std::int64_t i,
+                                      const std::uint8_t* validity) noexcept {
+  using F = RedFloatVec<T>;
+  const typename F::V neg0 = F::set1(static_cast<T>(-0.0));
+  for (int k = 0; k < kRedSumAccs; ++k) {
+    const std::int64_t at = i + k * F::kW;
+    const typename F::V lm = validity != nullptr ? F::mask_of(validity, at) : F::zero();
+    acc[k] = F::add(acc[k], red_float_masked<T>(F::load(in + at), neg0, lm, validity));
+  }
+}
+
 template <class T>
 T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noexcept {
-  constexpr bool kF32 = std::is_same_v<T, float>;
-  constexpr std::int64_t kW = kF32 ? 8 : 4;
-  constexpr int kA = 4;
-  T s = T{0};
+  using F = RedFloatVec<T>;
+  constexpr std::int64_t kBlock = kRedSumAccs * F::kW;
+  typename F::V acc[kRedSumAccs] = {F::zero(), F::zero(), F::zero(), F::zero()};
   std::int64_t i = 0;
-  if constexpr (kF32) {
-    __m256 acc[kA] = {_mm256_setzero_ps(), _mm256_setzero_ps(), _mm256_setzero_ps(),
-                      _mm256_setzero_ps()};
-    const __m256 neg0 = _mm256_set1_ps(-0.0f);
-    for (; i + kA * kW <= n; i += kA * kW) {
-      for (int k = 0; k < kA; ++k) {
-        __m256 v = _mm256_loadu_ps(in + i + k * kW);
-        if (validity != nullptr) {
-          const __m256 lm =
-              _mm256_castsi256_ps(lane_mask32(validity_bits<8>(validity, i + k * kW)));
-          v = _mm256_blendv_ps(neg0, v, lm);
-        }
-        acc[k] = _mm256_add_ps(acc[k], v);
-      }
-    }
-    const __m256 vsum =  // ADR-013 frozen combine: (0+2),(1+3), then +
-        _mm256_add_ps(_mm256_add_ps(acc[0], acc[2]), _mm256_add_ps(acc[1], acc[3]));
-    alignas(32) T lanes[static_cast<std::size_t>(kW)];
-    _mm256_storeu_ps(lanes, vsum);
-    for (std::int64_t k = 0; k < kW; ++k) {
-      s += lanes[k];
-    }
-  } else {
-    __m256d acc[kA] = {_mm256_setzero_pd(), _mm256_setzero_pd(), _mm256_setzero_pd(),
-                       _mm256_setzero_pd()};
-    const __m256d neg0 = _mm256_set1_pd(-0.0);
-    for (; i + kA * kW <= n; i += kA * kW) {
-      for (int k = 0; k < kA; ++k) {
-        __m256d v = _mm256_loadu_pd(in + i + k * kW);
-        if (validity != nullptr) {
-          const __m256d lm =
-              _mm256_castsi256_pd(lane_mask64(validity_bits<4>(validity, i + k * kW)));
-          v = _mm256_blendv_pd(neg0, v, lm);
-        }
-        acc[k] = _mm256_add_pd(acc[k], v);
-      }
-    }
-    const __m256d vsum =  // ADR-013 frozen combine: (0+2),(1+3), then +
-        _mm256_add_pd(_mm256_add_pd(acc[0], acc[2]), _mm256_add_pd(acc[1], acc[3]));
-    alignas(32) T lanes[static_cast<std::size_t>(kW)];
-    _mm256_storeu_pd(lanes, vsum);
-    for (std::int64_t k = 0; k < kW; ++k) {
-      s += lanes[k];
-    }
+  for (; i + kBlock <= n; i += kBlock) {
+    red_sum_step<T>(acc, in, i, validity);
+  }
+  const typename F::V vsum =  // ADR-013 frozen combine: (0+2),(1+3), then +
+      F::add(F::add(acc[0], acc[2]), F::add(acc[1], acc[3]));
+  alignas(32) T lanes[static_cast<std::size_t>(F::kW)];
+  F::store(lanes, vsum);
+  T s = T{0};
+  for (std::int64_t k = 0; k < F::kW; ++k) {  // strict low->high lane fold from +0.0
+    s += lanes[k];
   }
   for (; i < n; ++i) {  // sequential valid-only tail (part of the documented policy)
     if (is_valid(validity, i)) {
@@ -488,21 +543,21 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
   T k6_reduce_min(const T* in, std::int64_t n, const std::uint8_t* validity,                       \
                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {                       \
     if (sel != nullptr) {                                                                          \
-      return scalar_impl::reduce_min<T>(in, n, validity, sel, sel_len);                            \
+      return scalar_impl::reduce_min<T>(in, {n, validity, sel, sel_len});                          \
     }                                                                                              \
     return dense_minmax<T, true, false>(in, n, validity).min;                                      \
   }                                                                                                \
   T k6_reduce_max(const T* in, std::int64_t n, const std::uint8_t* validity,                       \
                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {                       \
     if (sel != nullptr) {                                                                          \
-      return scalar_impl::reduce_max<T>(in, n, validity, sel, sel_len);                            \
+      return scalar_impl::reduce_max<T>(in, {n, validity, sel, sel_len});                          \
     }                                                                                              \
     return dense_minmax<T, false, true>(in, n, validity).max;                                      \
   }                                                                                                \
   MinMaxSummary<T> k6_compute_sma(const T* in, std::int64_t n, const std::uint8_t* validity,       \
                                   const std::uint32_t* sel, std::int64_t sel_len) noexcept {       \
     if (sel != nullptr) {                                                                          \
-      return scalar_impl::compute_sma<T>(in, n, validity, sel, sel_len);                           \
+      return scalar_impl::compute_sma<T>(in, {n, validity, sel, sel_len});                         \
     }                                                                                              \
     const MinMax<T> mm = dense_minmax<T, true, true>(in, n, validity);                             \
     return MinMaxSummary<T>{mm.min, mm.max, n - valid_count(validity, n)};                         \
@@ -513,14 +568,14 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
   S k6_reduce_sum_wrap(const T* in, std::int64_t n, const std::uint8_t* validity,                  \
                        const std::uint32_t* sel, std::int64_t sel_len) noexcept {                  \
     if (sel != nullptr) {                                                                          \
-      return scalar_impl::reduce_sum_wrap<T>(in, n, validity, sel, sel_len);                       \
+      return scalar_impl::reduce_sum_wrap<T>(in, {n, validity, sel, sel_len});                     \
     }                                                                                              \
     return dense_sum_wrap_int<T>(in, n, validity);                                                 \
   }                                                                                                \
   bool k6_reduce_sum_checked(const T* in, std::int64_t n, const std::uint8_t* validity,            \
                              const std::uint32_t* sel, std::int64_t sel_len,                       \
                              S* out_sum) noexcept {                                                \
-    return scalar_impl::reduce_sum_checked<T>(in, n, validity, sel, sel_len, out_sum);             \
+    return scalar_impl::reduce_sum_checked<T>(in, {n, validity, sel, sel_len}, out_sum);           \
   }
 
 #define QUIVER_K6_FLOAT_DEFINE(T)                                                                  \
@@ -528,7 +583,7 @@ T dense_sum_float(const T* in, std::int64_t n, const std::uint8_t* validity) noe
   T k6_reduce_sum_wrap(const T* in, std::int64_t n, const std::uint8_t* validity,                  \
                        const std::uint32_t* sel, std::int64_t sel_len) noexcept {                  \
     if (sel != nullptr) {                                                                          \
-      return scalar_impl::reduce_sum_wrap<T>(in, n, validity, sel, sel_len);                       \
+      return scalar_impl::reduce_sum_wrap<T>(in, {n, validity, sel, sel_len});                     \
     }                                                                                              \
     return dense_sum_float<T>(in, n, validity);                                                    \
   }

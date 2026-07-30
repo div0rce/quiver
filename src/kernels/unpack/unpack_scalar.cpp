@@ -12,7 +12,7 @@ namespace detail::scalar {
 #define QUIVER_K8_DEFINE(T)                                                                        \
   void k8_unpack(const std::uint8_t* packed, std::int64_t n, int bit_width, T base,                \
                  T* out) noexcept {                                                                \
-    scalar_impl::unpack<T>(packed, n, bit_width, base, out);                                       \
+    scalar_impl::unpack<T>({packed, n, bit_width}, base, out);                                     \
   }
 
 QUIVER_K8_DEFINE(std::uint8_t)

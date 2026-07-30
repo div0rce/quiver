@@ -12,6 +12,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include "quiver/dispatch.h"
@@ -114,40 +116,22 @@ inline std::vector<quiver::Isa> host_backends() {
 }
 
 // Applies f to a zero of the element type selected by the fuzz stream (REQ-API-004 set).
+// The element types the kernels are instantiated for, in the order the decoder picks them.
+// Keeping the list as data means adding a type is one edit here, not a new switch arm.
+using ElementTypes = std::tuple<std::int8_t, std::int16_t, std::int32_t, std::int64_t, std::uint8_t,
+                                std::uint16_t, std::uint32_t, std::uint64_t, float, double>;
+
+template <class F, std::size_t... I>
+void apply_picked(std::size_t pick, F f, std::index_sequence<I...> /*types*/) {
+  ((pick == I ? (void)f(std::tuple_element_t<I, ElementTypes>{}) : (void)0), ...);
+}
+
+// Call f with one element type, chosen by the decoder.
 template <class F>
 void with_element_type(Decoder& d, F f) {
-  switch (d.pick(10)) {
-  case 0:
-    f(std::int8_t{});
-    break;
-  case 1:
-    f(std::int16_t{});
-    break;
-  case 2:
-    f(std::int32_t{});
-    break;
-  case 3:
-    f(std::int64_t{});
-    break;
-  case 4:
-    f(std::uint8_t{});
-    break;
-  case 5:
-    f(std::uint16_t{});
-    break;
-  case 6:
-    f(std::uint32_t{});
-    break;
-  case 7:
-    f(std::uint64_t{});
-    break;
-  case 8:
-    f(float{});
-    break;
-  default:
-    f(double{});
-    break;
-  }
+  constexpr std::size_t kCount = std::tuple_size_v<ElementTypes>;
+  apply_picked(static_cast<std::size_t>(d.pick(static_cast<int>(kCount))), f,
+               std::make_index_sequence<kCount>{});
 }
 
 }  // namespace quiver_fuzz

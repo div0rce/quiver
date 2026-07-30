@@ -14,14 +14,21 @@
 
 namespace quiver_test {
 
+// What a divergence report needs beyond the buffers: the seed that produced them and the
+// contract they are being held to.
+struct FailureContext {
+  std::uint64_t seed;
+  const char* req_id;
+};
+
 template <class T>
 ::testing::AssertionResult buffers_equal(const T* expected, const T* actual, std::int64_t n,
-                                         std::uint64_t seed, const char* req_id) {
+                                         FailureContext ctx) {
   for (std::int64_t i = 0; i < n; ++i) {
     if (std::memcmp(&expected[i], &actual[i], sizeof(T)) != 0) {
       std::ostringstream os;
-      os << "first divergence at index " << i << " of " << n << " [" << req_id << "] seed=0x"
-         << std::hex << seed << std::dec << "\n  idx: expected / actual\n";
+      os << "first divergence at index " << i << " of " << n << " [" << ctx.req_id << "] seed=0x"
+         << std::hex << ctx.seed << std::dec << "\n  idx: expected / actual\n";
       const std::int64_t lo = i >= 4 ? i - 4 : 0;
       const std::int64_t hi = i + 4 < n ? i + 4 : n - 1;
       for (std::int64_t j = lo; j <= hi; ++j) {

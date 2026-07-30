@@ -18,16 +18,24 @@ namespace quiver::bench {
 
 // Benchmark names are the ledger's join key: BM_<family>/<api>/<variant>/<type>/<k>=<v>/...
 // (REQ-BENCH-002; renames are a ledger-schema event).
-inline std::string bench_name(const char* family, const char* api, const char* variant,
-                              const char* type, const std::string& axes) {
+// The fixed four-part path of a benchmark name. These are always supplied together and always
+// in this order; naming them stops a caller silently swapping api and variant.
+struct BenchKey {
+  const char* family;
+  const char* api;
+  const char* variant;
+  const char* type;
+};
+
+inline std::string bench_name(BenchKey key, const std::string& axes) {
   std::string s = "BM_";
-  s += family;
+  s += key.family;
   s += '/';
-  s += api;
+  s += key.api;
   s += '/';
-  s += variant;
+  s += key.variant;
   s += '/';
-  s += type;
+  s += key.type;
   if (!axes.empty()) {
     s += '/';
     s += axes;

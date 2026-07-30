@@ -171,25 +171,35 @@ def collect_samples(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path
     return samples, gb_ver
 
 
-def collect_metrics(reps: list, machine_flags: list[str]) -> dict[str, list[float]]:
-    """Per-metric sample vectors.
+def _all_or_none(reps: list, attr: str) -> list[float] | None:
+    """A throughput metric, or None when any repetition lacks it.
 
-    cycles_per_value is PMU-derived and shares attach_pmu's failure mode with ipc and
-    branch_miss_pct, so it gets the same tolerance build_pmu has: summarize the repetitions that
-    did measure rather than discarding all ten because one perf_event_open failed transiently.
-    The throughput metrics stay all-or-nothing — a missing items/bytes rate means the benchmark
-    does not report one at all, not that a counter dropped out.
+    These stay all-or-nothing: a missing items/bytes rate means the benchmark does not report
+    one at all, not that a counter dropped out.
     """
+    values = [getattr(r, attr) for r in reps]
+    return values if all(v is not None for v in values) else None
+
+
+def _measured_only(reps: list, attr: str) -> list[float] | None:
+    """A PMU-derived metric over the repetitions that measured it, or None if none did.
+
+    PMU metrics share attach_pmu's failure mode, so they get the same tolerance build_pmu has:
+    summarize the repetitions that did measure rather than discarding all ten because one
+    perf_event_open failed transiently.
+    """
+    values = [v for v in (getattr(r, attr) for r in reps) if v is not None]
+    return values or None
+
+
+def collect_metrics(reps: list, machine_flags: list[str]) -> dict[str, list[float]]:
+    """Per-metric sample vectors. Throughput is all-or-nothing, PMU metrics tolerate gaps."""
     metrics = {"ns_per_batch": [r.real_time_ns for r in reps]}
-    for metric, attr in (("values_per_s", "items_per_second"),
-                         ("bytes_per_s", "bytes_per_second")):
-        values = [getattr(r, attr) for r in reps]
-        if all(v is not None for v in values):
-            metrics[metric] = values
+    optional = {"values_per_s": _all_or_none(reps, "items_per_second"),
+                "bytes_per_s": _all_or_none(reps, "bytes_per_second")}
     if "no_pmu" not in machine_flags:
-        measured = [r.cycles_per_value for r in reps if r.cycles_per_value is not None]
-        if measured:
-            metrics["cycles_per_value"] = measured
+        optional["cycles_per_value"] = _measured_only(reps, "cycles_per_value")
+    metrics.update({k: v for k, v in optional.items() if v is not None})
     return metrics
 
 
@@ -261,15 +271,28 @@ def write_results(out_dir: pathlib.Path, entries: list, rejected: list,
         print("NON-PUBLISHABLE (deviations recorded in manifest) — investigation only")
 
 
+def report_deviations(deviations: list[str]) -> None:
+    print("environment checklist FAILED (REQ-LEDGER-013); run is non-publishable:",
+          file=sys.stderr)
+    for d in deviations:
+        print(f"  - {d}", file=sys.stderr)
+    print("re-run with --allow-deviations for local investigation only", file=sys.stderr)
+
+
+def partition_entries(samples: dict, ctx: dict) -> tuple[list, list]:
+    """Split measured samples into publishable entries and CV-rejected ones."""
+    entries, rejected = [], []
+    for (_, name), reps in samples.items():
+        entry, publishable = build_entry(name, reps, ctx)
+        (entries if publishable else rejected).append(entry)
+    return entries, rejected
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     machine = environment.load_machine(REPO, args.machine)
     deviations = environment.environment_checklist(REPO, machine)
     if deviations and not args.allow_deviations:
-        print("environment checklist FAILED (REQ-LEDGER-013); run is non-publishable:",
-              file=sys.stderr)
-        for d in deviations:
-            print(f"  - {d}", file=sys.stderr)
-        print("re-run with --allow-deviations for local investigation only", file=sys.stderr)
+        report_deviations(deviations)
         return 2
 
     build_dir = pathlib.Path(args.build_dir)
@@ -297,10 +320,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                "lib_version": library_version(),
                "git_dirty": "dirty" if "git tree dirty" in manifest["deviations"] else "clean",
                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")}
-        entries, rejected = [], []
-        for (_, name), reps in samples.items():
-            entry, publishable = build_entry(name, reps, ctx)
-            (entries if publishable else rejected).append(entry)
+        entries, rejected = partition_entries(samples, ctx)
     except RunAborted as exc:
         print(str(exc), file=sys.stderr)
         return 2

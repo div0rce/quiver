@@ -57,21 +57,37 @@ void fill_bitmap_uniform(Rng& rng, std::uint8_t* bits, std::int64_t n, int selec
   }
 }
 
+namespace {
+// Geometric(mean 64) run length via Bernoulli trials: continue the run while next()%64 != 0.
+std::int64_t clustered_run_length(Rng& rng) {
+  std::int64_t len = 1;
+  while (rng.next_below(64) != 0) {
+    ++len;
+  }
+  return len;
+}
+
+// Set every bit in [from, to).
+void set_bit_range(std::uint8_t* bits, std::int64_t from, std::int64_t to) {
+  for (std::int64_t i = from; i < to; ++i) {
+    bits[i >> 3] = static_cast<std::uint8_t>(bits[i >> 3] | (1u << (i & 7)));
+  }
+}
+
+}  // namespace
+
 void fill_bitmap_clustered(Rng& rng, std::uint8_t* bits, std::int64_t n, int selectivity_pct) {
   const std::int64_t bytes = (n + 7) / 8;
   std::memset(bits, 0, static_cast<std::size_t>(bytes));
   std::int64_t i = 0;
   while (i < n) {
     const bool selected = rng.next_below(100) < static_cast<std::uint64_t>(selectivity_pct);
-    std::int64_t len = 1;
-    while (rng.next_below(64) != 0) {
-      ++len;
+    const std::int64_t len = clustered_run_length(rng);
+    const std::int64_t end = (i + len < n) ? i + len : n;
+    if (selected) {
+      set_bit_range(bits, i, end);
     }
-    for (std::int64_t j = 0; j < len && i < n; ++j, ++i) {
-      if (selected) {
-        bits[i >> 3] = static_cast<std::uint8_t>(bits[i >> 3] | (1u << (i & 7)));
-      }
-    }
+    i = end;
   }
 }
 
