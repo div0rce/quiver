@@ -15,6 +15,7 @@
 #include "bench/harness/bench_common.h"
 #include "bench/harness/distributions.h"
 #include "bench/harness/meta.h"
+#include "bench/harness/phase.h"
 #include "bench/harness/pmu.h"
 #include "quiver/quiver.h"
 
@@ -25,8 +26,8 @@ constexpr std::uint64_t kSeed = 0xBE5CB00Aull;
 
 // The two operand vectors a guarded op reads, filled together.
 struct OperandPair {
-  std::vector<std::int64_t>& a;
-  std::vector<std::int64_t>& b;
+  quiver::bench::PhasedVec<std::int64_t>& a;
+  quiver::bench::PhasedVec<std::int64_t>& b;
 };
 
 // Inputs with a controlled overflow density: overflowing lanes get a = max-1, b = 2.
@@ -62,8 +63,9 @@ struct CheckedExpectation {
 
 // Validate all THREE outputs: wrapped values, per-lane overflow bitmap, and the total count —
 // a correct count alone does not imply correct out[]/bits[].
-CheckedExpectation recompute_checked(OperandPair ops, const std::vector<std::int64_t>& out,
-                                     const std::vector<std::uint8_t>& bits) {
+CheckedExpectation recompute_checked(OperandPair ops,
+                                     const quiver::bench::PhasedVec<std::int64_t>& out,
+                                     const quiver::bench::PhasedVec<std::uint8_t>& bits) {
   CheckedExpectation e{0, true};
   for (std::size_t i = 0; i < ops.a.size(); ++i) {
     const bool ovf = add_overflows(ops.a[i], ops.b[i]);
@@ -75,7 +77,7 @@ CheckedExpectation recompute_checked(OperandPair ops, const std::vector<std::int
   return e;
 }
 
-bool saturating_outputs_match(OperandPair ops, const std::vector<std::int64_t>& out) {
+bool saturating_outputs_match(OperandPair ops, const quiver::bench::PhasedVec<std::int64_t>& out) {
   for (std::size_t i = 0; i < ops.a.size(); ++i) {
     const std::int64_t x = ops.a[i];
     const std::int64_t y = ops.b[i];
@@ -95,11 +97,16 @@ void bm_checked_add_i64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   const int ovf_permille = static_cast<int>(state.range(1));
   quiver::bench::Rng rng(kSeed);
-  std::vector<std::int64_t> a;
-  std::vector<std::int64_t> b;
+  // Fixed 4 KiB phases (bench/harness/phase.h): operand loads sit ≥1 KiB of page phase from
+  // the result stores, keeping glibc's packed-layout false store→load dependences out of the
+  // timed region. Both sides of the avx2/autovec-avx2 verdict pair allocate identically.
+  auto a = quiver::bench::phased_vec<std::int64_t>(0, quiver::bench::kLoadPhaseA);
+  auto b = quiver::bench::phased_vec<std::int64_t>(0, quiver::bench::kLoadPhaseB);
   make_inputs(rng, n, ovf_permille, {a, b});
-  std::vector<std::int64_t> out(static_cast<std::size_t>(n));
-  std::vector<std::uint8_t> bits((static_cast<std::size_t>(n) + 7) / 8);
+  auto out = quiver::bench::phased_vec<std::int64_t>(static_cast<std::size_t>(n),
+                                                     quiver::bench::kStorePhase);
+  auto bits = quiver::bench::phased_vec<std::uint8_t>((static_cast<std::size_t>(n) + 7) / 8,
+                                                      quiver::bench::kAuxStorePhase);
 
   const auto run_checked = [&]() -> std::int64_t {
 #if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
@@ -134,10 +141,12 @@ template <bool kAutovec>
 void bm_saturating_add_i64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   quiver::bench::Rng rng(kSeed);
-  std::vector<std::int64_t> a;
-  std::vector<std::int64_t> b;
+  // Same fixed phases as bm_checked_add_i64 (bench/harness/phase.h).
+  auto a = quiver::bench::phased_vec<std::int64_t>(0, quiver::bench::kLoadPhaseA);
+  auto b = quiver::bench::phased_vec<std::int64_t>(0, quiver::bench::kLoadPhaseB);
   make_inputs(rng, n, 100, {a, b});
-  std::vector<std::int64_t> out(static_cast<std::size_t>(n));
+  auto out = quiver::bench::phased_vec<std::int64_t>(static_cast<std::size_t>(n),
+                                                     quiver::bench::kStorePhase);
   const auto run_saturating = [&]() {
 #if defined(QUIVER_BENCH_HAVE_AUTOVEC_AVX2)
     if constexpr (kAutovec) {

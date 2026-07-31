@@ -15,6 +15,7 @@
 #include "bench/harness/bench_common.h"
 #include "bench/harness/distributions.h"
 #include "bench/harness/meta.h"
+#include "bench/harness/phase.h"
 #include "bench/harness/pmu.h"
 #include "quiver/quiver.h"
 
@@ -38,9 +39,13 @@ template <bool kAutovec>
 void bm_hash_i64(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   quiver::bench::Rng rng(kSeed);
-  std::vector<std::int64_t> v(static_cast<std::size_t>(n));
+  // Fixed 4 KiB phases (bench/harness/phase.h): key loads ≥1 KiB of page phase from the
+  // hash stores; identical placement for every variant of the verdict pair.
+  auto v = quiver::bench::phased_vec<std::int64_t>(static_cast<std::size_t>(n),
+                                                   quiver::bench::kLoadPhaseA);
   quiver::bench::fill_uniform(rng, v.data(), n);
-  std::vector<std::uint64_t> out(static_cast<std::size_t>(n));
+  auto out = quiver::bench::phased_vec<std::uint64_t>(static_cast<std::size_t>(n),
+                                                      quiver::bench::kStorePhase);
   const std::uint64_t seed = 0x1234;
 
   const auto run = [&]() {
@@ -71,13 +76,17 @@ void bm_hash_i64(benchmark::State& state) {
 void bm_hash_combine(benchmark::State& state) {
   const auto n = static_cast<std::int64_t>(state.range(0));
   quiver::bench::Rng rng(kSeed);
-  std::vector<std::uint64_t> a(static_cast<std::size_t>(n));
-  std::vector<std::uint64_t> b(static_cast<std::size_t>(n));
+  // Fixed 4 KiB phases (bench/harness/phase.h), as in bm_hash_i64.
+  auto a = quiver::bench::phased_vec<std::uint64_t>(static_cast<std::size_t>(n),
+                                                    quiver::bench::kLoadPhaseA);
+  auto b = quiver::bench::phased_vec<std::uint64_t>(static_cast<std::size_t>(n),
+                                                    quiver::bench::kLoadPhaseB);
   for (std::int64_t i = 0; i < n; ++i) {
     a[static_cast<std::size_t>(i)] = rng.next();
     b[static_cast<std::size_t>(i)] = rng.next();
   }
-  std::vector<std::uint64_t> out(static_cast<std::size_t>(n));
+  auto out = quiver::bench::phased_vec<std::uint64_t>(static_cast<std::size_t>(n),
+                                                      quiver::bench::kStorePhase);
   quiver::hash64_combine(a.data(), b.data(), n, out.data());
   bool ok = true;
   for (std::int64_t i = 0; i < n; ++i) {

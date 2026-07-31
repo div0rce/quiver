@@ -19,7 +19,8 @@ Numbers intended for comparison, and everything ledger-bound, require a controll
 3. Note SMT state; avoid placing other load on the sibling.
 4. ASLR: for A/B comparisons on one machine, disabling (`randomize_va_space=0`) reduces variance; the ledger's cross-run defense is **randomized interleaving of repetitions**, both schools, per Survey §7.3: fixed layout for A/B *plus* interleaving to sample layout bias.
 5. Quiesce background services; prefer a wired, idle machine.
-6. Record everything you touched, the M5 ledger runner captures this manifest automatically and rejects publishable runs with unexplained deviations (REQ-LEDGER-013).
+6. Optional but recommended on Linux: reserve a few explicit 2 MiB pages (`sysctl vm.nr_hugepages=8`) so the bench harness's phased buffer arena (`bench/harness/phase.h`) is huge-backed and the buffers' *physical* cache-set layout is identical across repetition processes. Without the pool the harness falls back transparently (madvise THP, then 4 KiB pages) — correct, but on kernels that decline THP the physical layout reverts to per-process luck.
+7. Record everything you touched, the M5 ledger runner captures this manifest automatically and rejects publishable runs with unexplained deviations (REQ-LEDGER-013).
 
 macOS note: no public PMU access; wall-clock only; entries are labeled secondary (Survey §7.3, Charter §6.4).
 
