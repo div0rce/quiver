@@ -234,37 +234,45 @@ struct AgCheckedRun {
     return bits;
   }
 
-  std::int64_t blocks() const noexcept {
+  // Bitmap stores batch 64 elements (one std::uint64_t, little-endian == the LSB-first byte
+  // layout) instead of one byte per group. The byte-granular stream advanced at 1/8 the
+  // operand rate, so its 4 KiB phase swept the operand loads' phase and every crossing
+  // false-conflicted loads against in-flight byte stores (Intel 4K aliasing) — a
+  // timing-sensitive cost that dominated this kernel's run-to-run variance on
+  // intel-coffee-lake and starved REQ-BENCH-010 verdict pairs. Batching cuts the bitmap
+  // store count and those crossings 8x; the written bytes are identical.
+  std::int64_t blocks_bitmap() const noexcept {
+    constexpr std::int64_t kSuper = 64;  // 64 lanes = 64 bitmap bits per store
+    static_assert(kSuper % kGroup == 0, "superblock must hold whole groups for every lane width");
     std::int64_t count = 0;
-    // Bitmap stores batch 64 elements (one std::uint64_t, little-endian == the LSB-first byte
-    // layout) instead of one byte per group. The byte-granular stream advanced at 1/8 the
-    // operand rate, so its 4 KiB phase swept the operand loads' phase and every crossing
-    // false-conflicted loads against in-flight byte stores (Intel 4K aliasing) — a
-    // timing-sensitive cost that dominated this kernel's run-to-run variance on
-    // intel-coffee-lake and starved REQ-BENCH-010 verdict pairs. Batching cuts the bitmap
-    // store count and those crossings 8x; the written bytes are identical.
     std::int64_t i = 0;
-    if (sink.overflow_bits != nullptr) {
-      constexpr std::int64_t kSuper = 64;  // 64 lanes = 64 bitmap bits per store
-      static_assert(kSuper % kGroup == 0, "superblock must hold whole groups for every lane width");
-      for (; i + kSuper <= in.n; i += kSuper) {
-        std::uint64_t word = 0;
-        for (std::int64_t g = 0; g < kSuper; g += kGroup) {
-          const std::uint32_t bits = group(i + g);
-          count += std::popcount(bits);
-          word |= static_cast<std::uint64_t>(bits) << g;
-        }
-        std::memcpy(sink.overflow_bits + (i >> 3), &word, sizeof word);
+    for (; i + kSuper <= in.n; i += kSuper) {
+      std::uint64_t word = 0;
+      for (std::int64_t g = 0; g < kSuper; g += kGroup) {
+        const std::uint32_t bits = group(i + g);
+        count += std::popcount(bits);
+        word |= static_cast<std::uint64_t>(bits) << g;
       }
+      std::memcpy(sink.overflow_bits + (i >> 3), &word, sizeof word);
     }
     for (; i + kGroup <= in.n; i += kGroup) {
       const std::uint32_t bits = group(i);
       count += std::popcount(bits);
-      if (sink.overflow_bits != nullptr) {
-        std::memcpy(sink.overflow_bits + (i >> 3), &bits, kGroup / 8);
-      }
+      std::memcpy(sink.overflow_bits + (i >> 3), &bits, kGroup / 8);
     }
     return count;
+  }
+
+  std::int64_t blocks_plain() const noexcept {
+    std::int64_t count = 0;
+    for (std::int64_t i = 0; i + kGroup <= in.n; i += kGroup) {
+      count += std::popcount(group(i));
+    }
+    return count;
+  }
+
+  std::int64_t blocks() const noexcept {
+    return sink.overflow_bits != nullptr ? blocks_bitmap() : blocks_plain();
   }
 
   // Scalar tail with byte assembly (ADR-015/ADR-016); tail bits zero by construction.
