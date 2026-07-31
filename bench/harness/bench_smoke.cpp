@@ -30,40 +30,41 @@ std::uint64_t checksum(const std::uint64_t* v, std::int64_t n) {
   return acc;
 }
 
+std::uintptr_t phase_of(const void* p) {
+  return reinterpret_cast<std::uintptr_t>(p) % quiver::bench::kPhasePage;
+}
+
 // phase.h placement contract (REQ-BENCH-013 fixed layout): the requested 4 KiB phase is
-// honored, survives a growth reallocation, holds for a second, differently-phased buffer,
-// and — critical for the ledger runner's --min-time path, which invokes a benchmark body
-// several times while calibrating — a full allocate/destroy cycle replays the SAME arena
-// addresses instead of leaking the arena into unpinned fallback allocations.
-bool phased_buffers_ok() {
-  const auto phase_of = [](const void* p) {
-    return reinterpret_cast<std::uintptr_t>(p) % quiver::bench::kPhasePage;
-  };
-  bool ok = true;
-  {
-    auto v = quiver::bench::phased_vec<std::uint64_t>(1024, quiver::bench::kLoadPhaseA);
-    ok = ok && phase_of(v.data()) == quiver::bench::kLoadPhaseA;
-    v.resize(200000);  // forces reallocation; the allocator (and phase) must travel with it
-    ok = ok && phase_of(v.data()) == quiver::bench::kLoadPhaseA;
-    const auto bits = quiver::bench::phased_vec<std::uint8_t>(64, quiver::bench::kAuxStorePhase);
-    ok = ok && phase_of(bits.data()) == quiver::bench::kAuxStorePhase;
-  }
-  // Calibration replay: 8 rounds of the largest ledger working set (2 x 512 KiB) would blow
-  // through the 4 MiB arena without the live-count reset; with it, every round must land on
-  // identical addresses.
+// honored, survives a growth reallocation, and holds for a second, differently-phased buffer.
+bool phase_placement_ok() {
+  auto v = quiver::bench::phased_vec<std::uint64_t>(1024, quiver::bench::kLoadPhaseA);
+  bool ok = phase_of(v.data()) == quiver::bench::kLoadPhaseA;
+  v.resize(200000);  // forces reallocation; the allocator (and phase) must travel with it
+  ok = ok && phase_of(v.data()) == quiver::bench::kLoadPhaseA;
+  const auto bits = quiver::bench::phased_vec<std::uint8_t>(64, quiver::bench::kAuxStorePhase);
+  return ok && phase_of(bits.data()) == quiver::bench::kAuxStorePhase;
+}
+
+// Calibration replay: the ledger runner's --min-time path invokes a benchmark body several
+// times, and 8 rounds of the largest ledger working set (2 x 512 KiB) would blow through the
+// 4 MiB arena without the live-count reset. Every round must land on identical addresses,
+// never leak the arena into unpinned fallback allocations.
+bool arena_replay_ok() {
   const void* first = nullptr;
   for (int round = 0; round < 8; ++round) {
-    auto a = quiver::bench::phased_vec<std::uint64_t>(65536, quiver::bench::kLoadPhaseA);
-    auto b = quiver::bench::phased_vec<std::uint64_t>(65536, quiver::bench::kLoadPhaseB);
-    ok = ok && phase_of(a.data()) == quiver::bench::kLoadPhaseA &&
-         phase_of(b.data()) == quiver::bench::kLoadPhaseB;
+    const auto a = quiver::bench::phased_vec<std::uint64_t>(65536, quiver::bench::kLoadPhaseA);
+    const auto b = quiver::bench::phased_vec<std::uint64_t>(65536, quiver::bench::kLoadPhaseB);
+    if (phase_of(a.data()) != quiver::bench::kLoadPhaseA ||
+        phase_of(b.data()) != quiver::bench::kLoadPhaseB) {
+      return false;
+    }
     if (round == 0) {
       first = a.data();
-    } else {
-      ok = ok && a.data() == first;
+    } else if (a.data() != first) {
+      return false;
     }
   }
-  return ok;
+  return true;
 }
 
 void bm_smoke_checksum(benchmark::State& state) {
@@ -121,8 +122,10 @@ int main(int argc, char** argv) {
 
   const bool pmu = g_pmu.open();
   quiver::bench::add_run_context(pmu);
-  quiver::bench::validate_or_abort("BM_smoke/phase", phased_buffers_ok(),
+  quiver::bench::validate_or_abort("BM_smoke/phase", phase_placement_ok(),
                                    "phased_vec placement contract (bench/harness/phase.h)");
+  quiver::bench::validate_or_abort("BM_smoke/phase", arena_replay_ok(),
+                                   "phased arena calibration replay (bench/harness/phase.h)");
   benchmark::RegisterBenchmark("BM_smoke/checksum/scalar/u64/n=4096", bm_smoke_checksum);
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv)) {
