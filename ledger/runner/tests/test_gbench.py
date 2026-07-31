@@ -11,9 +11,11 @@ exactly the x86 auto-vectorized baselines (`autovec-avx2`, `autovec-avx512`, ADR
 — unreachable while Apple M2 (variants `neon`, `autovec`) was the only registered machine.
 """
 
+import argparse
 import json
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -213,6 +215,133 @@ class TestEreClosingDelimiters(unittest.TestCase):
 
     def test_opening_delimiters_are_still_escaped(self):
         self.assertEqual(gbench.ere_escape("a[b{c"), "a\\[b\\{c")
+
+
+class TestRunIdentity(unittest.TestCase):
+    """entry_id must key off a canonical run identity, never the output directory name.
+
+    community-run writes to the literal `submission`, so directory-derived ids made every bundle
+    from one machine collide — and because ids are baked into entries.json, renaming the directory
+    at append time cannot repair them. Identity is `<date>-<commit>`: reproducible for a given
+    commit and day, and independent of --output.
+    """
+
+    def setUp(self):
+        self.uarch = f"testuarch{id(self)}"
+        self.results = quiver_ledger.REPO / "ledger" / "results" / self.uarch
+        self.machine = {"uarch_dir": self.uarch}
+
+    def tearDown(self):
+        if self.results.exists():
+            shutil.rmtree(self.results)
+
+    def test_identity_is_date_and_commit(self):
+        rid = quiver_ledger.run_identity(self.machine, "abc123def456")
+        self.assertRegex(rid, r"^\d{8}-abc123def456$")
+
+    def test_different_commits_are_different_runs(self):
+        """Distinct commits must never share an identity, whatever the directory is called."""
+        self.assertNotEqual(quiver_ledger.run_identity(self.machine, "aaaaaaaaaaaa"),
+                            quiver_ledger.run_identity(self.machine, "bbbbbbbbbbbb"))
+
+    def test_second_run_at_one_commit_gets_a_suffix(self):
+        """REQ-LEDGER-010 is append-only: a repeat run is a NEW publishable run, not a
+        replacement. apple-m2 carries runs through -j at one commit, and 20260703-4ec273e2904d
+        overlaps its -b sibling on 7 benchmarks — dropping the suffix would collide them."""
+        first = quiver_ledger.run_identity(self.machine, "cafebabe1234")
+        (self.results / first).mkdir(parents=True)
+        second = quiver_ledger.run_identity(self.machine, "cafebabe1234")
+        self.assertEqual(second, f"{first}-b")
+        (self.results / second).mkdir()
+        self.assertEqual(quiver_ledger.run_identity(self.machine, "cafebabe1234"), f"{first}-c")
+
+    def test_suffix_reaches_the_entry_id(self):
+        """The suffix must survive into the id, which is where collisions actually bite."""
+        first = quiver_ledger.run_identity(self.machine, "cafebabe1234")
+        (self.results / first).mkdir(parents=True)
+        second = quiver_ledger.run_identity(self.machine, "cafebabe1234")
+        self.assertNotEqual(f"{self.uarch}-{first}-bm-x", f"{self.uarch}-{second}-bm-x")
+
+    def test_canonical_destination_is_named_for_the_identity(self):
+        args = argparse.Namespace(out=None)
+        out = quiver_ledger.resolve_out_dir(args, {"uarch_dir": "intel-coffee-lake"},
+                                            "20260730-deadbeef")
+        self.assertEqual(out.name, "20260730-deadbeef")
+        self.assertEqual(out.parent.name, "intel-coffee-lake")
+
+    def test_explicit_output_moves_files_but_not_identity(self):
+        args = argparse.Namespace(out="/tmp/submission")
+        out = quiver_ledger.resolve_out_dir(args, {"uarch_dir": "x"}, "20260730-deadbeef")
+        self.assertEqual(out, pathlib.Path("/tmp/submission"))  # only the location changed
+
+
+class TestCrossRunCollisions(unittest.TestCase):
+    """Uniqueness is a property of the whole ledger; validate_run_dir only ever sees one dir."""
+
+    @staticmethod
+    def _run_dir(root: pathlib.Path, name: str, ids: list[str]) -> pathlib.Path:
+        d = root / name
+        d.mkdir(parents=True)
+        (d / "entries.json").write_text(json.dumps([{"entry_id": i} for i in ids]))
+        return d
+
+    def test_distinct_identities_do_not_collide(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        a = self._run_dir(root, "a", ["uarch-20260730-aaaa-bm-x"])
+        b = self._run_dir(root, "b", ["uarch-20260731-bbbb-bm-x"])
+        self.assertEqual(quiver_ledger.cross_run_id_collisions([a, b]), [])
+
+    def test_genuine_collision_is_reported(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        a = self._run_dir(root, "a", ["uarch-20260730-aaaa-bm-x"])
+        b = self._run_dir(root, "b", ["uarch-20260730-aaaa-bm-x"])
+        problems = quiver_ledger.cross_run_id_collisions([a, b])
+        self.assertEqual(len(problems), 1)
+        self.assertIn("already published by", problems[0])
+
+    def test_malformed_entries_do_not_crash_the_sweep(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        good = self._run_dir(root, "good", ["uarch-20260730-aaaa-bm-x"])
+        bad = root / "bad"
+        bad.mkdir()
+        (bad / "entries.json").write_text("{ truncated")
+        self.assertEqual(quiver_ledger.cross_run_id_collisions([good, bad]), [])
+
+
+class TestValidateRunDirIsTotal(unittest.TestCase):
+    """`validate` is the gate a reviewer runs on someone else's bundle: a malformed artifact must
+    be a reported problem, never an uncaught traceback."""
+
+    def _dir(self, **files) -> pathlib.Path:
+        d = pathlib.Path(tempfile.mkdtemp()) / "run"
+        d.mkdir()
+        for name, body in files.items():
+            (d / name.replace("_", ".", 1)).write_text(body)
+        return d
+
+    def test_missing_artifacts(self):
+        problems = quiver_ledger.validate_run_dir(self._dir())
+        self.assertTrue(any("missing" in p for p in problems))
+
+    def test_invalid_json(self):
+        problems = quiver_ledger.validate_run_dir(self._dir(manifest_json="{ truncated"))
+        self.assertTrue(any("invalid JSON" in p for p in problems))
+
+    def test_wrong_top_level_type(self):
+        problems = quiver_ledger.validate_run_dir(self._dir(manifest_json='["list"]'))
+        self.assertTrue(any("expected dict" in p for p in problems))
+
+    def test_artifact_is_a_directory(self):
+        d = self._dir()
+        (d / "manifest.json").mkdir()
+        self.assertTrue(any("not a regular file" in p
+                            for p in quiver_ledger.validate_run_dir(d)))
+
+    def test_entries_items_not_objects(self):
+        d = self._dir(manifest_json=json.dumps({"deviations": []}),
+                      entries_json='[1, "two", null]')
+        problems = quiver_ledger.validate_run_dir(d)
+        self.assertEqual(sum("expected object" in p for p in problems), 3)
 
 
 if __name__ == "__main__":

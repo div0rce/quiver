@@ -71,6 +71,81 @@ def check(name: str, found: list[str], *, expect: str | None) -> None:
     print(f"  ok  {name}")
 
 
+def check_submission(name: str, setup, *, expect: str | None) -> None:
+    """`submission/` is admitted by allowed_toplevel (CONTRIBUTING.md Lane A), so the shape check
+    is the only thing stopping it becoming an arbitrary top-level directory."""
+    root = new_repo()
+    (root / "submission").mkdir()
+    setup(root / "submission")
+    mod = load_repo_lint()
+    mod.ROOT = root
+    mod.errors.clear()
+    mod.check_lane_a_submission()
+    check(name, list(mod.errors), expect=expect)
+
+
+BUNDLE = ("manifest.json", "entries.json", "rejected_noisy.json",
+          "commands.txt", "git-status.txt", "checksums.txt")
+
+
+def _complete(sub):
+    for f in BUNDLE:
+        (sub / f).write_text("{}")
+    (sub / "raw").mkdir()
+    (sub / "raw" / "rep0.json").write_text("{}")
+
+
+def submission_cases() -> None:
+    """Shape rules for a Lane A bundle (CONTRIBUTING.md)."""
+    print("\nlane A submission shape:")
+    check_submission("complete bundle accepted", _complete, expect=None)
+
+    def missing_raw(sub):
+        _complete(sub)
+        (sub / "raw" / "rep0.json").unlink()
+        (sub / "raw").rmdir()
+    check_submission("missing raw/ rejected", missing_raw, expect="missing 'raw'")
+
+    def empty_raw(sub):
+        _complete(sub)
+        (sub / "raw" / "rep0.json").unlink()
+    check_submission("empty raw/ rejected", empty_raw, expect="raw/ is empty")
+
+    def no_manifest(sub):
+        _complete(sub)
+        (sub / "manifest.json").unlink()
+    check_submission("missing manifest rejected", no_manifest, expect="missing 'manifest.json'")
+
+    def raw_is_file(sub):
+        _complete(sub)
+        (sub / "raw" / "rep0.json").unlink()
+        (sub / "raw").rmdir()
+        (sub / "raw").write_text("not a directory")
+    check_submission("raw as a file rejected", raw_is_file, expect="raw must be a directory")
+
+    def manifest_is_dir(sub):
+        _complete(sub)
+        (sub / "manifest.json").unlink()
+        (sub / "manifest.json").mkdir()
+    check_submission("artifact as a directory rejected", manifest_is_dir,
+                     expect="manifest.json must be a regular file")
+
+    def stray(sub):
+        _complete(sub)
+        (sub / "notes.txt").write_text("hi")
+    check_submission("stray file rejected", stray, expect="not part of a community-run bundle")
+
+    root = new_repo()
+    (root / "submission").write_text("not a bundle")
+    mod = load_repo_lint()
+    mod.ROOT = root
+    mod.errors.clear()
+    mod.check_lane_a_submission()
+    check("submission as a file rejected", list(mod.errors),
+          expect="must be the Lane A bundle directory, not a file")
+
+
+
 def main() -> int:
     print("repo_lint allow-list self-tests:")
 
@@ -116,6 +191,8 @@ def main() -> int:
     subprocess.run(["git", "-C", str(root), "commit", "-qm", "leak"], check=True)
     check("committed content in a local tree rejected", run(root),
           expect="may never hold committed content")
+
+    submission_cases()
 
     if failures:
         print("\nrepo_lint allow-list self-tests: FAIL", file=sys.stderr)

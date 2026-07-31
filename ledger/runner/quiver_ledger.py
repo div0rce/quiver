@@ -26,6 +26,7 @@ import pathlib
 import random
 import re
 import shlex
+import string
 import subprocess
 import sys
 
@@ -223,7 +224,7 @@ def build_entry(name: str, reps: list, ctx: dict) -> tuple[dict, bool]:
     entry = {
         # Keyed by the run DIRECTORY name so supplementary runs at the same commit
         # (e.g. <date>-<sha>-b) can never collide with the main run's ids.
-        "entry_id": f"{machine['uarch_dir']}-{ctx['out_dir'].name}-{entry_slug(name)}",
+        "entry_id": f"{machine['uarch_dir']}-{ctx['run_id']}-{entry_slug(name)}",
         "schema": schema_check.SCHEMA_VERSION,
         "methodology": schema_check.METHODOLOGY_VERSION,
         "benchmark": name,
@@ -252,18 +253,45 @@ def build_entry(name: str, reps: list, ctx: dict) -> tuple[dict, bool]:
     return entry, publishable
 
 
-def resolve_out_dir(args: argparse.Namespace, machine: dict, sha: str) -> pathlib.Path:
+def run_identity(machine: dict, sha: str) -> str:
+    """The canonical name of a run: `<date>-<commit>`, plus a `-b`, `-c`, ... suffix when that
+    slot is already taken under this machine's uarch directory.
+
+    NOT replacement semantics. REQ-LEDGER-010 makes results append-only — "corrections add
+    superseding entries with notes, never edit history" — and the committed ledger relies on it:
+    apple-m2 has runs through `-j` at one commit, and 20260703-4ec273e2904d overlaps its `-b`
+    sibling on 7 benchmarks. Dropping the suffix would mint identical entry_ids for genuinely
+    different runs, which is exactly the collision this identity exists to prevent.
+
+    Derived from the canonical destination, never from `--output`: a community-run bundle written
+    to `submission/` still carries the identity of the slot it belongs in.
+    """
+    base = f"{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d')}-{sha}"
+    uarch_dir = REPO / "ledger" / "results" / machine["uarch_dir"]
+    if not (uarch_dir / base).exists():
+        return base
+    for suffix in string.ascii_lowercase[1:]:  # -b, -c, ... matching the committed convention
+        if not (uarch_dir / f"{base}-{suffix}").exists():
+            return f"{base}-{suffix}"
+    raise RunAborted(f"more than 25 runs already exist for {base} under {machine['uarch_dir']}")
+
+
+def resolve_out_dir(args: argparse.Namespace, machine: dict, run_id: str) -> pathlib.Path:
+    """Where results are written. The canonical destination is named for the run identity; an
+    explicit --output only moves the files, it does not change what the run IS."""
     if args.out:
         return pathlib.Path(args.out)
-    date = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d")
-    return REPO / "ledger" / "results" / machine["uarch_dir"] / f"{date}-{sha}"
+    return REPO / "ledger" / "results" / machine["uarch_dir"] / run_id
 
 
 def write_results(out_dir: pathlib.Path, entries: list, rejected: list,
                   deviations: list[str]) -> None:
     (out_dir / "entries.json").write_text(json.dumps(entries, indent=2) + "\n")
+    # Always emit the rejected-noisy record, empty when nothing was excluded. CONTRIBUTING.md
+    # lists it as part of a Lane A bundle, and an explicit [] states "nothing was rejected"
+    # where a missing file cannot be told apart from a lost artifact.
+    (out_dir / "rejected_noisy.json").write_text(json.dumps(rejected, indent=2) + "\n")
     if rejected:
-        (out_dir / "rejected_noisy.json").write_text(json.dumps(rejected, indent=2) + "\n")
         print(f"{len(rejected)} entries EXCLUDED (cv > 5%, REQ-LEDGER-005) — rerun advised; "
               f"see rejected_noisy.json")
     print(f"{len(entries)} entries -> {out_dir}")
@@ -301,13 +329,14 @@ def cmd_run(args: argparse.Namespace) -> int:
         print(f"{len(jobs)} benchmark configurations × {args.reps} repetitions")
 
         sha, _ = environment.git_state(REPO)
-        out_dir = resolve_out_dir(args, machine, sha)
+        run_id = run_identity(machine, sha)
+        out_dir = resolve_out_dir(args, machine, run_id)
         (out_dir / "raw").mkdir(parents=True, exist_ok=True)
         samples, gb_ver = collect_samples(jobs, args, out_dir / "raw")
 
         manifest = environment.build_manifest(
             environment.RunContext(repo=REPO, build_dir=build_dir, out_dir=out_dir,
-                                   machine=machine, gb_version=gb_ver,
+                                   run_id=run_id, machine=machine, gb_version=gb_ver,
                                    repetition_seed=args.seed),
             deviations)
         (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
@@ -315,7 +344,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         # The manifest re-derives commit and deviations AFTER the run so a mid-run edit is
         # caught; entries must quote those authoritative values, not the pre-run snapshot used
         # only to name the output directory.
-        ctx = {"machine": machine, "args": args, "out_dir": out_dir,
+        # The manifest's commit is authoritative (post-run), so the identity follows it.
+        run_id = run_identity(machine, manifest["library_commit"])
+        ctx = {"machine": machine, "args": args, "out_dir": out_dir, "run_id": run_id,
                "sha": manifest["library_commit"],
                "lib_version": library_version(),
                "git_dirty": "dirty" if "git tree dirty" in manifest["deviations"] else "clean",
@@ -329,33 +360,100 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
-def validate_run_dir(run_dir: pathlib.Path) -> list[str]:
-    """Every QLS-1 problem in one committed run directory (REQ-LEDGER-013/-015)."""
-    problems: list[str] = []
-    manifest = json.loads((run_dir / "manifest.json").read_text())
+def _load_json(path: pathlib.Path, expect: type) -> tuple[object | None, list[str]]:
+    """(document, problems). A malformed artifact is a VALIDATION FAILURE, never a traceback:
+    `validate` is the gate a reviewer runs on someone else's bundle, so it must survive a
+    truncated, unreadable or wrong-shaped file and say which one it was."""
+    label = f"{path.parent.name}/{path.name}"
+    if not path.exists():
+        return None, [f"{label}: missing"]
+    if not path.is_file():
+        return None, [f"{label}: not a regular file"]
+    try:
+        doc = json.loads(path.read_text())
+    except OSError as exc:
+        return None, [f"{label}: unreadable ({exc.strerror})"]
+    except json.JSONDecodeError as exc:
+        return None, [f"{label}: invalid JSON at line {exc.lineno} column {exc.colno}"]
+    if not isinstance(doc, expect):
+        return None, [f"{label}: top-level JSON is {type(doc).__name__}, expected "
+                      f"{expect.__name__}"]
+    return doc, []
+
+
+def _manifest_problems(run_dir: pathlib.Path) -> list[str]:
+    manifest, problems = _load_json(run_dir / "manifest.json", dict)
+    if manifest is None:
+        return problems
     problems += [f"{run_dir}/manifest.json: {e}" for e in schema_check.validate_manifest(manifest)]
-    if manifest["deviations"]:
+    if manifest.get("deviations"):
         problems.append(f"{run_dir}: committed run has manifest deviations "
                         f"(non-publishable, REQ-LEDGER-013)")
+    return problems
 
-    entries = json.loads((run_dir / "entries.json").read_text())
+
+def _entry_problems(run_dir: pathlib.Path, index: int, entry: object,
+                    seen: set[str]) -> list[str]:
+    if not isinstance(entry, dict):
+        return [f"{run_dir}/entries.json [{index}]: entry is {type(entry).__name__}, "
+                f"expected object"]
+    entry_id = entry.get("entry_id", "?")
+    problems = [f"{run_dir}/entries.json [{entry_id}]: {e}"
+                for e in schema_check.validate_entry(entry)]
+    if entry_id in seen:
+        problems.append(f"{run_dir}: duplicate entry_id {entry_id}")
+    seen.add(entry_id)
+    return problems
+
+
+def validate_run_dir(run_dir: pathlib.Path) -> list[str]:
+    """Every QLS-1 problem in one run directory (REQ-LEDGER-013/-015)."""
+    problems = _manifest_problems(run_dir)
+    entries, entry_problems = _load_json(run_dir / "entries.json", list)
+    problems += entry_problems
     seen: set[str] = set()
-    for entry in entries:
-        entry_id = entry.get("entry_id", "?")
-        problems += [f"{run_dir}/entries.json [{entry_id}]: {e}"
-                     for e in schema_check.validate_entry(entry)]
-        if entry_id in seen:
-            problems.append(f"{run_dir}: duplicate entry_id {entry_id}")
-        seen.add(entry_id)
+    for index, entry in enumerate(entries or []):
+        problems += _entry_problems(run_dir, index, entry, seen)
+    return problems
+
+
+def cross_run_id_collisions(run_dirs: list[pathlib.Path]) -> list[str]:
+    """entry_id must be unique across the whole ledger, not just within one run.
+
+    build_entry derives it from the OUTPUT DIRECTORY NAME, which is unique for a default run
+    (`<date>-<sha>`) but is the literal `submission` for every community-run bundle. Two
+    submissions from the same machine therefore mint identical ids; appending the second makes
+    every `qle:<entry_id>` doc reference ambiguous (REQ-LEDGER-015). validate_run_dir only sees
+    one directory, so the collision is invisible to it.
+    """
+    owner: dict[str, pathlib.Path] = {}
+    problems: list[str] = []
+    for run_dir in run_dirs:
+        entries, _ = _load_json(run_dir / "entries.json", list)  # malformed: reported elsewhere
+        for entry in entries or []:
+            if not isinstance(entry, dict):
+                continue
+            entry_id = entry.get("entry_id", "?")
+            if entry_id in owner:
+                problems.append(f"{run_dir}: entry_id {entry_id} already published by "
+                                f"{owner[entry_id]} — ids must be unique across the ledger "
+                                f"(REQ-LEDGER-015); rename the run directory before appending")
+            else:
+                owner[entry_id] = run_dir
     return problems
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
     run_dirs = sorted(p.parent for p in (REPO / "ledger" / "results").glob("*/*/entries.json"))
+    # A Lane A bundle in flight lives at the repo root (CONTRIBUTING.md) and is reviewed before
+    # it is appended to ledger/results/, so it must face the same QLS-1 checks, not fewer.
+    if (REPO / "submission" / "entries.json").exists():
+        run_dirs.append(REPO / "submission")
     if not run_dirs and args.require_results:
         print("no committed results found", file=sys.stderr)
         return 1
     problems = [p for run_dir in run_dirs for p in validate_run_dir(run_dir)]
+    problems += cross_run_id_collisions(run_dirs)
     for problem in problems:
         print(problem, file=sys.stderr)
     print(f"validate: {len(run_dirs)} run dir(s), {len(problems)} problem(s)")

@@ -38,6 +38,15 @@ policies: PRD [11](../docs/prd/11-performance-ledger.md); methodology QLM-1:
 ## Reading results
 
 Entries are referenced from docs by `entry_id` (checked at docs build, REQ-LEDGER-015).
+Run identity and entry ids. A run is named `<yyyymmdd>-<shortsha>`, plus a `-b`, `-c`, …
+suffix when that slot is already taken for the machine. Repeating a run at the same commit on the
+same day therefore produces a NEW publishable run, never a replacement — results are append-only
+(REQ-LEDGER-010: "corrections add superseding entries with `notes`, never edit history"). Every
+`entry_id` is `<uarch_dir>-<run_id>-<benchmark>`, derived from that identity rather than from the
+output directory, so a `submission/` bundle carries the ids of the slot it belongs in and stays
+valid when it is appended. Because the id carries no `machine_id`, each registered machine must own
+a distinct `uarch_dir`; repo-lint enforces this (REQ-LEDGER-015).
+
 Statistics per entry: median and min with seeded percentile-bootstrap 95% CIs and CV
 (ADR-020; CI pair reported for the median estimator). Flags: `noisy` (CV in the 3-5% band,
 published with an explanation; above 5% the entry is excluded until rerun), `no_pmu`,

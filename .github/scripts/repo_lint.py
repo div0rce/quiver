@@ -222,6 +222,121 @@ def check_include_graph(manifest: dict) -> None:
         check_family_isolation(rel, text)
 
 
+def check_autovec_baseline_coverage() -> None:
+    """REQ-BENCH-010 / ADR-011: the equal-ISA autovec baseline recompiles EVERY family's
+    `_scalar_impl.h`, so every family with an explicit AVX2 backend has a verdict pair
+    (REQ-LEDGER-011). arith_guarded was omitted, and the gap was invisible until an x86 machine
+    was registered: on ARM the portable scalar build IS the autovec baseline (REQ-BENCH-010), so
+    the NEON verdict existed while the AVX2 one could never be produced.
+
+    Structural, not behavioural: a family is covered iff the baseline TU re-includes its
+    reference header and its microbenchmark registers the `autovec-avx2` variant name.
+    """
+    baseline = ROOT / "bench" / "baselines" / "baseline_avx2.cpp"
+    if not baseline.exists():
+        return  # baselines land at their owning milestone
+    recompiled = baseline.read_text(errors="replace")
+    for impl in sorted(ROOT.glob("src/kernels/*/*_scalar_impl.h")):
+        family = impl.parent.name
+        # Only families that actually ship an explicit AVX2 backend owe a verdict pair.
+        if not (impl.parent / f"{family}_avx2.cpp").exists():
+            continue
+        if f"src/kernels/{family}/{impl.name}" not in recompiled:
+            err(f"REQ-BENCH-010: {family} has an explicit AVX2 backend but "
+                f"bench/baselines/baseline_avx2.cpp does not recompile {impl.name} — "
+                f"no autovec-avx2 baseline, so REQ-LEDGER-011 can derive no verdict")
+        bench = ROOT / "bench" / "micro" / f"bench_{family}.cpp"
+        if not bench.exists():
+            err(f"REQ-BENCH-010: {family} ships an explicit AVX2 backend but has no "
+                f"bench/micro/bench_{family}.cpp, so it can produce no ledger entries at all")
+        elif '"autovec-avx2"' not in bench.read_text(errors="replace"):
+            err(f"REQ-BENCH-010: bench/micro/bench_{family}.cpp registers no `autovec-avx2` "
+                f"variant, so its AVX2 entries have no equal-ISA pair (ADR-011)")
+
+
+_BUNDLE_FILES = ("manifest.json", "entries.json", "rejected_noisy.json",
+                 "commands.txt", "git-status.txt", "checksums.txt")
+
+
+def _bundle_file_errors(sub: pathlib.Path) -> None:
+    """The six flat artifacts, each of which must exist AND be a regular file — a directory named
+    manifest.json would satisfy a name-only check and then break the ledger validator."""
+    for name in _BUNDLE_FILES:
+        path = sub / name
+        if not path.exists():
+            err(f"REQ-LEDGER-013: submission/ is missing '{name}' — a Lane A bundle is the "
+                f"complete community-run output (CONTRIBUTING.md)")
+        elif not path.is_file():
+            err(f"REQ-LEDGER-013: submission/{name} must be a regular file")
+
+
+def _bundle_raw_errors(sub: pathlib.Path) -> None:
+    """raw/ carries the per-repetition evidence a published entry rests on."""
+    raw = sub / "raw"
+    if not raw.exists():
+        err("REQ-LEDGER-013: submission/ is missing 'raw' — a Lane A bundle is the complete "
+            "community-run output (CONTRIBUTING.md)")
+    elif not raw.is_dir():
+        err("REQ-LEDGER-013: submission/raw must be a directory of per-repetition measurements")
+    elif not any(raw.iterdir()):
+        err("REQ-LEDGER-013: submission/raw/ is empty — raw per-repetition measurements are "
+            "the evidence a published entry rests on")
+
+
+def _bundle_extra_errors(sub: pathlib.Path) -> None:
+    """"a PR containing only the generated directory" (CONTRIBUTING.md) — nothing smuggled in."""
+    for extra in sorted({p.name for p in sub.iterdir()} - set(_BUNDLE_FILES) - {"raw"}):
+        err(f"REQ-REPO-001: submission/{extra} is not part of a community-run bundle "
+            f"(open a PR containing only the generated directory, CONTRIBUTING.md)")
+
+
+def check_lane_a_submission() -> None:
+    """A Lane A hardware submission is `submission/` at the root (CONTRIBUTING.md), so the tree
+    lint must admit it — but admitting it must not make it a free-for-all directory.
+
+    Shape only. Content validity (QLS-1 schema, deviations, duplicate entry_ids) belongs to
+    `quiver_ledger.py validate`, which also covers this directory.
+    """
+    sub = ROOT / "submission"
+    if not sub.exists():
+        return  # no submission in flight: nothing to check
+    if not sub.is_dir():
+        err("REQ-REPO-001: 'submission' must be the Lane A bundle directory, not a file")
+        return
+    _bundle_file_errors(sub)
+    _bundle_raw_errors(sub)
+    _bundle_extra_errors(sub)
+
+
+def check_machine_uarch_uniqueness() -> None:
+    """REQ-LEDGER-010 stores results at `ledger/results/<uarch>/`, and entry_id is
+    `<uarch_dir>-<run_id>-<benchmark>` — neither carries machine_id. Two registered machines
+    sharing a uarch_dir would therefore write into the same results tree and, at the same commit
+    on the same day, mint identical entry_ids for different hardware.
+
+    Changing the id format would invalidate every committed id and each `qle:` reference
+    (REQ-LEDGER-015), so uniqueness is guaranteed here instead: one registered machine per
+    uarch_dir. Registration is a reviewed, committed act, so this is enforceable at lint time.
+    """
+    owner: dict[str, str] = {}
+    for path in sorted((ROOT / "ledger" / "machines").glob("*.json")):
+        try:
+            machine = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            err(f"REQ-LEDGER-007: {path.relative_to(ROOT)} is not readable JSON ({exc})")
+            continue
+        uarch_dir = machine.get("uarch_dir", "")
+        machine_id = machine.get("machine_id", path.stem)
+        if not uarch_dir:
+            err(f"REQ-LEDGER-007: {path.relative_to(ROOT)} has no uarch_dir")
+        elif uarch_dir in owner:
+            err(f"REQ-LEDGER-015: machines '{owner[uarch_dir]}' and '{machine_id}' both claim "
+                f"uarch_dir '{uarch_dir}' — entry_id carries no machine_id, so they would mint "
+                f"colliding ids; give each registered machine its own uarch_dir")
+        else:
+            owner[uarch_dir] = machine_id
+
+
 def check_source_scans(manifest: dict) -> None:
     # --- Source scans (vacuous while no production code exists) ------------------------------
     src_globs = ["include/**/*.h", "src/**/*.h", "src/**/*.cpp"]
@@ -333,6 +448,9 @@ def main() -> int:
     want = check_adrs(manifest)
     check_include_graph(manifest)
     check_source_scans(manifest)
+    check_autovec_baseline_coverage()
+    check_lane_a_submission()
+    check_machine_uarch_uniqueness()
     check_ledger_refs(manifest)
     check_release_status(manifest)
 
