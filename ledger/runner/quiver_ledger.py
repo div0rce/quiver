@@ -152,10 +152,14 @@ def _binary_jobs(binary: pathlib.Path, name_filter):
 
 
 def _measure_pass(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path,
-                  seed_base: int, raw_prefix: str = "") -> tuple[dict, str]:
+                  pass_no: int = 0) -> tuple[dict, str]:
     """One full set of `args.reps` fresh-process repetitions over `jobs`, order shuffled per
-    repetition from `seed_base + rep` (REQ-LEDGER-006). Raw files carry `raw_prefix` so every
-    measurement pass leaves distinct evidence side by side."""
+    repetition from a recorded seed (REQ-LEDGER-006). Pass 0 is the initial measurement;
+    pass N >= 1 is the Nth REQ-LEDGER-005 rerun, whose shuffle seed derives as
+    `seed + 100000*N` (reproducible from the recorded command) and whose raw files carry a
+    `rerun<N>-` prefix so every attempt leaves distinct evidence side by side."""
+    seed_base = args.seed + 100_000 * pass_no
+    raw_prefix = f"rerun{pass_no}-" if pass_no else ""
     samples: dict[tuple[str | None, str], list[gbench.BenchResult]] = {
         (env_cap, name): [] for (_, env_cap, name) in jobs}
     gb_ver = "unknown"
@@ -178,7 +182,7 @@ def collect_samples(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path
                     ) -> tuple[dict, str]:
     """Run every job `args.reps` times, one fresh process each, order shuffled per repetition
     from a recorded seed (REQ-LEDGER-006). Returns (samples keyed by (cap, name), GB version)."""
-    return _measure_pass(jobs, args, raw_dir, args.seed)
+    return _measure_pass(jobs, args, raw_dir)
 
 
 @dataclasses.dataclass
@@ -204,9 +208,7 @@ def _rerun_pass(state: _RerunState, rejected: list, pass_no: int) -> tuple[list,
     redo = [state.job_by_name[e["benchmark"]] for e in rejected]
     print(f"rerun pass {pass_no}/{args.rerun_noisy}: {len(redo)} noisy "
           f"entr{'y' if len(redo) == 1 else 'ies'} (REQ-LEDGER-005 excluded-until-rerun)")
-    redo_samples, _ = _measure_pass(redo, args, state.ctx["out_dir"] / "raw",
-                                    args.seed + 100_000 * pass_no,
-                                    raw_prefix=f"rerun{pass_no}-")
+    redo_samples, _ = _measure_pass(redo, args, state.ctx["out_dir"] / "raw", pass_no)
     recovered, still_rejected = [], []
     for (_, name), reps in redo_samples.items():
         entry, publishable = build_entry(name, reps, state.ctx)
