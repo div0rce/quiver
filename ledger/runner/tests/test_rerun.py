@@ -32,9 +32,12 @@ def make_args(rerun_noisy: int, reps: int = 10) -> argparse.Namespace:
     return argparse.Namespace(reps=reps, seed=7, min_time="1x", rerun_noisy=rerun_noisy)
 
 
-def make_ctx(args: argparse.Namespace) -> dict:
-    return {"machine": MACHINE, "args": args, "run_id": "submission", "sha": "abcdef123456",
-            "lib_version": "0.0.0", "git_dirty": "clean",
+def make_ctx(args: argparse.Namespace, out_dir: pathlib.Path) -> dict:
+    # rerun_noisy reads args and the raw directory (out_dir / "raw") from the run context,
+    # exactly as cmd_run builds it.
+    (out_dir / "raw").mkdir(parents=True, exist_ok=True)
+    return {"machine": MACHINE, "args": args, "out_dir": out_dir, "run_id": "submission",
+            "sha": "abcdef123456", "lib_version": "0.0.0", "git_dirty": "clean",
             "timestamp": "2026-01-01T00:00:00+00:00"}
 
 
@@ -68,15 +71,14 @@ class TestRerunNoisy(unittest.TestCase):
 
     def test_recovered_on_first_pass(self):
         args = make_args(rerun_noisy=2)
-        ctx = make_ctx(args)
         jobs = [(pathlib.Path("bin"), None, NAME)]
-        rejected = [self._initial_rejected(ctx)]
         with tempfile.TemporaryDirectory() as tmp:
-            raw_dir = pathlib.Path(tmp)
+            ctx = make_ctx(args, pathlib.Path(tmp))
+            raw_dir = pathlib.Path(tmp) / "raw"
+            rejected = [self._initial_rejected(ctx)]
             with mock.patch.object(quiver_ledger.gbench, "run_one",
                                    scripted_run_one([CLEAN])):
-                entries, still = quiver_ledger.rerun_noisy(jobs, [], rejected, args,
-                                                           raw_dir, ctx)
+                entries, still = quiver_ledger.rerun_noisy(jobs, [], rejected, ctx)
             self.assertEqual(len(entries), 1)
             self.assertEqual(still, [])
             # Statistics come only from the rerun pass — replacement, not a merge.
@@ -92,15 +94,14 @@ class TestRerunNoisy(unittest.TestCase):
 
     def test_still_noisy_after_all_passes(self):
         args = make_args(rerun_noisy=2)
-        ctx = make_ctx(args)
         jobs = [(pathlib.Path("bin"), None, NAME)]
-        rejected = [self._initial_rejected(ctx)]
         with tempfile.TemporaryDirectory() as tmp:
-            raw_dir = pathlib.Path(tmp)
+            ctx = make_ctx(args, pathlib.Path(tmp))
+            raw_dir = pathlib.Path(tmp) / "raw"
+            rejected = [self._initial_rejected(ctx)]
             with mock.patch.object(quiver_ledger.gbench, "run_one",
                                    scripted_run_one([NOISY, NOISY])):
-                entries, still = quiver_ledger.rerun_noisy(jobs, [], rejected, args,
-                                                           raw_dir, ctx)
+                entries, still = quiver_ledger.rerun_noisy(jobs, [], rejected, ctx)
             self.assertEqual(entries, [])
             self.assertEqual(len(still), 1)
             self.assertIn("rerun pass 2", still[0]["notes"])
@@ -112,25 +113,24 @@ class TestRerunNoisy(unittest.TestCase):
 
     def test_stops_early_when_nothing_left(self):
         args = make_args(rerun_noisy=5)
-        ctx = make_ctx(args)
         jobs = [(pathlib.Path("bin"), None, NAME)]
-        rejected = [self._initial_rejected(ctx)]
         with tempfile.TemporaryDirectory() as tmp:
-            raw_dir = pathlib.Path(tmp)
+            ctx = make_ctx(args, pathlib.Path(tmp))
+            raw_dir = pathlib.Path(tmp) / "raw"
+            rejected = [self._initial_rejected(ctx)]
             with mock.patch.object(quiver_ledger.gbench, "run_one",
-                                   scripted_run_one([CLEAN])) as fake:
-                entries, still = quiver_ledger.rerun_noisy(jobs, [], rejected, args,
-                                                           raw_dir, ctx)
+                                   scripted_run_one([CLEAN])):
+                entries, still = quiver_ledger.rerun_noisy(jobs, [], rejected, ctx)
             self.assertEqual(len(entries), 1)
             # Pass 1 recovered the entry; passes 2..5 must not have run.
             self.assertEqual(list(raw_dir.glob("rerun2-*")), [])
 
     def test_disabled_is_a_no_op(self):
         args = make_args(rerun_noisy=0)
-        ctx = make_ctx(args)
-        rejected = [self._initial_rejected(ctx)]
-        entries, still = quiver_ledger.rerun_noisy([], [], list(rejected), args,
-                                                   pathlib.Path("/nonexistent"), ctx)
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx = make_ctx(args, pathlib.Path(tmp))
+            rejected = [self._initial_rejected(ctx)]
+            entries, still = quiver_ledger.rerun_noisy([], [], list(rejected), ctx)
         self.assertEqual(entries, [])
         self.assertEqual(still, rejected)
 

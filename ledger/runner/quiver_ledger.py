@@ -19,6 +19,7 @@ where <pattern> matches the entry's `benchmark` name.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import datetime
 import hashlib
 import json
@@ -180,8 +181,43 @@ def collect_samples(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path
     return _measure_pass(jobs, args, raw_dir, args.seed)
 
 
-def rerun_noisy(jobs: list, entries: list, rejected: list, args: argparse.Namespace,
-                raw_dir: pathlib.Path, ctx: dict) -> tuple[list, list]:
+@dataclasses.dataclass
+class _RerunState:
+    """What every rerun pass needs: the job lookup, the CV history that becomes the entry's
+    provenance note, and the run context (which carries args and the output directory)."""
+
+    job_by_name: dict
+    cv_history: dict
+    ctx: dict
+
+
+def _append_rerun_note(entry: dict, cvs: list[float], pass_no: int) -> None:
+    chain = " -> ".join(f"{cv:.4f}" for cv in cvs)
+    note = (f"rerun pass {pass_no} (REQ-LEDGER-005 excluded-until-rerun): cv {chain}; "
+            f"raw of every attempt kept (rerun{pass_no}-rep*)")
+    entry["notes"] = f"{entry['notes']}; {note}" if entry["notes"] else note
+
+
+def _rerun_pass(state: _RerunState, rejected: list, pass_no: int) -> tuple[list, list]:
+    """One full fresh-process repetition set over the still-rejected benchmarks."""
+    args = state.ctx["args"]
+    redo = [state.job_by_name[e["benchmark"]] for e in rejected]
+    print(f"rerun pass {pass_no}/{args.rerun_noisy}: {len(redo)} noisy "
+          f"entr{'y' if len(redo) == 1 else 'ies'} (REQ-LEDGER-005 excluded-until-rerun)")
+    redo_samples, _ = _measure_pass(redo, args, state.ctx["out_dir"] / "raw",
+                                    args.seed + 100_000 * pass_no,
+                                    raw_prefix=f"rerun{pass_no}-")
+    recovered, still_rejected = [], []
+    for (_, name), reps in redo_samples.items():
+        entry, publishable = build_entry(name, reps, state.ctx)
+        state.cv_history[name].append(entry["results"]["ns_per_batch"]["cv"])
+        _append_rerun_note(entry, state.cv_history[name], pass_no)
+        (recovered if publishable else still_rejected).append(entry)
+    print(f"  pass {pass_no}: {len(recovered)} recovered, {len(still_rejected)} still noisy")
+    return recovered, still_rejected
+
+
+def rerun_noisy(jobs: list, entries: list, rejected: list, ctx: dict) -> tuple[list, list]:
     """REQ-LEDGER-005 says a CV > 5% entry is "excluded from publication until rerun"; this is
     that rerun. Each pass re-measures every rejected benchmark with a FULL fresh-process
     repetition set (same --reps/--min-time; shuffle seed derived as seed + 100000*pass so the
@@ -189,29 +225,15 @@ def rerun_noisy(jobs: list, entries: list, rejected: list, args: argparse.Namesp
     rejected one — never a merge, which would cherry-pick repetitions. Raw files of every
     attempt sit side by side (`rerun<P>-rep<K>--<slug>.json`), and the final entry's notes
     record the full CV chain, so a reviewer sees exactly what it took to land the entry."""
-    job_by_name = {name: (binary, env_cap, name) for (binary, env_cap, name) in jobs}
-    cv_history: dict[str, list[float]] = {
-        e["benchmark"]: [e["results"]["ns_per_batch"]["cv"]] for e in rejected}
-    for pass_no in range(1, args.rerun_noisy + 1):
+    state = _RerunState(
+        job_by_name={name: (binary, env_cap, name) for (binary, env_cap, name) in jobs},
+        cv_history={e["benchmark"]: [e["results"]["ns_per_batch"]["cv"]] for e in rejected},
+        ctx=ctx)
+    for pass_no in range(1, ctx["args"].rerun_noisy + 1):
         if not rejected:
             break
-        redo = [job_by_name[e["benchmark"]] for e in rejected]
-        print(f"rerun pass {pass_no}/{args.rerun_noisy}: {len(redo)} noisy "
-              f"entr{'y' if len(redo) == 1 else 'ies'} (REQ-LEDGER-005 excluded-until-rerun)")
-        redo_samples, _ = _measure_pass(redo, args, raw_dir, args.seed + 100_000 * pass_no,
-                                        raw_prefix=f"rerun{pass_no}-")
-        still_rejected = []
-        for (_, name), reps in redo_samples.items():
-            entry, publishable = build_entry(name, reps, ctx)
-            cv_history[name].append(entry["results"]["ns_per_batch"]["cv"])
-            chain = " -> ".join(f"{cv:.4f}" for cv in cv_history[name])
-            note = (f"rerun pass {pass_no} (REQ-LEDGER-005 excluded-until-rerun): cv {chain}; "
-                    f"raw of every attempt kept (rerun{pass_no}-rep*)")
-            entry["notes"] = f"{entry['notes']}; {note}" if entry["notes"] else note
-            (entries if publishable else still_rejected).append(entry)
-        recovered = len(rejected) - len(still_rejected)
-        print(f"  pass {pass_no}: {recovered} recovered, {len(still_rejected)} still noisy")
-        rejected = still_rejected
+        recovered, rejected = _rerun_pass(state, rejected, pass_no)
+        entries += recovered
     return entries, rejected
 
 
@@ -396,8 +418,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")}
         entries, rejected = partition_entries(samples, ctx)
         if args.rerun_noisy and rejected:
-            entries, rejected = rerun_noisy(jobs, entries, rejected, args,
-                                            out_dir / "raw", ctx)
+            entries, rejected = rerun_noisy(jobs, entries, rejected, ctx)
     except RunAborted as exc:
         print(str(exc), file=sys.stderr)
         return 2
