@@ -204,6 +204,8 @@ if(Python3_FOUND AND NOT Python3_VERSION VERSION_LESS 3.11)
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ledger/runner/tests/test_schema.py)
   add_test(NAME Ledger.GbenchFilterEscape
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ledger/runner/tests/test_gbench.py)
+  add_test(NAME Ledger.RerunNoisy
+           COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ledger/runner/tests/test_rerun.py)
   add_test(NAME Ledger.ResultsValidate
            COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ledger/runner/quiver_ledger.py
                    validate)

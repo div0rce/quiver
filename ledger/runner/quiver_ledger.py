@@ -19,6 +19,7 @@ where <pattern> matches the entry's `benchmark` name.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import datetime
 import hashlib
 import json
@@ -150,16 +151,21 @@ def _binary_jobs(binary: pathlib.Path, name_filter):
                 yield binary, env_cap, name
 
 
-def collect_samples(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path
-                    ) -> tuple[dict, str]:
-    """Run every job `args.reps` times, one fresh process each, order shuffled per repetition
-    from a recorded seed (REQ-LEDGER-006). Returns (samples keyed by (cap, name), GB version)."""
+def _measure_pass(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path,
+                  pass_no: int = 0) -> tuple[dict, str]:
+    """One full set of `args.reps` fresh-process repetitions over `jobs`, order shuffled per
+    repetition from a recorded seed (REQ-LEDGER-006). Pass 0 is the initial measurement;
+    pass N >= 1 is the Nth REQ-LEDGER-005 rerun, whose shuffle seed derives as
+    `seed + 100000*N` (reproducible from the recorded command) and whose raw files carry a
+    `rerun<N>-` prefix so every attempt leaves distinct evidence side by side."""
+    seed_base = args.seed + 100_000 * pass_no
+    raw_prefix = f"rerun{pass_no}-" if pass_no else ""
     samples: dict[tuple[str | None, str], list[gbench.BenchResult]] = {
         (env_cap, name): [] for (_, env_cap, name) in jobs}
     gb_ver = "unknown"
     for rep in range(args.reps):
         order = list(jobs)
-        random.Random(args.seed + rep).shuffle(order)
+        random.Random(seed_base + rep).shuffle(order)
         for binary, env_cap, name in order:
             raw_text, results = gbench.run_one(binary, name, env_cap, args.min_time)
             if len(results) != 1:
@@ -167,9 +173,70 @@ def collect_samples(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path
             gb_ver = gbench.gb_version(raw_text)
             samples[(env_cap, name)].append(results[0])
             slug = entry_slug(name) + ("" if env_cap is None else f"--{env_cap}")
-            (raw_dir / f"rep{rep}--{slug}.json").write_text(raw_text)
-        print(f"  repetition {rep + 1}/{args.reps} complete")
+            (raw_dir / f"{raw_prefix}rep{rep}--{slug}.json").write_text(raw_text)
+        print(f"  {raw_prefix or ''}repetition {rep + 1}/{args.reps} complete")
     return samples, gb_ver
+
+
+def collect_samples(jobs: list, args: argparse.Namespace, raw_dir: pathlib.Path
+                    ) -> tuple[dict, str]:
+    """Run every job `args.reps` times, one fresh process each, order shuffled per repetition
+    from a recorded seed (REQ-LEDGER-006). Returns (samples keyed by (cap, name), GB version)."""
+    return _measure_pass(jobs, args, raw_dir)
+
+
+@dataclasses.dataclass
+class _RerunState:
+    """What every rerun pass needs: the job lookup, the CV history that becomes the entry's
+    provenance note, and the run context (which carries args and the output directory)."""
+
+    job_by_name: dict
+    cv_history: dict
+    ctx: dict
+
+
+def _append_rerun_note(entry: dict, cvs: list[float], pass_no: int) -> None:
+    chain = " -> ".join(f"{cv:.4f}" for cv in cvs)
+    note = (f"rerun pass {pass_no} (REQ-LEDGER-005 excluded-until-rerun): cv {chain}; "
+            f"raw of every attempt kept (rerun{pass_no}-rep*)")
+    entry["notes"] = f"{entry['notes']}; {note}" if entry["notes"] else note
+
+
+def _rerun_pass(state: _RerunState, rejected: list, pass_no: int) -> tuple[list, list]:
+    """One full fresh-process repetition set over the still-rejected benchmarks."""
+    args = state.ctx["args"]
+    redo = [state.job_by_name[e["benchmark"]] for e in rejected]
+    print(f"rerun pass {pass_no}/{args.rerun_noisy}: {len(redo)} noisy "
+          f"entr{'y' if len(redo) == 1 else 'ies'} (REQ-LEDGER-005 excluded-until-rerun)")
+    redo_samples, _ = _measure_pass(redo, args, state.ctx["out_dir"] / "raw", pass_no)
+    recovered, still_rejected = [], []
+    for (_, name), reps in redo_samples.items():
+        entry, publishable = build_entry(name, reps, state.ctx)
+        state.cv_history[name].append(entry["results"]["ns_per_batch"]["cv"])
+        _append_rerun_note(entry, state.cv_history[name], pass_no)
+        (recovered if publishable else still_rejected).append(entry)
+    print(f"  pass {pass_no}: {len(recovered)} recovered, {len(still_rejected)} still noisy")
+    return recovered, still_rejected
+
+
+def rerun_noisy(jobs: list, entries: list, rejected: list, ctx: dict) -> tuple[list, list]:
+    """REQ-LEDGER-005 says a CV > 5% entry is "excluded from publication until rerun"; this is
+    that rerun. Each pass re-measures every rejected benchmark with a FULL fresh-process
+    repetition set (same --reps/--min-time; shuffle seed derived as seed + 100000*pass so the
+    order stays reproducible from the recorded command), and the new measurement REPLACES the
+    rejected one — never a merge, which would cherry-pick repetitions. Raw files of every
+    attempt sit side by side (`rerun<P>-rep<K>--<slug>.json`), and the final entry's notes
+    record the full CV chain, so a reviewer sees exactly what it took to land the entry."""
+    state = _RerunState(
+        job_by_name={name: (binary, env_cap, name) for (binary, env_cap, name) in jobs},
+        cv_history={e["benchmark"]: [e["results"]["ns_per_batch"]["cv"]] for e in rejected},
+        ctx=ctx)
+    for pass_no in range(1, ctx["args"].rerun_noisy + 1):
+        if not rejected:
+            break
+        recovered, rejected = _rerun_pass(state, rejected, pass_no)
+        entries += recovered
+    return entries, rejected
 
 
 def _all_or_none(reps: list, attr: str) -> list[float] | None:
@@ -352,6 +419,8 @@ def cmd_run(args: argparse.Namespace) -> int:
                "git_dirty": "dirty" if "git tree dirty" in manifest["deviations"] else "clean",
                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")}
         entries, rejected = partition_entries(samples, ctx)
+        if args.rerun_noisy and rejected:
+            entries, rejected = rerun_noisy(jobs, entries, rejected, ctx)
     except RunAborted as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -480,7 +549,8 @@ def reproduction_command(args: argparse.Namespace) -> str:
     if args.filter:
         parts += ["--filter", str(args.filter)]
     parts += ["--reps", str(args.reps), "--min-time", str(args.min_time),
-              "--seed", str(args.seed), "--build-dir", str(args.build_dir)]
+              "--seed", str(args.seed), "--rerun-noisy", str(args.rerun_noisy),
+              "--build-dir", str(args.build_dir)]
     if args.allow_deviations:
         parts.append("--allow-deviations")
     # shlex.join quotes only what needs it, and escapes embedded quotes — a filter regex or a
@@ -529,6 +599,9 @@ def main() -> int:
     run.add_argument("--reps", type=int, default=DEFAULT_REPS)
     run.add_argument("--min-time", default=DEFAULT_MIN_TIME)
     run.add_argument("--seed", type=int, default=20260703)
+    run.add_argument("--rerun-noisy", type=int, default=0,
+                     help="extra full-repetition passes for entries the CV screen rejected "
+                          "(REQ-LEDGER-005 'excluded until rerun'); 0 disables")
     run.add_argument("--out", default="")
     run.add_argument("--allow-deviations", action="store_true")
     run.set_defaults(fn=cmd_run)
@@ -542,6 +615,9 @@ def main() -> int:
     community.add_argument("--reps", type=int, default=DEFAULT_REPS)
     community.add_argument("--min-time", default=DEFAULT_MIN_TIME)
     community.add_argument("--seed", type=int, default=20260703)
+    community.add_argument("--rerun-noisy", type=int, default=0,
+                           help="extra full-repetition passes for entries the CV screen "
+                                "rejected (REQ-LEDGER-005 'excluded until rerun'); 0 disables")
     community.add_argument("--output", default="submission",
                            help="submission directory (default: submission/)")
     community.add_argument("--allow-deviations", action="store_true")
