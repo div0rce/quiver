@@ -11,6 +11,8 @@ the three contracts that make the rerun honest:
 """
 
 import argparse
+import contextlib
+import io
 import json
 import pathlib
 import sys
@@ -61,6 +63,21 @@ def scripted_run_one(per_pass_values: list[list[float]]):
 
 NOISY = [100.0] * 9 + [130.0]           # cv ~= 0.092 — rejected by the 5% screen
 CLEAN = [100.0, 100.5] * 5              # cv ~= 0.0025 — publishable
+
+
+def scripted_by_name(values_by_name: dict[str, list[float]]):
+    """Like scripted_run_one, but keyed by benchmark name: with several jobs in one pass the
+    per-repetition shuffle interleaves calls, so positional scripting cannot address one
+    benchmark. Each name consumes its own queue in call order."""
+    queues = {name: list(values) for name, values in values_by_name.items()}
+
+    def fake_run_one(binary, name, env_cap, min_time):
+        ns = queues[name].pop(0)
+        raw = json.dumps({"context": {"library_build_type": "release"}, "benchmarks": []})
+        return raw, [gbench.BenchResult(name=name, real_time_ns=ns, items_per_second=None,
+                                        bytes_per_second=None, cycles_per_value=None)]
+
+    return fake_run_one
 
 
 class TestRerunNoisy(unittest.TestCase):
@@ -133,6 +150,41 @@ class TestRerunNoisy(unittest.TestCase):
             entries, still = quiver_ledger.rerun_noisy([], [], list(rejected), ctx)
         self.assertEqual(entries, [])
         self.assertEqual(still, rejected)
+
+    def test_partial_recovery_keeps_cv_chains_separate(self):
+        """Two rejected entries, one recovering per pass: the slow entry's CV chain must grow
+        by exactly one value per pass and never absorb the fast entry's history."""
+        name2 = "BM_mask/or/avx2/bitmap/n=4096/4096"
+        args = make_args(rerun_noisy=2)
+        jobs = [(pathlib.Path("bin"), None, NAME), (pathlib.Path("bin"), None, name2)]
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx = make_ctx(args, pathlib.Path(tmp))
+            raw_dir = pathlib.Path(tmp) / "raw"
+            e1, _ = quiver_ledger.build_entry(NAME, [result(v) for v in NOISY], ctx)
+            e2, _ = quiver_ledger.build_entry(name2, [result(v) for v in NOISY], ctx)
+            with mock.patch.object(quiver_ledger.gbench, "run_one", scripted_by_name(
+                    {NAME: CLEAN, name2: NOISY + CLEAN})):
+                entries, still = quiver_ledger.rerun_noisy(jobs, [], [e1, e2], ctx)
+            self.assertEqual(still, [])
+            by_name = {e["benchmark"]: e for e in entries}
+            self.assertEqual(len(by_name), 2)
+            fast, slow = by_name[NAME], by_name[name2]
+            self.assertIn("rerun pass 1", fast["notes"])
+            self.assertEqual(fast["notes"].split("cv ")[1].split(";")[0].count("->"), 1)
+            self.assertIn("rerun pass 2", slow["notes"])
+            self.assertEqual(slow["notes"].split("cv ")[1].split(";")[0].count("->"), 2)
+            # Pass 1 measured both benchmarks; pass 2 only the still-rejected one.
+            self.assertEqual(len(list(raw_dir.glob("rerun1-rep*"))), 2 * args.reps)
+            self.assertEqual(len(list(raw_dir.glob("rerun2-rep*"))), args.reps)
+
+    def test_negative_rerun_noisy_is_rejected(self):
+        """A negative pass count would silently no-op (range(1, 0) is empty); argparse must
+        refuse it instead."""
+        with self.assertRaises(SystemExit), \
+                mock.patch.object(sys, "argv", ["quiver_ledger.py", "run", "--machine", "m",
+                                                "--rerun-noisy", "-3"]), \
+                contextlib.redirect_stderr(io.StringIO()):
+            quiver_ledger.main()
 
     def test_reproduction_command_records_the_flag(self):
         """Charter T2: every argument that changes the result is recorded, defaults included."""

@@ -235,7 +235,7 @@ def rerun_noisy(jobs: list, entries: list, rejected: list, ctx: dict) -> tuple[l
         if not rejected:
             break
         recovered, rejected = _rerun_pass(state, rejected, pass_no)
-        entries += recovered
+        entries = entries + recovered  # pure: the return value is the only channel
     return entries, rejected
 
 
@@ -589,6 +589,15 @@ def cmd_community_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _non_negative_int(value: str) -> int:
+    """argparse type for --rerun-noisy: a negative count would silently no-op (range(1, 0)
+    is empty), and silent is the one thing this runner never is."""
+    parsed = int(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("must be >= 0")
+    return parsed
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(prog="quiver_ledger.py", description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -599,7 +608,7 @@ def main() -> int:
     run.add_argument("--reps", type=int, default=DEFAULT_REPS)
     run.add_argument("--min-time", default=DEFAULT_MIN_TIME)
     run.add_argument("--seed", type=int, default=20260703)
-    run.add_argument("--rerun-noisy", type=int, default=0,
+    run.add_argument("--rerun-noisy", type=_non_negative_int, default=0,
                      help="extra full-repetition passes for entries the CV screen rejected "
                           "(REQ-LEDGER-005 'excluded until rerun'); 0 disables")
     run.add_argument("--out", default="")
@@ -615,7 +624,7 @@ def main() -> int:
     community.add_argument("--reps", type=int, default=DEFAULT_REPS)
     community.add_argument("--min-time", default=DEFAULT_MIN_TIME)
     community.add_argument("--seed", type=int, default=20260703)
-    community.add_argument("--rerun-noisy", type=int, default=0,
+    community.add_argument("--rerun-noisy", type=_non_negative_int, default=0,
                            help="extra full-repetition passes for entries the CV screen "
                                 "rejected (REQ-LEDGER-005 'excluded until rerun'); 0 disables")
     community.add_argument("--output", default="submission",
