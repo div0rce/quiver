@@ -1,9 +1,11 @@
 # Hardware coverage plan: closing R-06
 
-The ledger currently holds **one** registered machine (Apple M2, a secondary, no-PMU platform).
-That single-µarch state (risk **R-06** / REQ-LEDGER-012) is the one blocker behind three otherwise-
-complete deliverables. This page is the concrete plan to close it. It changes no conclusions on its
-own, it says exactly what evidence is missing and how to add it without rewriting what exists.
+The ledger holds **two** registered machines: Apple M2 (`apple-m2-mba`, secondary, no PMU) and
+Intel Coffee Lake Refresh (`intel-i9-9900k`, AVX2, PMU) — still short of the coverage
+REQ-LEDGER-012 calls for. That under-coverage (risk **R-06**) is the one blocker behind three
+otherwise-complete deliverables. This page is the concrete plan to close it. It changes no
+conclusions on its own, it says exactly what evidence is missing and how to add it without
+rewriting what exists.
 
 ```mermaid
 flowchart LR

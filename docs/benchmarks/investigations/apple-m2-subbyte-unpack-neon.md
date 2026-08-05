@@ -8,7 +8,8 @@ path (REQ-KERNEL-007). Building with `-DQUIVER_K8_SUBBYTE_VECTOR=0` reverts to t
 This page records why the path exists, how it stays in bounds, how it is tested, and the measurement
 that promoted it.
 
-Apple M2 only (R-06, one registered machine). No claim here generalizes to another microarchitecture.
+Apple M2 only (R-06). No claim here generalizes to another microarchitecture; the
+intel-coffee-lake entries do not bear on this NEON promotion.
 
 ## Why this exists
 
@@ -135,9 +136,9 @@ sub-byte to the scalar reference (the fallback and A/B coverage mechanism, mirro
   follow-up, and the measured 6.9x to 11.0x already clears the promotion bar without it.
 - The path covers w in [1,7] only. Irregular widths such as 24 (multiple bytes per value) are a
   structurally different shape and remain on the scalar reference (measured near-parity there).
-- Coverage is one machine (R-06): the promotion evidence is Apple M2 only. The seam makes the
-  decision per-build revisitable when the second and third microarchitectures the coverage plan
-  calls for are registered. The AVX2/AVX-512 sub-byte paths still delegate to scalar; vectorizing
+- The promotion evidence is Apple M2 only. A second machine (intel-coffee-lake, AVX2) is now
+  registered (R-06 still open), but x86 runs do not cross-validate a NEON promotion; the seam
+  keeps the decision per-build revisitable as further ARM µarchs register. The AVX2/AVX-512 sub-byte paths still delegate to scalar; vectorizing
   them is the analogous x86 follow-up and is decided by their own ledger, not this page.
 
 ## Traceability

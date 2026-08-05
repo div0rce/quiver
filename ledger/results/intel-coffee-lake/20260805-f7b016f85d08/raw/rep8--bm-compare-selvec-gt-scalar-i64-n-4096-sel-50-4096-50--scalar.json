@@ -1,0 +1,67 @@
+{
+  "context": {
+    "date": "2026-08-05T10:30:47-04:00",
+    "host_name": "sentinel",
+    "executable": "/home/div0rce/repos/quiver/build/bench/bin/quiver_bench_compare",
+    "num_cpus": 16,
+    "mhz_per_cpu": 3600,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 262144,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [1.16748,1.09424,1.021],
+    "library_version": "v0.7.0-17-g373ec8ee",
+    "library_build_type": "release",
+    "json_schema_version": 1,
+    "compiler": "Clang 18.1.8 (https://github.com/conda-forge/clangdev-feedstock 3c15221e001c9fe87fcc807876aa06d599616b01)",
+    "cxx_flags": " [Release]",
+    "git_dirty": "clean",
+    "git_sha": "373ec8eec66b",
+    "lto": "off",
+    "pmu": "available",
+    "quiver_version": "0.7.0"
+  },
+  "benchmarks": [
+    {
+      "name": "BM_compare/selvec_gt/scalar/i64/n=4096/sel=50/4096/50",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_compare/selvec_gt/scalar/i64/n=4096/sel=50/4096/50",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 12003,
+      "real_time": 2.8781726484581381e+04,
+      "cpu_time": 2.8782039990002500e+04,
+      "time_unit": "ns",
+      "branch_miss_pct": 2.6087315184225556e+01,
+      "cycles_per_value": 2.5231333849480340e+01,
+      "ipc": 5.9483842989094993e-01,
+      "items_per_second": 1.4231096897310802e+08
+    }
+  ]
+}

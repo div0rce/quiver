@@ -11,7 +11,7 @@ Three different claims, kept deliberately distinct:
 
 | Platform | Scalar | AVX2 | AVX-512 | NEON | Performance evidence |
 |---|---|---|---|---|---|
-| Linux x86-64 (GCC 13/14, Clang 17/19) | tested | tested | tested under Intel SDE¹ | — | pending native machines |
+| Linux x86-64 (GCC 13/14, Clang 17/19) | tested | tested | tested under Intel SDE¹ | — | **intel-coffee-lake ledger** (i9-9900K, AVX2; AVX-512 pending silicon) |
 | macOS ARM64 (Apple Clang) | tested | — | — | tested | **Apple M2 ledger** |
 | Linux ARM64 (GCC 14, Clang 19) | tested | — | — | tested | pending |
 | Windows x86-64 (MSVC) | tested (no sanitizers)² | tested (no sanitizers)² | compiles only³ | — | pending |

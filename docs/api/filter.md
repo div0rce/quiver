@@ -39,7 +39,7 @@ The family's semantics are defined by `src/kernels/filter/filter_scalar_impl.h` 
 | `i64` n=65536/sel=1/pat=uniform | 1.68× | `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-1-pat-uniform-65536-1-0` `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-1-pat-uniform-65536-1-0` |
 | `i64` n=65536/sel=90/pat=uniform | 1.74× | `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-neon-i64-n-65536-sel-90-pat-uniform-65536-90-0` `qle:apple-m2-20260703-4ec273e2904d-bm-filter-bitmap-autovec-i64-n-65536-sel-90-pat-uniform-65536-90-0` |
 
-Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); this is the only registered machine at v0.3 (the three-µarch coverage gate is an open deferral, [gate M5](../releases/gates/M5.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); a second machine — `intel-i9-9900k`, Coffee Lake AVX2 — is registered with committed runs; the three-µarch coverage gap remains open ([hardware coverage plan](../benchmarks/hardware-coverage-plan.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
 ## Validation
 
 `tests/unit/test_filter.cpp` · `tests/property/prop_filter.cpp` · `tests/differential/diff_isa_filter.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_filter.cpp` (hypothesis in-source).

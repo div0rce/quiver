@@ -35,7 +35,7 @@ The family's semantics are defined by `src/kernels/select/select_scalar_impl.h` 
 | `u32` n=4096/density=1 | 7.67× | `qle:apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-neon-u32-n-4096-density-1-4096-1` `qle:apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-4096-density-1-4096-1` |
 | `u32` n=4096/density=90 | 7.50× | `qle:apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-neon-u32-n-4096-density-90-4096-90` `qle:apple-m2-20260703-4ec273e2904d-bm-select-bitmap-to-selvec-autovec-u32-n-4096-density-90-4096-90` |
 
-Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); this is the only registered machine at v0.3 (the three-µarch coverage gate is an open deferral, [gate M5](../releases/gates/M5.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); a second machine — `intel-i9-9900k`, Coffee Lake AVX2 — is registered with committed runs; the three-µarch coverage gap remains open ([hardware coverage plan](../benchmarks/hardware-coverage-plan.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
 ## Validation
 
 `tests/unit/test_select.cpp` · `tests/property/prop_select.cpp` · `tests/differential/diff_isa_select.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_select.cpp` (hypothesis in-source).

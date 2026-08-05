@@ -36,8 +36,10 @@ producer+consumer. One ISA cannot answer it:
 
 ## Next data required
 
-Per [method.md](method.md): register x86 (AVX2, and AVX-512 if present) and a Graviton-class ARM
-part; run the `compare` filter through the ledger runner on each; add `qle:`-referenced entries to
+Per [method.md](method.md): x86 AVX2 is collected — intel-coffee-lake `compare` entries are
+committed (run 20260805-f7b016f85d08) and referenced from [entries.md](entries.md). Still needed:
+an AVX-512 x86 machine and a Graviton-class ARM part; run the `compare` filter on each; add their
+`qle:`-referenced entries to
 [entries.md](entries.md); then evaluate the pre-registered decision rule across the ≥3-ISA /
 ≥5-µarch set and draw the [conclusion](conclusion.md).
 

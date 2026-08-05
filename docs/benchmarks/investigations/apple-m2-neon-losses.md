@@ -98,5 +98,5 @@ machine code the `autovec` variant measured, which is why no fresh ledger run is
 
 REQ-KERNEL-007 (resolution-time backend choice), Charter T7 (publish honest verdicts). Committed
 loss entries: `qle:` references in [compare.md](../../api/compare.md) and
-[arith.md](../../api/arith.md). Ledger coverage is still one machine (R-06); these conclusions are
-Apple M2 only.
+[arith.md](../../api/arith.md). Ledger coverage is two machines (apple-m2 and intel-coffee-lake; R-06 remains open below the
+required bar); these conclusions are Apple M2 only.

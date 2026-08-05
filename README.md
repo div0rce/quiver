@@ -103,10 +103,10 @@ flowchart TD
 Integer and hash results are identical across CPUs. Floating-point sums follow one documented
 reassociation policy, so a result is reproducible for a given version, CPU, and build.
 
-## Measured evidence (one machine, stated plainly)
+## Measured evidence (two machines, stated plainly)
 
-From the committed, reproducible benchmark ledger — Apple M2, dispatched backend versus the
-autovectorized scalar baseline, both shipped code:
+From the committed, reproducible benchmark ledger — dispatched backend versus the equal-ISA
+autovectorized baseline, both shipped code. Apple M2 (NEON):
 
 | Operation | Speedup |
 |---|---|
@@ -121,9 +121,20 @@ autovectorized scalar baseline, both shipped code:
 ¹ Where the compiler's autovectorized code measured faster than handwritten NEON, Quiver routes to
 it and says so — the losing measurements stay published.
 
-**Apple M2 only. These are not universal cross-CPU claims.** One machine is registered so far; the
-ledger methodology (fresh process per repetition, CV gate, no unverifiable numbers) and every entry
-behind the table are in [`ledger/`](ledger/README.md). Registering an x86 machine is the single
+Intel i9-9900K, Coffee Lake (AVX2) — run `20260805-f7b016f85d08`, 377 entries, zero CV
+rejections:
+
+| Operation | Speedup (avx2 vs autovec-avx2) |
+|---|---|
+| select: bitmap → indices | **4.8–5.2×** |
+| checked arithmetic | **2.6–3.2×** |
+| compare → bitmap | **2.3–3.2×** |
+| filter selected values | **2.5–2.8×** |
+| saturating arithmetic, 8-byte mask/take | autovec wins or parity — published as measured¹ |
+
+**Two machines. These are not universal cross-CPU claims.** The ledger methodology (fresh process
+per repetition, CV gate, no unverifiable numbers) and every entry behind both tables are in
+[`ledger/`](ledger/README.md). Registering an AVX-512 x86 or additional Arm machine is the single
 most valuable contribution — see [contributing](CONTRIBUTING.md).
 
 ## Support matrix
@@ -132,7 +143,7 @@ Three different claims, kept distinct: *compiles*, *correctness-tested*, and *pe
 
 | Platform | Scalar | AVX2 | AVX-512 | NEON | Performance evidence |
 |---|---|---|---|---|---|
-| Linux x86-64 | tested | tested | tested (Intel SDE emulator) | — | pending native machines |
+| Linux x86-64 | tested | tested | tested (Intel SDE emulator) | — | **i9-9900K AVX2 ledger** |
 | macOS ARM64 | tested | — | — | tested | **Apple M2 ledger** |
 | Linux ARM64 | tested | — | — | tested | pending |
 | Windows x86-64 | tested² | tested² | compiles only² | — | pending |
@@ -142,7 +153,8 @@ AVX2, sanitizers excepted — `QUIVER_SANITIZE` is unsupported on MSVC, so ASan/
 tier-1 toolchains only. The Windows AVX-512 backend compiles but has never been executed — the verification
 machine has no AVX-512 and the Intel SDE legs are Linux-only. Windows stays labelled toolchain
 tier-2: Charter §8.1 gates tier-1 promotion on demonstrated demand, and tier-1 promises are made
-only for GCC/Clang. No Windows performance evidence exists; the ledger has no x86 entry at all.
+only for GCC/Clang. No Windows performance evidence exists; the committed x86 ledger entries (intel-coffee-lake) are
+from Linux.
 
 ## Why Quiver (and when not)
 
@@ -170,7 +182,7 @@ vector-math toolkit. Quiver is a fixed, closed set of analytical operations.
 - **The release pipeline is live**: a tag runs the full gate plus the nightly suite (differential
   cross product, 4.5 h fuzz, MSan/LSan) and publishes the two-file drop-in with checksums and
   build provenance.
-- **Road to v1.0 is evidence, not features**: register more benchmark machines (x86 AVX2/AVX-512,
+- **Road to v1.0 is evidence, not features**: register more benchmark machines (x86 AVX-512,
   more Arm), fill the cross-CPU record, run the release regression gates on ≥2 machines. The plan:
   [hardware coverage](docs/benchmarks/hardware-coverage-plan.md).
 

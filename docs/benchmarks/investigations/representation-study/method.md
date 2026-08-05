@@ -50,8 +50,8 @@ follow-up once the per-µarch producer numbers exist.
 
 ## Reopening / completion criteria
 
-Registered access to ≥3 ISAs across ≥5 µarchs — concretely an x86 machine (AVX2, and AVX-512 if
-present) and an ARM Graviton-class part in addition to `apple-m2-mba`. Until then the analysis and
-conclusion stay open (R-06).
+Registered access to ≥3 ISAs across ≥5 µarchs — `apple-m2-mba` (NEON) and `intel-i9-9900k`
+(AVX2, run 20260805-f7b016f85d08) are registered; still needed: an AVX-512-capable x86 machine
+and an ARM Graviton-class part. Until then the analysis and conclusion stay open (R-06).
 
 *Traceability: REQ-LEDGER-013/-014, REQ-BENCH-004, ADR-020/021; gate M9.*

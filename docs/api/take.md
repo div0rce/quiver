@@ -39,7 +39,7 @@ The family's semantics are defined by `src/kernels/take/take_scalar_impl.h` (Cha
 | `i64_u32` n=65536/dict=65536KiB | 1.00× | `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-neon-i64-u32-n-65536-dict-65536kib-65536-67108864` `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-autovec-i64-u32-n-65536-dict-65536kib-65536-67108864` |
 | `i64_u32` n=65536/dict=8192KiB | 0.97× | `qle:apple-m2-20260703-4ec273e2904d-bm-take-dict-decode-neon-i64-u32-n-65536-dict-8192kib-65536-8388608` `qle:apple-m2-20260703-4ec273e2904d-b-bm-take-dict-decode-autovec-i64-u32-n-65536-dict-8192kib-65536-8388608` |
 
-Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); this is the only registered machine at v0.3 (the three-µarch coverage gate is an open deferral, [gate M5](../releases/gates/M5.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); a second machine — `intel-i9-9900k`, Coffee Lake AVX2 — is registered with committed runs; the three-µarch coverage gap remains open ([hardware coverage plan](../benchmarks/hardware-coverage-plan.md)). Entries flagged `noisy` sit in the 3–5% CV band (REQ-LEDGER-005). Reproduction: [disputes guide](../guides/disputes.md).
 ## Validation
 
 `tests/unit/test_take.cpp` · `tests/property/prop_take.cpp` · `tests/differential/diff_isa_take.cpp` (backends vs the naive oracle, byte-exact) · invariant + guard-page suites · `bench/micro/bench_take.cpp` (hypothesis in-source).

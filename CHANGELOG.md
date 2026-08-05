@@ -6,6 +6,20 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ### Added
 
+- **First complete x86 ledger run** — intel-coffee-lake (i9-9900K, AVX2), run
+  `20260805-f7b016f85d08`: 377 entries, **zero** CV rejections, empty deviations, and all eight
+  K10 `arith_guarded` equal-ISA verdict pairs (REQ-BENCH-010). The verdicts: `checked_add` avx2
+  beats the autovectorized baseline **3.18×** (n=4096) / **2.62×** (n=65536), flat across
+  overflow density (ADR-014 confirmed on a second ISA); `saturating_add` avx2 **loses**
+  (0.71×/0.85×) and is published per Charter T7. Supersedes `20260730-373ec8eec66b`, which
+  predates the K10 baselines; both stay, append-only (#62, #63).
+- **`--rerun-noisy N` on the ledger runner** (#64, #65, #67) — implements REQ-LEDGER-005's
+  "excluded from publication until rerun": up to N full fresh-process repetition passes over
+  only the CV-rejected entries, replacement never merge, every attempt's raw evidence kept
+  (`rerun<P>-rep<K>--…`), the CV chain recorded in the entry's notes, the flag recorded in
+  `commands.txt` (Charter T2). The maiden run recovered 8 entries (worst chain
+  cv 0.1855 → 0.0029).
+
 - **Convenience surface** (ADR-027, PRD 04 §3.6) — zero-cost spellings over the unchanged
   primitives, from the external API-ergonomics review: `all_valid` (the named
   `BitmapView{nullptr}`), `bitmap_bytes(n)`, `batch_view(range)`/`selection_view(range)` view
@@ -22,6 +36,17 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ### Changed
 
+- **K10 checked arithmetic on AVX2 is 1.3–1.7× faster, and its benchmarks are finally
+  measurable** (#62, #63). Three stacked mechanisms made `arith_guarded` avx2 unmeasurable
+  (cross-repetition CV 0.12–0.24 vs the 0.05 gate) and slower than shipped: allocator layout
+  put ~95% of operand loads in 4 KiB-phase false store→load dependences, physically-indexed
+  L2/L3 set placement re-randomized per process, and the overflow bitmap's byte-granular store
+  stream swept phase against the loads. Fixes: bench buffers allocate at pinned 4 KiB phases
+  from a hugetlb-backed arena (`bench/harness/phase.h`, REQ-BENCH-013 fixed-layout school),
+  and the kernel batches bitmap stores into one `u64` per 64 lanes — written bytes identical,
+  differential/unit/property suites and the bench's independent three-output recompute all
+  pass. Both sides of every verdict pair allocate identically (REQ-BENCH-002).
+
 - **AVX2 64-bit `filter` is ~4x faster**, and now beats the equal-ISA autovectorized baseline
   on every measured shape instead of losing on nearly all of them. `kCompactLut64` stored four
   64-bit lane indices, which `compact4_64bit` expanded into vpermd's epi32 pair indices with
@@ -34,9 +59,12 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
   end to end across 20 i64 `filter/bitmap` shapes the median is **4.17x**, and AVX2 goes from
   beating the `autovec-avx2` baseline in **1/20 shapes to 20/20**. These are development-box
   numbers under WSL2, **not** ledger entries: that environment reports no cpufreq governor and
-  is non-publishable under REQ-LEDGER-013. No dispatch routing changed, so REQ-KERNEL-007 does
-  not gate this; correctness is unchanged and proven by the differential suite (byte-identical
-  to the scalar reference) on GCC, Clang, MSVC, and AVX-512 under SDE.
+  is non-publishable under REQ-LEDGER-013. Committed intel-coffee-lake ledger runs have since
+  landed for this machine under a publishable native environment (see below); the ledger
+  `filter` entries confirm the win (2.46–2.84× vs `autovec-avx2` across all 20 shapes). No
+  dispatch routing changed, so REQ-KERNEL-007 does not gate this; correctness is unchanged and
+  proven by the differential suite (byte-identical to the scalar reference) on GCC, Clang,
+  MSVC, and AVX-512 under SDE.
 
 - **Windows CI now builds the full test suite and runs it with no `--gtest_filter` exclusions**
   (128/128 under MSVC 14.44 / VS 2022 17.14). Previously only the amalgamated unit target was

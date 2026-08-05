@@ -12,5 +12,5 @@
   "turbo_boost": "OS-managed DVFS (no user control on Apple Silicon)",
   "flags": ["secondary_platform", "no_pmu"],
   "owner": "maintainer (div0rce)",
-  "notes": "Apple Silicon is a SECONDARY platform per Charter §6.4/REQ-LEDGER-008: entries carry secondary_platform + no_pmu flags and omit cycles_per_value (PMU counters require entitlements not available to user processes). Registered at M5 as the project's only physically available machine — the REQ-LEDGER-012 three-uarch coverage gate is an open deferral recorded in gates/M5.md."
+  "notes": "Apple Silicon is a SECONDARY platform per Charter §6.4/REQ-LEDGER-008: entries carry secondary_platform + no_pmu flags and omit cycles_per_value (PMU counters require entitlements not available to user processes). Registered at M5 as the project's first (then only) physically available machine; intel-i9-9900k (x86-64 AVX2) registered later — the REQ-LEDGER-012 three-uarch coverage gate remains an open deferral recorded in gates/M5.md (Zen 4/5 and Golden-Cove-class still missing)."
 }

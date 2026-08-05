@@ -43,7 +43,7 @@ The family's semantics are defined by `src/kernels/hash/hash_scalar_impl.h` (Cha
 | `hash64` i64 n=65536 | 1.00× | `qle:apple-m2-20260704-883c08552f35-bm-hash-hash64-neon-i64-n-65536-65536` `qle:apple-m2-20260704-883c08552f35-bm-hash-hash64-autovec-i64-n-65536-65536` |
 | `combine` u64 n=65536 | 1.00× | `qle:apple-m2-20260704-883c08552f35-bm-hash-combine-neon-u64-n-65536-65536` `qle:apple-m2-20260704-883c08552f35-bm-hash-combine-autovec-u64-n-65536-65536` |
 
-Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); it is the only registered machine at v0.4 (the ≥2-µarch coverage gate is an open deferral, [gate M6](../releases/gates/M6.md)). Reproduction: [disputes guide](../guides/disputes.md).
+Apple M2 is a **secondary platform** (`secondary_platform`, `no_pmu`: no cycle counters — REQ-LEDGER-008); a second machine — `intel-i9-9900k`, Coffee Lake AVX2 — is registered with committed runs; broader coverage remains open ([hardware coverage plan](../benchmarks/hardware-coverage-plan.md)). Reproduction: [disputes guide](../guides/disputes.md).
 
 ## Validation
 
