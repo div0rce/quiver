@@ -51,7 +51,9 @@ guards against scope creep back toward one.
 
 ## Open deferrals (all hardware/external, none a correctness gap)
 
-- **R-06 / REQ-LEDGER-012 — ≥5-µarch ledger coverage.** Only `apple-m2-mba` is registered. Blocks:
+- **R-06 / REQ-LEDGER-012 — ≥5-µarch ledger coverage.** Registered: `apple-m2-mba` and
+  `intel-i9-9900k` (Coffee Lake AVX2, the ledger's first PMU-carrying entries, runs
+  20260730-373ec8eec66b and 20260805-f7b016f85d08) — still short of the bar. Blocks:
   the AVX-512 performance ledger (M7), the multi-µarch representation study + paper (M9), and the
   v1.0 certification's coverage/regression gates (M10). Every deferral traces here.
 - **R-17 — MSVC amalgamation `/arch`-consumer narrowing.** The amalgamation is verified on MSVC

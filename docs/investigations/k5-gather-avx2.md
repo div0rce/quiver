@@ -27,7 +27,7 @@ Should the AVX2 `take` backend use hardware gather (`vpgatherdd`/`vpgatherdq`/`v
 `values.len`). Any future flip to gather must either keep a guard for large-index batches or
 restrict the gather path to `values.len ≤ 2^31`. Debug-asserted in the gather path.
 
-## Measurement protocol (to run on first registered x86 machine — M5 ledger work or later)
+## Measurement protocol (the first x86 machine, `intel-i9-9900k`, is now registered; this experiment has NOT run — it needs the `-DQUIVER_K5_TAKE_GATHER` toggle and a dedicated dict-size sweep)
 
 1. Machine registered per REQ-LEDGER-013 (pinned frequency governor, isolated core set).
 2. `bench_take` dict-size sweep (L1/L2/L3/DRAM-resident) × `{i32, i64, f32, f64}` ×

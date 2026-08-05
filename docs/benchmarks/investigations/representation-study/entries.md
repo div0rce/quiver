@@ -6,8 +6,9 @@
 `bench_compare` on `apple-m2-mba` (NEON), `--benchmark_min_time=0.5s`, machine not in the pinned-
 quiet state the ledger requires (this was an active dev session). Numbers are real and stable
 across repeats (see below), but they are **not** CV-gated, empty-`deviations` ledger entries, so
-they carry no `qle:` id. The publishable per-µarch entries are pending a quiet registered run
-(R-06). Reported to characterize one point of H2, not to conclude the study.
+they carry no `qle:` id. The publishable per-µarch entries now exist for x86 AVX2 (intel-coffee-lake run
+20260805-f7b016f85d08, below); entries for the remaining µarchs are pending further
+registrations (R-06). Reported to characterize one point of H2, not to conclude the study.
 
 `n = 65536` (DRAM-resident), `i64`, `kGt`, wall-clock per call:
 
@@ -24,8 +25,18 @@ the ~7–11 % selvec penalty is robust to run-to-run noise on this host.
 
 ## Publishable ledger entries — PENDING (R-06)
 
-The CV-gated, entry-referenced data across ≥3 ISAs and ≥5 µarchs is not yet collected — only
-`apple-m2-mba` is registered. When x86 (AVX2, AVX-512) and a Graviton-class ARM part are
+## intel-coffee-lake (AVX2) — committed ledger entries
+
+Run `20260805-f7b016f85d08` (i9-9900K, PMU-carrying, zero CV rejections) commits the study's
+`compare` axes for both representations under the same ISA, e.g. at i64 n=65536 sel=50%:
+`qle:intel-coffee-lake-20260805-f7b016f85d08-bm-compare-bitmap-gt-avx2-i64-n-65536-sel-50-65536-50`
+(bitmap) versus
+`qle:intel-coffee-lake-20260805-f7b016f85d08-bm-compare-selvec-gt-avx2-i64-n-65536-sel-50-65536-50`
+(selection vector). `bitmap_gt` additionally carries its equal-ISA `autovec-avx2` verdict pairs;
+`selvec_gt` registers no autovec baseline (bench registration, not a measurement gap).
+
+The CV-gated, entry-referenced data across ≥3 ISAs and ≥5 µarchs is not yet complete — still
+needed: an AVX-512 x86 machine and a Graviton-class ARM part. When those are
 registered, `quiver_ledger.py run --machine <id> --filter compare` produces the entries per
 [method.md](method.md), committed under `ledger/results/` and referenced here as `qle:<entry_id>`.
 No cross-µarch numbers are recorded until then (Charter T2 — no invented data).

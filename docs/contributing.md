@@ -12,7 +12,8 @@ reproduction reports, and **hardware benchmark submissions**. No specification r
 requirement citations. Sign your commits (`git commit -s`, DCO) and let CI run — that is all.
 
 The single most valuable contribution is running the benchmark suite on hardware the ledger has
-not measured (any x86 machine qualifies today — see [compatibility](compatibility.md)):
+not measured (AVX-512-capable x86 or a second Arm microarchitecture — see
+[compatibility](compatibility.md)):
 
 ```sh
 cmake --preset bench && cmake --build --preset bench -j

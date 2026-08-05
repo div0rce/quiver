@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thank you — independent hardware evidence is exactly what the performance record needs.
-        The one registered machine so far is an Apple M2; x86 (AVX2 / native AVX-512) and
+        Two machines are registered so far (Apple M2 NEON; Intel i9-9900K, AVX2); native AVX-512 and
         additional Arm machines matter most. The flow is: register a machine manifest, run the
         ledger runner, open a PR with the generated submission. This issue coordinates that; see
         CONTRIBUTING.md ("Submitting a hardware benchmark") for the commands.

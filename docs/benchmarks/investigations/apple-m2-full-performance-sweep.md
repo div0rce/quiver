@@ -10,7 +10,8 @@ pending a quiet-machine measurement, and has since been measured (6.9x to 11.0x 
 gather, CV under 0.9%) and promoted to the shipped default. No benchmark data was invented,
 no losing result was deleted, and the CV and noise policy was not touched.
 
-This sweep is Apple M2 only (REQ-LEDGER, R-06: one registered machine). No claim here generalizes to
+This sweep is Apple M2 only (REQ-LEDGER, R-06: the only registered machine at the time;
+intel-coffee-lake has since registered with its own runs). No claim here generalizes to
 any other microarchitecture.
 
 ## What this is
@@ -347,7 +348,7 @@ their committed entry ids. The CV and noise policy was not weakened, and no benc
 changed to manufacture a win. Every "no headroom" claim is backed by bandwidth arithmetic or an
 objdump byte-diff, not assertion. Where the machine could not produce a trustworthy measurement, that
 is stated plainly and the conclusion is deferred rather than forced. All conclusions are Apple M2
-only (R-06, one registered machine).
+only (R-06; intel-coffee-lake was registered after this sweep and carries its own runs).
 
 ## Traceability
 

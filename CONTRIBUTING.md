@@ -21,9 +21,9 @@ CI run. That is it.
 
 ### Submitting a hardware benchmark
 
-Quiver's performance record has exactly one registered machine (Apple M2), stated plainly
-everywhere numbers appear. An independent x86 (AVX2 or AVX-512) or additional Arm submission is
-worth more than any code change. The flow:
+Quiver's performance record has two registered machines — Apple M2 (NEON) and an Intel i9-9900K,
+Coffee Lake (x86-64 AVX2) — stated plainly everywhere numbers appear. An independent submission
+(AVX-512 x86, additional Arm, or any third machine) is worth more than any code change. The flow:
 
 ```sh
 cmake --preset bench && cmake --build --preset bench -j

@@ -12,7 +12,7 @@ benchmark entry.
 3. [Recipes](guides/recipes.md) — filter, pipeline, ISA control, nulls; complete tested programs.
 4. [API reference](api/core.md) — the contracts, one page per operation family.
 5. [Performance](benchmarks/README.md) — what is measured, on what, and
-   [what it costs](benchmarks/investigations/apple-m2-full-performance-sweep.md); one machine so
+   [what it costs](benchmarks/investigations/apple-m2-full-performance-sweep.md); two machines so
    far, stated plainly ([compatibility](compatibility.md) keeps compiles / tested / measured
    distinct).
 

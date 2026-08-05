@@ -4,8 +4,9 @@ The ledger is Quiver's honest scorecard. It records how fast each operation runs
 on which CPU, under which conditions, in a form anyone can re-run and check. It is deliberately hard
 to fake: every run happens on a registered machine, is repeated in shuffled fresh processes, gets
 statistical confidence intervals, and is thrown out if it is too noisy to trust. If the evidence is
-not there, the number is not published. Today it holds real data from one machine (an Apple M2);
-more CPUs are needed before broad speed claims can be made.
+not there, the number is not published. Today it holds real data from two machines — an Apple M2
+(NEON) and an Intel i9-9900K, Coffee Lake (x86-64 AVX2, runs `20260730-373ec8eec66b` and
+`20260805-f7b016f85d08`); more CPUs are still needed before broad cross-CPU claims can be made.
 
 How a number gets into the ledger:
 
@@ -55,8 +56,10 @@ REQ-LEDGER-008).
 
 ## Coverage: read this before citing numbers
 
-The ledger never claims coverage it does not have (Charter T7). The registry currently
-holds **one** machine (Apple M2, a secondary platform). The REQ-LEDGER-012 v0.3 gate calls
-for three microarchitectures (Zen 4/5, Golden-Cove-class, Apple M-series); the missing x86
-machines are an **open, recorded deferral**, see `docs/releases/gates/M5.md`. x86 numbers
-will appear only when measured on registered x86 hardware; none are invented in the interim.
+The ledger never claims coverage it does not have (Charter T7). The registry holds **two**
+machines: Apple M2 (`apple-m2-mba`, secondary, no PMU) and Intel i9-9900K
+(`intel-i9-9900k`, Coffee Lake, AVX2, PMU counters). The REQ-LEDGER-012 v0.3 gate calls
+for three microarchitectures (Zen 4/5, Golden-Cove-class, Apple M-series); Coffee Lake is
+Skylake-derived, so the Zen and Golden-Cove slots remain an **open, recorded deferral**,
+see `docs/releases/gates/M5.md`. Numbers appear only when measured on registered hardware;
+none are invented in the interim.

@@ -1,0 +1,67 @@
+{
+  "context": {
+    "date": "2026-08-05T10:06:30-04:00",
+    "host_name": "sentinel",
+    "executable": "/home/div0rce/repos/quiver/build/bench/bin/quiver_bench_reduce",
+    "num_cpus": 16,
+    "mhz_per_cpu": 3600,
+    "cpu_scaling_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 32768,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 262144,
+        "num_sharing": 2
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [1.06152,1.03564,1.00244],
+    "library_version": "v0.7.0-17-g373ec8ee",
+    "library_build_type": "release",
+    "json_schema_version": 1,
+    "compiler": "Clang 18.1.8 (https://github.com/conda-forge/clangdev-feedstock 3c15221e001c9fe87fcc807876aa06d599616b01)",
+    "cxx_flags": " [Release]",
+    "git_dirty": "clean",
+    "git_sha": "373ec8eec66b",
+    "lto": "off",
+    "pmu": "available",
+    "quiver_version": "0.7.0"
+  },
+  "benchmarks": [
+    {
+      "name": "BM_reduce/sum_wrap/avx2/i64/n=65536/nulls=10/65536/10",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_reduce/sum_wrap/avx2/i64/n=65536/nulls=10/65536/10",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 15983,
+      "real_time": 2.6284152474524013e+04,
+      "cpu_time": 2.6285023212162923e+04,
+      "time_unit": "ns",
+      "branch_miss_pct": 4.1584439052719274e-02,
+      "cycles_per_value": 1.4400890488532982e+00,
+      "ipc": 2.1705246565077818e+00,
+      "items_per_second": 2.4932829418113046e+09
+    }
+  ]
+}

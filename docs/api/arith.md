@@ -47,7 +47,22 @@ K9's semantics are defined by `src/kernels/arith/arith_scalar_impl.h` (wrapping 
 | `arith_checked` add | i64 n=65536 / ovf=50% | 1.42× | `qle:apple-m2-20260704-883c08552f35-b-bm-arith-guarded-checked-add-neon-i64-n-65536-ovf-500-65536-500` `qle:apple-m2-20260704-883c08552f35-b-bm-arith-guarded-checked-add-autovec-i64-n-65536-ovf-500-65536-500` |
 | `arith_saturating` add | i64 n=65536 | 1.65× | `qle:apple-m2-20260704-883c08552f35-g-bm-arith-guarded-saturating-add-neon-i64-n-65536-65536` `qle:apple-m2-20260704-883c08552f35-g-bm-arith-guarded-saturating-add-autovec-i64-n-65536-65536` |
 
-The `arith` (K9) `neon` medians come from a 4 s window and the `autovec` medians from an 8 s window — both CV-screened; `ns_per_batch` medians are window-length independent, and the longer autovec window was needed to bring this fanless secondary platform's streaming baseline under the 5% CV policy (REQ-LEDGER-005; several 2 s attempts were excluded). Apple M2 is a **secondary platform** (`no_pmu`, secondary; the only registered machine — ≥2-µarch is an open deferral, [gate M6](../releases/gates/M6.md)). Reproduction: [disputes guide](../guides/disputes.md).
+**Verdict (Intel Coffee Lake i9-9900K, `avx2` vs `autovec-avx2`, run `20260805-f7b016f85d08`):**
+
+- **K10 `arith_checked` — avx2 wins 3.18× (n=4096) and 2.62× (n=65536), FLAT across overflow
+  density.** The checked-add medians at 0 / 0.1% / 50% overflow are within 0.15% of each other on
+  both sides of the pair — ADR-014's branch-free-accumulation claim, confirmed on a second ISA.
+- **K10 `arith_saturating` — avx2 LOSES: 0.71× (n=4096), 0.85× (n=65536).** The autovectorized
+  clamp beats the handwritten path; the loss is published per Charter T7. No dispatch routing
+  changes from this entry alone (REQ-KERNEL-007 gates that on its own evidence review).
+
+| api | configuration | avx2 vs autovec-avx2 | entries |
+|---|---|---|---|
+| `arith_checked` add | i64 n=65536 / ovf=0 | 2.62× | `qle:intel-coffee-lake-20260805-f7b016f85d08-bm-arith-guarded-checked-add-avx2-i64-n-65536-ovf-0-65536-0` `qle:intel-coffee-lake-20260805-f7b016f85d08-bm-arith-guarded-checked-add-autovec-avx2-i64-n-65536-ovf-0-65536-0` |
+| `arith_checked` add | i64 n=65536 / ovf=50% | 2.62× | `qle:intel-coffee-lake-20260805-f7b016f85d08-bm-arith-guarded-checked-add-avx2-i64-n-65536-ovf-500-65536-500` `qle:intel-coffee-lake-20260805-f7b016f85d08-bm-arith-guarded-checked-add-autovec-avx2-i64-n-65536-ovf-500-65536-500` |
+| `arith_saturating` add | i64 n=65536 | 0.85× (loss) | `qle:intel-coffee-lake-20260805-f7b016f85d08-bm-arith-guarded-saturating-add-avx2-i64-n-65536-65536` `qle:intel-coffee-lake-20260805-f7b016f85d08-bm-arith-guarded-saturating-add-autovec-avx2-i64-n-65536-65536` |
+
+The `arith` (K9) `neon` medians come from a 4 s window and the `autovec` medians from an 8 s window — both CV-screened; `ns_per_batch` medians are window-length independent, and the longer autovec window was needed to bring this fanless secondary platform's streaming baseline under the 5% CV policy (REQ-LEDGER-005; several 2 s attempts were excluded). Apple M2 is a **secondary platform** (`no_pmu`, secondary; one of two registered machines — `intel-i9-9900k` (Coffee Lake AVX2) also has committed runs; broader coverage remains open, [hardware coverage plan](../benchmarks/hardware-coverage-plan.md)). Reproduction: [disputes guide](../guides/disputes.md).
 
 ## Validation
 
