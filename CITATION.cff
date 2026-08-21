@@ -3,13 +3,14 @@ message: "If you use Quiver in research, please cite it as below."
 title: "Quiver: dependency-free C++23 analytical kernels with runtime SIMD dispatch"
 type: software
 authors:
-  - family-names: "Moustafa Nasr"
+  - given-names: "Moustafa"
+    family-names: "Nasr"
     alias: "div0rce"
 repository-code: "https://github.com/div0rce/quiver"
 url: "https://div0rce.github.io/quiver/"
 license: Apache-2.0
-version: 0.7.0
-date-released: 2026-07-11
+version: 0.8.0
+date-released: 2026-08-21
 keywords:
   - simd
   - vectorized-execution

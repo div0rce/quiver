@@ -4,6 +4,8 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-08-21
+
 ### Added
 
 - **First complete x86 ledger run** — intel-coffee-lake (i9-9900K, AVX2), run
@@ -76,6 +78,11 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
   `compute_min_max`** (ADR-027). The old name read as "simple moving average", which the
   operation never was — it is the fused single-pass min/max/null-count summary. `[[deprecated]]`
   aliases keep old code compiling through 0.x and are removed at v1.0.
+- On aarch64, the **mask queries (`all`/`any`/`none`) are vectorized**: the per-byte early-exit
+  scalar loop does not autovectorize and measured ~3.2 GB/s on the all-valid "any nulls?" fast
+  path; the NEON 64-byte-block form with a block-granular early exit reaches read bandwidth —
+  **30.3×/32.4×** on that class with the early-exit class unchanged at ~1.7 ns (#44,
+  pre-registered two-prong promotion rule; before/after ledger rows committed).
 - On aarch64, **integer dense min/max/SMA delegates to the autovectorized scalar reference**: the
   measured handwritten single-accumulator chain lost 0.26×–0.27× (integer min is
   associative-exact, so the compiler builds a multi-accumulator loop), and the delegated path

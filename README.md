@@ -176,7 +176,7 @@ vector-math toolkit. Quiver is a fixed, closed set of analytical operations.
 
 ## Status
 
-- **Current release: [v0.7.0](https://github.com/div0rce/quiver/releases/latest).** All ten
+- **Current release: [v0.8.0](https://github.com/div0rce/quiver/releases/latest).** All ten
   operation groups on scalar + AVX2 + NEON natively; AVX-512 correctness-verified under Intel SDE.
   The public API is frozen and audited.
 - **The release pipeline is live**: a tag runs the full gate plus the nightly suite (differential

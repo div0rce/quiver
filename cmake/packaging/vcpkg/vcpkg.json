@@ -1,7 +1,7 @@
 {
   "$comment": "vcpkg manifest skeleton (REQ-BUILD-015). Prepared at M8; registry submission is a release activity, not a build-system feature. `version` tracks the code version single-sourced in include/quiver/detail/config.h and is advanced by the post-release bump (release plan §5 step 8).",
   "name": "quiver",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Dependency-free C++23 vectorized analytical kernels + cross-ISA performance ledger",
   "homepage": "https://github.com/div0rce/quiver",
   "license": "Apache-2.0",
