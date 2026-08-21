@@ -395,7 +395,7 @@ VERSION_SOURCES = [
     ("README 'Current release'", "README.md", r"Current release: \[v(\d+\.\d+\.\d+)\]"),
     ("conanfile.py version", "cmake/packaging/conan/conanfile.py",
      r'version = "(\d+\.\d+\.\d+)"'),
-    ("CITATION.cff version", "CITATION.cff", r"^version: (\d+\.\d+\.\d+)"),
+    ("CITATION.cff version", "CITATION.cff", r"^version: (\d+\.\d+\.\d+)$"),
 ]
 
 
