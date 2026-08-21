@@ -103,7 +103,8 @@ nav:
   - Contributing: contributing.md
   - Releases:
       - Overview: releases/README.md
-      - v0.7.0 (current): releases/v0.7.0.md
+      - v0.8.0 (current): releases/v0.8.0.md
+      - v0.7.0: releases/v0.7.0.md
       - v0.6.0: releases/v0.6.0.md
       - v0.5.0: releases/v0.5.0.md
       - v0.4.0: releases/v0.4.0.md

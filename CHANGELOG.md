@@ -4,6 +4,8 @@ All notable changes to Quiver are documented here. The format follows [Keep a Ch
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-08-21
+
 ### Added
 
 - **First complete x86 ledger run** — intel-coffee-lake (i9-9900K, AVX2), run

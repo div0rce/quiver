@@ -15,7 +15,7 @@ from conan.tools.files import copy
 
 class QuiverConan(ConanFile):
     name = "quiver"
-    version = "0.7.0"
+    version = "0.8.0"
     license = "Apache-2.0"
     homepage = "https://github.com/div0rce/quiver"
     url = "https://github.com/div0rce/quiver"
